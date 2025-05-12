@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Rule for user-specific data in the 'users' collection and its sub-collections
+    match /users/{userId}/{subpath=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Rule for all other documents (e.g., public anime data).
+    // This rule will apply to documents not covered by more specific rules above.
+    match /{document=**} {
+      allow read: if true; // Anyone can read (e.g., anime details, lists)
+      allow write: if request.auth != null; // Only authenticated users can write (e.g., admins adding anime)
+                                          // Consider making this more restrictive for specific collections.
+    }
+  }
+}
