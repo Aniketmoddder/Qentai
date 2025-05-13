@@ -1,22 +1,25 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import ProfileDetailsForm from '@/components/profile/ProfileDetailsForm';
 import PasswordChangeForm from '@/components/profile/PasswordChangeForm';
-import { UserCircle, KeyRound, ArrowLeft, Loader2, ShieldBan } from 'lucide-react';
+import { UserCircle, KeyRound, ArrowLeft, Loader2, ShieldBan, AlertCircle } from 'lucide-react';
 import Container from '@/components/layout/container';
 import { Button } from '@/components/ui/button';
 import BannedUserModule from '@/components/common/BannedUserModule';
-
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export default function AccountSettingsPage() {
-  const { user, appUser, loading: authLoading } = useAuth();
+  const { user, appUser, loading: authLoading, isInitializing } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const needsSetup = searchParams.get('initialSetup') === 'true' || (appUser && (appUser.photoURL === null || appUser.bannerImageUrl === null));
 
-  if (authLoading || (!user && !authLoading) || appUser === undefined) {
+
+  if (isInitializing || authLoading || (!user && !authLoading) || appUser === undefined) {
     return (
       <Container className="flex items-center justify-center min-h-[calc(100vh-var(--header-height)-1px)]">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
@@ -42,6 +45,16 @@ export default function AccountSettingsPage() {
       <div className="max-w-3xl mx-auto space-y-8">
         <h1 className="text-3xl font-bold text-primary text-center">Account Settings</h1>
         
+        {needsSetup && (
+          <Alert variant="default" className="bg-primary/10 border-primary/30 text-primary">
+            <AlertCircle className="h-5 w-5 !text-primary" /> {/* Ensure icon color matches */}
+            <AlertTitle className="font-semibold">Complete Your Profile!</AlertTitle>
+            <AlertDescription>
+              Please select an avatar and banner to personalize your Qentai experience.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card className="shadow-xl border-border/50">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-foreground flex items-center">

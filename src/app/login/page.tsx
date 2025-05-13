@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams as useNextSearchParams } from 'next/navigation'; // Renamed useSearchParams to avoid conflict
+import { useRouter, useSearchParams as useNextSearchParams } from 'next/navigation';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -27,19 +26,24 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useNextSearchParams(); // Using the renamed import
-  const { user, loading: authLoading, setLoading: setAuthContextLoading } = useAuth();
+  const searchParams = useNextSearchParams();
+  const { user, appUser, loading: authLoading, setLoading: setAuthContextLoading, refreshAppUser, isInitializing } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!isInitializing && !authLoading && user) {
       const redirectUrl = searchParams.get('redirect') || '/';
-      router.push(redirectUrl); 
+      // Check if profile setup is needed before final redirect
+      if (appUser && (appUser.photoURL === null || appUser.bannerImageUrl === null)) {
+        router.push('/profile/settings?initialSetup=true');
+      } else {
+        router.push(redirectUrl);
+      }
     }
-  }, [user, authLoading, router, searchParams]);
+  }, [user, appUser, authLoading, isInitializing, router, searchParams]);
 
   const handleLogin = async (values: LoginFormValues) => {
     setIsLoading(true);
@@ -48,15 +52,11 @@ export default function LoginPage() {
 
     try {
       if (values.identifier.includes('@')) {
-        // Assume it's an email
         emailToUse = values.identifier;
       } else {
-        // Assume it's a username, try to fetch user by username
-        // Note: This requires an index on 'username' in Firestore users collection.
-        // Firestore will prompt to create it if missing.
-        const appUser = await getAppUserByUsername(values.identifier);
-        if (appUser && appUser.email) {
-          emailToUse = appUser.email;
+        const fetchedAppUser = await getAppUserByUsername(values.identifier);
+        if (fetchedAppUser && fetchedAppUser.email) {
+          emailToUse = fetchedAppUser.email;
         } else {
           setError("User with that username not found.");
           toast({
@@ -70,7 +70,6 @@ export default function LoginPage() {
       }
 
       if (!emailToUse) {
-        // Should not happen if logic above is correct, but as a safeguard
         setError("Invalid email or username.");
         toast({ variant: "destructive", title: "Login Failed", description: "Invalid email or username." });
         setIsLoading(false);
@@ -78,12 +77,13 @@ export default function LoginPage() {
       }
 
       await signInWithEmailAndPassword(auth, emailToUse, values.password);
+      await refreshAppUser(); // Ensure appUser context is updated
+
       toast({
         title: "Login Successful",
         description: "Welcome back!",
       });
-      const redirectUrl = searchParams.get('redirect') || '/';
-      router.push(redirectUrl); 
+      // Redirection handled by useEffect
     } catch (e: any) {
       let errorMessage = 'Failed to sign in. Please check your credentials.';
       if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
@@ -105,24 +105,26 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setError(null);
-    setAuthContextLoading(true); // Indicate auth state might change
+    setAuthContextLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged in AuthProvider will handle upsertAppUserInFirestore
+      await refreshAppUser(); // Ensure appUser context is updated after potential upsert
+
       toast({
         title: "Login Successful",
         description: "Welcome!",
       });
-      const redirectUrl = searchParams.get('redirect') || '/';
-      router.push(redirectUrl);
+      // Redirection handled by useEffect after appUser state is confirmed
     } catch (e: any) {
       let errorMessage = "Failed to sign in with Google. Please try again.";
       const errorCode = e.code;
-      console.error("Google Sign-In Error:", e); 
+      console.error("Google Sign-In Error:", e);
 
       if (errorCode === 'auth/popup-closed-by-user') {
         errorMessage = "Google Sign-In was cancelled. Please try again.";
       } else if (errorCode === 'auth/cancelled-popup-request') {
-        errorMessage = "Google Sign-In request was cancelled. Please ensure only one sign-in window is open.";
+        errorMessage = "Google Sign-In request was cancelled. Please ensure only one sign-up window is open.";
       } else if (errorCode === 'auth/popup-blocked') {
         errorMessage = "Google Sign-In popup was blocked by your browser. Please disable your popup blocker and try again.";
       } else if (errorCode === 'auth/operation-not-allowed') {
@@ -141,24 +143,25 @@ export default function LoginPage() {
       });
     } finally {
       setIsGoogleLoading(false);
-      setAuthContextLoading(false); // Reset global loading after attempt
+      setAuthContextLoading(false);
     }
   };
   
-  if (authLoading || (!authLoading && user)) {
+  if (isInitializing || (authLoading && !user)) {
     return (
         <div className="flex items-center justify-center min-h-screen bg-background">
              <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
     );
   }
+  // If user is logged in and profile complete, useEffect redirects.
 
   return (
     <Container className="flex items-center justify-center min-h-[calc(100vh-var(--header-height)-1px)] py-12">
       <Card className="w-full max-w-md shadow-2xl bg-card/80 backdrop-blur-sm">
         <CardHeader className="text-center">
           <div className="mx-auto mb-6">
-            <Logo iconSize={27} /> 
+            <Logo iconSize={27} />
           </div>
           <CardTitle className="text-3xl font-bold">Welcome Back!</CardTitle>
           <CardDescription>Sign in to continue to Qentai.</CardDescription>
@@ -170,7 +173,7 @@ export default function LoginPage() {
             isLoading={isLoading}
             error={error}
             setError={setError}
-            defaultValues={{ identifier: '', password: ''}} // Provide default values for new schema
+            defaultValues={{ identifier: '', password: ''}}
           />
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
@@ -191,4 +194,3 @@ export default function LoginPage() {
     </Container>
   );
 }
-

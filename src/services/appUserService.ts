@@ -1,8 +1,8 @@
 'use server';
 
-import { db } from '@/lib/firebase';
+import { db, auth as firebaseAuth } from '@/lib/firebase'; // Imported firebaseAuth to check provider
 import type { AppUser, AppUserRole } from '@/types/appUser';
-import { convertUserTimestampsForClient } from '@/lib/userUtils'; 
+import { convertUserTimestampsForClient } from '@/lib/userUtils';
 import {
   collection,
   doc,
@@ -16,7 +16,7 @@ import {
   Timestamp,
   setDoc,
   limit,
-  where, 
+  where,
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 
@@ -37,83 +37,90 @@ const handleFirestoreError = (error: unknown, context: string): FirestoreError =
 };
 
 export const upsertAppUserInFirestore = async (
-  userData: Partial<Omit<AppUser, 'createdAt' | 'lastLoginAt' | 'updatedAt' | 'bannerImageUrl'>> & { uid: string; photoURL?: string | null; bannerImageUrl?: string | null }
+  userData: Partial<Omit<AppUser, 'createdAt' | 'lastLoginAt' | 'updatedAt' >> & {
+    uid: string;
+    email: string | null;
+    displayName?: string | null; // Firebase User's displayName
+    photoURL?: string | null;    // Firebase User's photoURL
+    username?: string;
+    fullName?: string;
+    // bannerImageUrl is not passed directly here for Google Sign-In if we want them to choose
+  }
 ): Promise<AppUser> => {
   const userRef = doc(usersCollection, userData.uid);
   try {
     const userSnap = await getDoc(userRef);
-    let role: AppUserRole;
-    let finalStatus: AppUser['status'];
-    let finalUserDataForDb: any;
+    let finalUserDataForDb: Partial<AppUser>;
 
     const defaultUsername = userData.email ? userData.email.split('@')[0] : `user_${userData.uid.substring(0,5)}`;
     const defaultFullName = userData.displayName || null;
 
     if (userSnap.exists()) {
+      // Existing user
       const existingData = userSnap.data() as AppUser;
-      role = existingData.role;
-      finalStatus = existingData.status;
-
+      let role = existingData.role;
       if (userData.email === ADMIN_EMAIL && existingData.role !== 'owner') {
-        role = 'owner';
-      } else if (userData.email === ADMIN_EMAIL && existingData.role === 'owner') {
         role = 'owner';
       }
 
-
       finalUserDataForDb = {
-        email: userData.email || existingData.email,
-        displayName: userData.displayName !== undefined ? userData.displayName : existingData.displayName, 
-        photoURL: userData.photoURL !== undefined ? userData.photoURL : existingData.photoURL,
-        bannerImageUrl: userData.bannerImageUrl !== undefined ? userData.bannerImageUrl : existingData.bannerImageUrl,
+        email: userData.email !== undefined ? userData.email : existingData.email,
+        displayName: userData.displayName !== undefined ? userData.displayName : existingData.displayName,
+        // Preserve existing Qentai choices unless explicitly updated elsewhere.
+        // Google's photoURL might be passed in userData.photoURL, but we prioritize existingData.
+        photoURL: existingData.photoURL,
+        bannerImageUrl: existingData.bannerImageUrl,
         username: userData.username || existingData.username || defaultUsername,
         fullName: userData.fullName !== undefined ? userData.fullName : (existingData.fullName || defaultFullName),
         role,
-        status: finalStatus,
-        lastLoginAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        status: existingData.status || 'active',
+        lastLoginAt: serverTimestamp() as any,
+        updatedAt: serverTimestamp() as any,
       };
       
-      if (userData.photoURL === '' || userData.photoURL === null) finalUserDataForDb.photoURL = null;
-      if (userData.bannerImageUrl === '' || userData.bannerImageUrl === null) finalUserDataForDb.bannerImageUrl = null;
+      // If Firebase auth's photoURL is different and Qentai's is null, consider it for initial setup.
+      // This case handles if user previously logged in with Google but didn't complete Qentai profile setup.
+      if (userData.photoURL && existingData.photoURL === null) {
+        // This scenario is tricky. For now, we assume if existingData.photoURL is null, they still need to pick.
+        // If we wanted to use Google's as a fallback:
+        // finalUserDataForDb.photoURL = userData.photoURL;
+      }
 
-
-      Object.keys(finalUserDataForDb).forEach(key => finalUserDataForDb[key] === undefined && key !== 'photoURL' && key !== 'bannerImageUrl' && delete finalUserDataForDb[key]);
 
       await updateDoc(userRef, finalUserDataForDb);
-      const updatedData = { 
-        ...existingData, 
-        ...finalUserDataForDb, 
+      const updatedClientData: AppUser = {
+        ...existingData,
+        ...finalUserDataForDb,
         uid: userData.uid,
-        lastLoginAt: new Date().toISOString(), 
-        updatedAt: new Date().toISOString() 
+        lastLoginAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdAt: existingData.createdAt ? (typeof existingData.createdAt === 'string' ? existingData.createdAt : (existingData.createdAt as Timestamp).toDate().toISOString()) : new Date().toISOString(),
       };
       revalidatePath(`/profile`);
       revalidatePath(`/admin/user-management`);
-      return convertUserTimestampsForClient(updatedData);
+      return convertUserTimestampsForClient(updatedClientData);
 
     } else {
-      role = userData.email === ADMIN_EMAIL ? 'owner' : 'member';
-      finalStatus = 'active';
+      // New user
+      const isGoogleSignInProvider = firebaseAuth.currentUser?.providerData.some(p => p.providerId === 'google.com');
+      let role: AppUserRole = userData.email === ADMIN_EMAIL ? 'owner' : 'member';
 
       finalUserDataForDb = {
         uid: userData.uid,
         email: userData.email || null,
-        displayName: userData.displayName !== undefined ? userData.displayName : null, 
-        photoURL: userData.photoURL !== undefined ? userData.photoURL : null,
-        bannerImageUrl: userData.bannerImageUrl !== undefined ? userData.bannerImageUrl : null,
+        displayName: userData.displayName || null,
+        // For NEW users (Google or Email/Pass), set photoURL and bannerImageUrl to null initially.
+        // This forces them through the setup process on /profile/settings.
+        photoURL: null,
+        bannerImageUrl: null,
         username: userData.username || defaultUsername,
-        fullName: userData.fullName !== undefined ? userData.fullName : defaultFullName,
+        fullName: userData.fullName || defaultFullName,
         role: role,
-        status: finalStatus,
-        createdAt: serverTimestamp(),
-        lastLoginAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        status: 'active',
+        createdAt: serverTimestamp() as any,
+        lastLoginAt: serverTimestamp() as any,
+        updatedAt: serverTimestamp() as any,
       };
-      
-      if (userData.photoURL === '' || userData.photoURL === null) finalUserDataForDb.photoURL = null;
-      if (userData.bannerImageUrl === '' || userData.bannerImageUrl === null) finalUserDataForDb.bannerImageUrl = null;
-
       await setDoc(userRef, finalUserDataForDb);
       const newUserDataForClient = {
         ...finalUserDataForDb,
@@ -144,17 +151,19 @@ export const updateAppUserProfile = async (
         dataToUpdate.bannerImageUrl = profileData.bannerImageUrl === '' ? null : profileData.bannerImageUrl;
     }
     
+    // Filter out undefined values to avoid accidentally clearing fields in Firestore,
+    // except for photoURL and bannerImageUrl which can explicitly be set to null.
     Object.keys(dataToUpdate).forEach(key => {
         if (dataToUpdate[key] === undefined && key !== 'photoURL' && key !== 'bannerImageUrl') { 
              delete dataToUpdate[key]; 
         }
     });
 
-    if (Object.keys(dataToUpdate).length > 1 || (Object.keys(dataToUpdate).length === 1 && !dataToUpdate.hasOwnProperty('updatedAt'))) { 
+    if (Object.keys(dataToUpdate).filter(key => key !== 'updatedAt').length > 0) { 
         await updateDoc(userRef, dataToUpdate);
         revalidatePath(`/profile`);
         revalidatePath(`/profile/settings`);
-        revalidatePath(`/admin/user-management`); // if admin views this user
+        revalidatePath(`/admin/user-management`); 
     }
   } catch (error) {
     throw handleFirestoreError(error, `updateAppUserProfile (uid: ${uid})`);

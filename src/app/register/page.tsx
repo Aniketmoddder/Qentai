@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams as useNextSearchParams } from 'next/navigation'; // Renamed
+import { useRouter, useSearchParams as useNextSearchParams } from 'next/navigation';
 import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,9 +15,9 @@ import { Separator } from '@/components/ui/separator';
 import { Chrome, Loader2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { upsertAppUserInFirestore } from '@/services/appUserService';
-import AvatarSelector from '@/components/common/AvatarSelector'; 
-import BannerSelector from '@/components/common/BannerSelector'; // Import BannerSelector
-import { Controller } from 'react-hook-form'; 
+import AvatarSelector from '@/components/common/AvatarSelector';
+import BannerSelector from '@/components/common/BannerSelector';
+import { Controller } from 'react-hook-form';
 
 const registerSchema = z
   .object({
@@ -38,51 +38,61 @@ export type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
-  const searchParams = useNextSearchParams(); 
-  const { user, loading: authLoading, setLoading: setAuthContextLoading, refreshAppUser } = useAuth();
+  const searchParams = useNextSearchParams();
+  const { user, appUser, loading: authLoading, setLoading: setAuthContextLoading, refreshAppUser, isInitializing } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
  useEffect(() => {
-    if (!authLoading && user) {
+    if (!isInitializing && !authLoading && user) {
       const redirectUrl = searchParams.get('redirect') || '/';
-      router.push(redirectUrl); 
+      // Check if profile setup is needed before final redirect
+      if (appUser && (appUser.photoURL === null || appUser.bannerImageUrl === null)) {
+        router.push('/profile/settings?initialSetup=true');
+      } else {
+        router.push(redirectUrl);
+      }
     }
-  }, [user, authLoading, router, searchParams]);
+  }, [user, appUser, authLoading, isInitializing, router, searchParams]);
 
   const handleRegister = async (values: RegisterFormValues) => {
     setIsLoading(true);
     setError(null);
-    setAuthContextLoading(true); 
+    setAuthContextLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
       const firebaseUser = userCredential.user;
 
+      // For email/pass, photoURL and bannerImageUrl come from the form (Avatar/Banner selectors)
+      // If they are empty strings from the form, they'll be converted to null by upsertAppUserInFirestore logic.
       await updateProfile(firebaseUser, {
-        displayName: values.fullName, 
+        displayName: values.fullName,
         photoURL: values.photoURL || null,
       });
       
       await upsertAppUserInFirestore({
         uid: firebaseUser.uid,
         email: firebaseUser.email,
-        displayName: values.fullName, 
-        photoURL: values.photoURL || null,
-        bannerImageUrl: values.bannerImageUrl || null,
-        username: values.username,     
-        fullName: values.fullName,     
+        displayName: values.fullName,
+        photoURL: values.photoURL || null, // Will be null if not chosen
+        bannerImageUrl: values.bannerImageUrl || null, // Will be null if not chosen
+        username: values.username,
+        fullName: values.fullName,
       });
 
-      await refreshAppUser(); 
+      await refreshAppUser(); // This will update appUser in context
 
       toast({
         title: "Account Created",
         description: "Welcome to Qentai!",
       });
-      const redirectUrl = searchParams.get('redirect') || '/';
-      router.push(redirectUrl); 
+      
+      // After refreshAppUser, appUser in context should be updated.
+      // The useEffect hook will handle redirection based on appUser.photoURL and appUser.bannerImageUrl.
+      // No explicit redirect here to avoid race conditions with context update.
+
     } catch (e: any) {
       const errorMessage = e.message?.replace('Firebase: ', '').split(' (')[0] || 'Failed to create account. Please try again.';
       setError(errorMessage);
@@ -93,40 +103,43 @@ export default function RegisterPage() {
       });
     } finally {
       setIsLoading(false);
-      setAuthContextLoading(false); 
+      setAuthContextLoading(false);
     }
   };
 
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
     setError(null);
-    setAuthContextLoading(true); 
+    setAuthContextLoading(true);
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const firebaseUser = userCredential.user;
 
-      // For Google Sign-Up, bannerImageUrl will be null by default or can be set later.
-      // photoURL comes from Google.
+      // upsertAppUserInFirestore will set photoURL and bannerImageUrl to null for new Google users
       await upsertAppUserInFirestore({
         uid: firebaseUser.uid,
         email: firebaseUser.email,
-        displayName: firebaseUser.displayName, 
-        photoURL: firebaseUser.photoURL,
-        bannerImageUrl: null, // Default to no banner for Google sign-ups initially
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL, // Pass Google's photo, upsert will decide if to use or set to null
       });
       
-      await refreshAppUser(); 
+      await refreshAppUser(); // This updates appUser in context
 
       toast({
         title: "Sign Up Successful",
         description: "Welcome to Qentai!",
       });
-      const redirectUrl = searchParams.get('redirect') || '/';
-      router.push(redirectUrl);
-    } catch (e: any) {
+
+      // Let the useEffect handle redirection based on the updated appUser status
+      // This avoids redirecting before appUser context is potentially updated.
+      // If appUser.photoURL or bannerImageUrl is null, useEffect will redirect to settings.
+      // Otherwise, it will redirect to the intended page or '/'.
+
+    } catch (e: any)
+ {
       let errorMessage = "Failed to sign up with Google. Please try again.";
-      const errorCode = e.code; 
-      console.error("Google Sign-Up Error:", e); 
+      const errorCode = e.code;
+      console.error("Google Sign-Up Error:", e);
 
       if (errorCode === 'auth/popup-closed-by-user') {
         errorMessage = "Google Sign-Up was cancelled. Please try again.";
@@ -150,24 +163,25 @@ export default function RegisterPage() {
       });
     } finally {
       setIsGoogleLoading(false);
-      setAuthContextLoading(false); 
+      setAuthContextLoading(false);
     }
   };
 
-  if (authLoading || (!authLoading && user)) {
+  if (isInitializing || (authLoading && !user)) { // Show loader if still initializing or auth is loading and no user yet
      return (
         <div className="flex items-center justify-center min-h-screen bg-background">
             <Loader2 className="w-12 h-12 animate-spin text-primary" />
         </div>
     );
   }
+  // If user is already logged in and profile is complete, useEffect will redirect.
 
   return (
     <Container className="flex items-center justify-center min-h-[calc(100vh-var(--header-height)-1px)] py-12">
       <Card className="w-full max-w-lg shadow-2xl bg-card/80 backdrop-blur-sm">
          <CardHeader className="text-center">
           <div className="mx-auto mb-6">
-            <Logo iconSize={27} /> 
+            <Logo iconSize={27} />
           </div>
           <CardTitle className="text-3xl font-bold">Create an Account</CardTitle>
           <CardDescription>Join Qentai to discover and watch your favorite anime.</CardDescription>
@@ -186,7 +200,7 @@ export default function RegisterPage() {
               email: '',
               password: '',
               confirmPassword: '',
-              photoURL: '', 
+              photoURL: '',
               bannerImageUrl: '',
             }}
           >
