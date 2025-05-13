@@ -3,6 +3,7 @@
 import { db } from '@/lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, FirestoreError } from 'firebase/firestore';
 import type { Theme } from '@/context/ThemeContext';
+import { revalidatePath } from 'next/cache';
 
 const SETTINGS_COLLECTION = 'settings';
 const SITE_CONFIG_DOC_ID = 'siteConfiguration';
@@ -32,16 +33,14 @@ export async function getDefaultSiteTheme(): Promise<Theme | null> {
       const config = docSnap.data() as SiteConfiguration;
       return config.defaultTheme || null;
     }
-    return null; // No default theme set in Firestore
+    return null; 
   } catch (error) {
-    // It's important to handle the case where the settings document might not exist
-    // or there's a permission issue, especially on first load or if rules are restrictive.
     if (error instanceof FirestoreError && (error.code === 'permission-denied' || error.code === 'unauthenticated')) {
         console.warn(`Permission denied or unauthenticated access when fetching default site theme. This might be expected if anonymous users cannot read site settings. Falling back to application default. Error: ${error.message}`);
     } else {
         console.error("Error fetching default site theme:", handleFirestoreError(error, 'getDefaultSiteTheme').message);
     }
-    return null; // Fallback if error
+    return null; 
   }
 }
 
@@ -49,8 +48,10 @@ export async function updateDefaultSiteTheme(theme: Theme): Promise<void> {
   try {
     const docRef = doc(db, SETTINGS_COLLECTION, SITE_CONFIG_DOC_ID);
     await setDoc(docRef, { defaultTheme: theme, updatedAt: serverTimestamp() }, { merge: true });
+    revalidatePath('/'); // Revalidate all pages as theme can affect global styles
+    revalidatePath('/admin/theme-settings');
   } catch (error) {
     console.error("Error updating default site theme:", error);
-    throw handleFirestoreError(error, 'updateDefaultSiteTheme'); // Re-throw to be caught by the calling component
+    throw handleFirestoreError(error, 'updateDefaultSiteTheme'); 
   }
 }

@@ -14,20 +14,17 @@ import {
   Timestamp,
   FirestoreError,
 } from 'firebase/firestore';
-import type { Anime } from '@/types/anime'; // For potential future use if storing more data
+import { revalidatePath } from 'next/cache';
+
 
 const handleFirestoreError = (error: unknown, context: string): FirestoreError => {
   console.error(`Firestore Error in ${context}:`, error);
   if (error instanceof FirestoreError) {
     return error;
   }
-  // Create a generic FirestoreError if it's not already one
   const genericError = new FirestoreError('unknown', `An unknown error occurred in ${context}.`);
-  // Attempt to copy relevant properties if possible
-  if (typeof error === 'object' && error !== null) {
-    if ('message' in error && typeof error.message === 'string') {
-      (genericError as any).message = error.message;
-    }
+  if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+    (genericError as any).message = error.message;
   }
   return genericError;
 };
@@ -38,6 +35,8 @@ export const addToFavorites = async (userId: string, animeId: string): Promise<v
   const favRef = doc(db, 'users', userId, 'favorites', animeId);
   try {
     await setDoc(favRef, { animeId, addedAt: serverTimestamp() });
+    revalidatePath(`/anime/${animeId}`); // Revalidate the specific anime page
+    revalidatePath(`/profile`); // Revalidate the user's profile page
   } catch (error) {
     throw handleFirestoreError(error, `addToFavorites (user: ${userId}, anime: ${animeId})`);
   }
@@ -47,6 +46,8 @@ export const removeFromFavorites = async (userId: string, animeId: string): Prom
   const favRef = doc(db, 'users', userId, 'favorites', animeId);
   try {
     await deleteDoc(favRef);
+    revalidatePath(`/anime/${animeId}`);
+    revalidatePath(`/profile`);
   } catch (error) {
     throw handleFirestoreError(error, `removeFromFavorites (user: ${userId}, anime: ${animeId})`);
   }
@@ -81,6 +82,8 @@ export const addToWishlist = async (userId: string, animeId: string): Promise<vo
   const wishRef = doc(db, 'users', userId, 'wishlist', animeId);
   try {
     await setDoc(wishRef, { animeId, addedAt: serverTimestamp() });
+    revalidatePath(`/anime/${animeId}`);
+    revalidatePath(`/profile`);
   } catch (error) {
     throw handleFirestoreError(error, `addToWishlist (user: ${userId}, anime: ${animeId})`);
   }
@@ -90,6 +93,8 @@ export const removeFromWishlist = async (userId: string, animeId: string): Promi
   const wishRef = doc(db, 'users', userId, 'wishlist', animeId);
   try {
     await deleteDoc(wishRef);
+    revalidatePath(`/anime/${animeId}`);
+    revalidatePath(`/profile`);
   } catch (error) {
     throw handleFirestoreError(error, `removeFromWishlist (user: ${userId}, anime: ${animeId})`);
   }

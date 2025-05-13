@@ -18,9 +18,11 @@ import {
   limit,
   where, 
 } from 'firebase/firestore';
+import { revalidatePath } from 'next/cache';
 
 const usersCollection = collection(db, 'users');
-const ADMIN_EMAIL = 'ninjax.desi@gmail.com';
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'ninjax.desi@gmail.com';
+
 
 const handleFirestoreError = (error: unknown, context: string): FirestoreError => {
   console.error(`Firestore Error in ${context}:`, error);
@@ -55,7 +57,6 @@ export const upsertAppUserInFirestore = async (
       if (userData.email === ADMIN_EMAIL && existingData.role !== 'owner') {
         role = 'owner';
       } else if (userData.email === ADMIN_EMAIL && existingData.role === 'owner') {
-        // Role remains 'owner' if already owner
         role = 'owner';
       }
 
@@ -73,13 +74,11 @@ export const upsertAppUserInFirestore = async (
         updatedAt: serverTimestamp(),
       };
       
-      // Ensure photoURL and bannerImageUrl are explicitly set to null if provided as such or empty string
       if (userData.photoURL === '' || userData.photoURL === null) finalUserDataForDb.photoURL = null;
       if (userData.bannerImageUrl === '' || userData.bannerImageUrl === null) finalUserDataForDb.bannerImageUrl = null;
 
 
       Object.keys(finalUserDataForDb).forEach(key => finalUserDataForDb[key] === undefined && key !== 'photoURL' && key !== 'bannerImageUrl' && delete finalUserDataForDb[key]);
-      // Ensure photoURL and bannerImageUrl are kept if explicitly null
 
       await updateDoc(userRef, finalUserDataForDb);
       const updatedData = { 
@@ -89,7 +88,9 @@ export const upsertAppUserInFirestore = async (
         lastLoginAt: new Date().toISOString(), 
         updatedAt: new Date().toISOString() 
       };
-       return convertUserTimestampsForClient(updatedData);
+      revalidatePath(`/profile`);
+      revalidatePath(`/admin/user-management`);
+      return convertUserTimestampsForClient(updatedData);
 
     } else {
       role = userData.email === ADMIN_EMAIL ? 'owner' : 'member';
@@ -120,6 +121,7 @@ export const upsertAppUserInFirestore = async (
         lastLoginAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
+      revalidatePath(`/admin/user-management`);
       return convertUserTimestampsForClient(newUserDataForClient);
     }
   } catch (error) {
@@ -142,7 +144,6 @@ export const updateAppUserProfile = async (
         dataToUpdate.bannerImageUrl = profileData.bannerImageUrl === '' ? null : profileData.bannerImageUrl;
     }
     
-    // Clean undefined keys, but preserve explicit nulls for photoURL and bannerImageUrl
     Object.keys(dataToUpdate).forEach(key => {
         if (dataToUpdate[key] === undefined && key !== 'photoURL' && key !== 'bannerImageUrl') { 
              delete dataToUpdate[key]; 
@@ -151,6 +152,9 @@ export const updateAppUserProfile = async (
 
     if (Object.keys(dataToUpdate).length > 1 || (Object.keys(dataToUpdate).length === 1 && !dataToUpdate.hasOwnProperty('updatedAt'))) { 
         await updateDoc(userRef, dataToUpdate);
+        revalidatePath(`/profile`);
+        revalidatePath(`/profile/settings`);
+        revalidatePath(`/admin/user-management`); // if admin views this user
     }
   } catch (error) {
     throw handleFirestoreError(error, `updateAppUserProfile (uid: ${uid})`);
@@ -179,6 +183,7 @@ export const updateUserStatusInFirestore = async (uid: string, status: AppUser['
         throw new Error("The owner account cannot be banned.");
     }
     await updateDoc(userRef, { status: status, updatedAt: serverTimestamp() });
+    revalidatePath(`/admin/user-management`);
   } catch (error) {
     throw handleFirestoreError(error, `updateUserStatusInFirestore (uid: ${uid})`);
   }
@@ -201,6 +206,7 @@ export const updateUserRoleInFirestore = async (uid: string, newRole: AppUserRol
         throw new Error(`User with UID ${uid} not found.`);
       }
       await updateDoc(userRef, { role: newRole, updatedAt: serverTimestamp() });
+      revalidatePath(`/admin/user-management`);
     } catch (error) {
       throw handleFirestoreError(error, `updateUserRoleInFirestore (uid: ${uid})`);
     }
