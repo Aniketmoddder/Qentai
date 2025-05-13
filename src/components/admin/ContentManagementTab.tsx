@@ -1,6 +1,7 @@
+
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { getAllAnimes, deleteAnimeFromFirestore, updateAnimeIsFeatured } from '@/services/animeService';
@@ -34,11 +35,11 @@ export default function ContentManagementTab() {
   const { toast } = useToast();
   const router = useRouter();
 
-  const fetchAnimes = async () => {
+  const fetchAnimes = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const fetchedAnimes = await getAllAnimes(200); 
+      const fetchedAnimes = await getAllAnimes({ count: 200, filters: {} }); 
       setAnimes(fetchedAnimes);
     } catch (err) {
       console.error('Failed to fetch anime list:', err);
@@ -47,12 +48,11 @@ export default function ContentManagementTab() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchAnimes();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); 
+  }, [fetchAnimes]); 
 
   const handleDelete = async (animeId: string, animeTitle: string) => {
     try {
@@ -89,7 +89,7 @@ export default function ContentManagementTab() {
 
   const filteredAnimes = animes.filter(anime =>
     anime.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    anime.genre.some(g => g.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (anime.genre && anime.genre.some(g => g.toLowerCase().includes(searchTerm.toLowerCase()))) ||
     anime.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -159,8 +159,8 @@ export default function ContentManagementTab() {
                     <span>ID: {anime.id}</span> | <span>Type: <Badge variant="secondary" className="text-xs">{anime.type}</Badge></span> | <span>Status: <Badge variant={anime.status === 'Completed' ? 'default' : 'outline'} className={`text-xs ${anime.status === 'Completed' ? 'bg-green-500/20 text-green-700' : anime.status === 'Ongoing' ? 'bg-sky-500/20 text-sky-700' : '' }`}>{anime.status}</Badge></span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap gap-1">
-                    {anime.genre.slice(0,4).map(g => <Badge key={g} variant="outline" className="text-xs">{g}</Badge>)}
-                    {anime.genre.length > 4 && <Badge variant="outline" className="text-xs">+{anime.genre.length - 4} more</Badge>}
+                    {anime.genre?.slice(0,4).map(g => <Badge key={g} variant="outline" className="text-xs">{g}</Badge>)}
+                    {anime.genre && anime.genre.length > 4 && <Badge variant="outline" className="text-xs">+{anime.genre.length - 4} more</Badge>}
                   </div>
                 </div>
                 <div className="flex-shrink-0 flex flex-col sm:flex-row items-center gap-2 mt-3 sm:mt-0 w-full sm:w-auto">
@@ -213,3 +213,4 @@ export default function ContentManagementTab() {
     </Card>
   );
 }
+
