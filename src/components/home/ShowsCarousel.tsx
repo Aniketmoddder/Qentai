@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, EffectCoverflow } from 'swiper/modules'; // Removed Controller
+import { Autoplay, EffectCoverflow } from 'swiper/modules'; // Controller removed previously
 import CarouselItem from './CarouselItem';
 import { cn } from '@/lib/utils';
 import type { Anime } from '@/types/anime';
@@ -33,35 +33,35 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
         {title}
       </h2>
       <div className={cn(
-        "shows-carousel-container-wrapper", // New wrapper class for potential future styling
-        "w-full max-w-screen-lg mx-auto relative" // Centering and max-width
+        "shows-carousel-container-wrapper", 
+        "w-full max-w-screen-lg mx-auto relative" 
       )}>
         <Swiper
-          modules={[Autoplay, EffectCoverflow]} // Removed Controller module
+          modules={[Autoplay, EffectCoverflow]}
           effect="coverflow"
           grabCursor={true}
           centeredSlides={true}
           slidesPerView={'auto'}
-          loop={rankedShows.length > 5} // Loop only if enough slides
+          loop={rankedShows.length > 5} 
           autoplay={{
-            delay: 3500, // Slightly increased delay
+            delay: 3500,
             disableOnInteraction: false,
             pauseOnMouseEnter: true,
           }}
-          speed={700} // Smooth transition speed
+          speed={700} 
           coverflowEffect={{
-            rotate: 25, // Rotation of side slides
-            stretch: -20,  // Negative stretch for a tighter feel
-            depth: 120,   // Depth offset of side slides
-            modifier: 1,  // Effect multiplier
-            slideShadows: false, // Disable default shadows if using custom
+            rotate: 25, 
+            stretch: -20, 
+            depth: 120,  
+            modifier: 1, 
+            slideShadows: false, 
           }}
           onSlideChange={(swiper) => setActiveSlideIndex(swiper.realIndex)}
-          className="shows-swiper-container" // Global CSS class for Swiper instance
+          className="shows-swiper-container" 
         >
-          {rankedShows.map((show, index) => ( // Added index for virtualIndex
-            <SwiperSlide key={show.id} className="shows-swiper-slide" virtualIndex={index}> {/* Added virtualIndex */}
-              {({ isActive, isPrev, isNext }) => (
+          {rankedShows.map((show) => ( 
+            <SwiperSlide key={show.id} className="shows-swiper-slide"> {/* REMOVED virtualIndex prop */}
+              {({ isActive, isPrev, isNext }) => ( 
                 <CarouselItem
                   rank={show.rank}
                   imageUrl={show.coverImage || `https://placehold.co/180x270.png`}
