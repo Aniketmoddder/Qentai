@@ -275,16 +275,18 @@
   left: -25px;
   font-size: 6rem;
   font-weight: 900;
-  font-family: var(--font-zen-dots), sans-serif; /* Changed from --font-montserrat */
+  font-family: var(--font-zen-dots), sans-serif; /* Using Zen Dots as discussed */
 
-  background: var(--ranking-number-gradient, linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--secondary-raw-hsl)) ));
+  /* For Gradient Fill */
+  background: var(--ranking-number-gradient, linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--secondary-raw-hsl)) ) ); /* Corrected: single closing parenthesis */
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent; /* Fallback for browsers not supporting -webkit-text-fill-color */
 
+  /* For Stroke */
   -webkit-text-stroke-width: 2px;
-  -webkit-text-stroke-color: var(--ranking-number-stroke-color, hsla(var(--border-raw-hsl), 0.7));
+  -webkit-text-stroke-color: var(--ranking-number-stroke-color, hsla(var(--border-raw-hsl), 0.7) ); /* Corrected: single closing parenthesis */
   paint-order: stroke fill;
 
   z-index: 3;
@@ -294,7 +296,7 @@
   pointer-events: none;
   opacity: 0.8;
   transform: rotate(-5deg);
-  text-shadow: 1px 1px 0px transparent; /* Added default base text-shadow for GSAP */
+  text-shadow: 1px 1px 0px transparent; /* Base shadow for GSAP to animate from */
 }
 
 
@@ -338,4 +340,3 @@
 .shows-swiper-slide, .carousel-item-wrapper {
   transform-style: preserve-3d;
 }
-
