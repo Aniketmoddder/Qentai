@@ -1,3 +1,4 @@
+
 // src/components/home/HomeClientContent.tsx
 'use client';
 
@@ -340,14 +341,11 @@ export default function HomeClient({
           </section>
         )}
         
+        {/* Removed the duplicate h2 for Trending TV Shows here */}
         {trendingTvShows.length > 0 && (
-          <section className="pt-2 pb-8 md:pt-4 md:pb-12"> {/* Reduced top padding */}
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6 md:mb-8 text-center md:text-left font-zen-dots section-title-bar">
-              Trending TV Shows
-            </h2>
-            <ShowsCarousel tvShows={trendingTvShows} />
-          </section>
+          <ShowsCarousel tvShows={trendingTvShows} title="Trending TV Shows" /> 
         )}
+
 
         {trendingAnime.length > 0 && <AnimeCarousel title="Trending Now" animeList={trendingAnime} />}
         
@@ -378,3 +376,4 @@ export default function HomeClient({
     </>
   );
 }
+

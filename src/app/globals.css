@@ -50,6 +50,8 @@
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 243 79% 59%;
     --border-raw-hsl: 240 5% 13%;
+    --ranking-number-stroke-color: hsl(var(--border-raw-hsl) / 0.7);
+    --ranking-number-gradient: linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--secondary-raw-hsl)));
   }
 
   html[data-theme="light-pale-purple"] {
@@ -69,6 +71,8 @@
     --accent-raw-hsl: 270 85% 77%;
     --highlight-raw-hsl: 262 84% 72%;
     --border-raw-hsl: 220 13% 91%;
+    --ranking-number-stroke-color: hsl(var(--muted-foreground) / 0.6);
+    --ranking-number-gradient: linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--highlight-raw-hsl)));
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -88,6 +92,8 @@
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 291 92% 72%;
     --border-raw-hsl: 287 67% 18%;
+    --ranking-number-stroke-color: hsl(var(--border-raw-hsl) / 0.7);
+    --ranking-number-gradient: linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--secondary-raw-hsl)));
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -107,6 +113,8 @@
     --accent-raw-hsl: 157 100% 50%;
     --highlight-raw-hsl: 250 66% 62%;
     --border-raw-hsl: 231 25% 20%;
+    --ranking-number-stroke-color: hsl(var(--border-raw-hsl) / 0.7);
+    --ranking-number-gradient: linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--accent-raw-hsl)));
   }
 
   /* Global styles that apply to all themes */
@@ -198,16 +206,16 @@
 .swiper-button-next { right: 10px !important; }
 .swiper-button-disabled-custom { opacity: 0 !important; pointer-events: none !important; }
 
-/* Styles for the new ShowsCarousel */
+/* Styles for the ShowsCarousel */
 .shows-carousel-container-wrapper { 
-    perspective: 1500px; /* Increased perspective */
-    width: 100%; /* Ensure it takes full width available */
-    overflow: hidden; /* Prevent items from spilling out visually during extreme tilts if any */
+    perspective: 1500px; 
+    width: 100%; 
+    overflow: visible; /* Changed from hidden to visible to prevent clipping shadows/glows */
 }
 .shows-swiper-container {
-  padding-top: 20px; /* Space for lifted items */
-  padding-bottom: 40px; /* Space for item content and shadows */
-  overflow: visible !important; /* Important for coverflow effect and shadows */
+  padding-top: 20px; 
+  padding-bottom: 40px; 
+  overflow: visible !important; 
 }
 .shows-swiper-slide {
   display: flex;
@@ -215,85 +223,110 @@
   align-items: center;
   height: 360px; 
   box-sizing: border-box;
-  width: auto !important; /* Let Swiper determine based on slidesPerView and Coverflow */
+  width: auto !important; 
 }
 
 .carousel-item-wrapper {
   position: relative;
-  width: 180px; /* Fixed width for the item wrapper */
-  height: 100%; /* Takes full height of the slide */
+  width: 180px; 
+  height: 100%; 
   display: flex;
   flex-direction: column;
   justify-content: flex-end; 
   align-items: center;
   box-sizing: border-box;
-  transform-style: preserve-3d; /* Essential for GSAP 3D transforms */
+  transform-style: preserve-3d; 
 }
-.show-poster-container-link { /* Added this wrapper for the Link component */
+.show-poster-container-link { 
   display: block;
-  width: 100%; /* Takes width of parent (.carousel-item-wrapper) */
-  height: 270px; /* Fixed height for poster area */
-  transform-style: preserve-3d; /* Ensure 3D transforms are seen */
+  width: 100%; 
+  height: 270px; 
+  transform-style: preserve-3d; 
 }
 .show-poster-container {
-  position: relative; /* Keep relative for normal flow within its link wrapper */
-  width: 180px; /* Fixed width for the poster */
-  height: 270px; /* Fixed height for the poster */
+  position: relative; 
+  width: 180px; 
+  height: 270px; 
   z-index: 2;
   border-radius: 12px;
-  box-shadow: 0 12px 30px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.2); /* Default shadow */
-  overflow: hidden; /* Important for rounded corners on image and glint */
+  /* Default shadow will be managed by GSAP for active/inactive states */
+  box-shadow: 0 8px 20px hsla(var(--border-raw-hsl, 240 5% 13%), 0.25);
+  overflow: hidden; 
   will-change: transform, opacity, box-shadow;
   cursor: pointer;
-  transition: box-shadow 0.3s ease; /* Smooth shadow transition */
-  transform-style: preserve-3d; /* For GSAP 3D effects on the poster itself */
+  transition: box-shadow 0.3s ease; 
+  transform-style: preserve-3d; 
 }
-.show-poster-container:hover {
-   box-shadow: 0 15px 35px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.45); /* Enhanced hover shadow */
+.show-poster-container:hover { /* Subtle hover shadow for non-active cards */
+   box-shadow: 0 10px 25px hsla(var(--border-raw-hsl, 240 5% 13%), 0.35);
 }
 .show-poster {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 12px; /* Image itself should also have radius if poster container overflows */
+  border-radius: 12px; 
 }
 .ranking-number {
   position: absolute;
-  bottom: 10px; /* Adjusted for potentially smaller poster if item height reduces */
-  left: -25px;  /* Keep the overlapping style */
-  font-size: 6rem; /* Slightly smaller to fit potential card size adjustments */
-  font-weight: 900; /* Inter Black or similar bold variant */
-  font-family: var(--font-montserrat), sans-serif; /* Fallback font */
-  color: hsl(var(--foreground));
-  -webkit-text-stroke: 2px hsl(var(--border)); /* Use theme border color */
+  bottom: 10px; 
+  left: -25px;  
+  font-size: 6rem; 
+  font-weight: 900; 
+  font-family: var(--font-montserrat), sans-serif; /* Keep Montserrat or switch to Orbitron/Zen Dots if preferred */
+  
+  /* Gradient Fill for Text */
+  background: var(--ranking-number-gradient, linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--secondary-raw-hsl)) ));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent; /* Fallback */
+
+  -webkit-text-stroke-width: 2px;
+  -webkit-text-stroke-color: var(--ranking-number-stroke-color, hsl(var(--border-raw-hsl) / 0.7));
   paint-order: stroke fill;
+
   z-index: 3;
-  line-height: 0.7; /* Tight line height for large numbers */
+  line-height: 0.7; 
   user-select: none;
   will-change: transform, opacity, text-shadow;
   pointer-events: none;
-  opacity: 0.8; /* Initial opacity before GSAP animation */
-  transform: rotate(-5deg); /* Initial playful rotation */
-  text-shadow: 1px 1px 1px hsla(var(--border-raw-hsl, 240 5% 13%), 0.2); /* Subtle depth */
+  opacity: 0.8; 
+  transform: rotate(-5deg); 
+  text-shadow: 1px 1px 0px hsl(var(--background)/0.5); /* Subtle depth against gradient */
 }
+
 
 .glint-overlay {
   content: '';
   position: absolute;
   top: 0;
-  left: -150%; /* Start off-screen */
-  width: 40%; /* Glint width */
+  left: -150%; 
+  width: 40%; 
   height: 100%;
   background: linear-gradient(
     to right,
     transparent 0%,
-    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%, /* Use theme's highlight color */
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%, 
     transparent 100%
   );
-  transform: skewX(-25deg); /* Angled shine */
-  opacity: 0; /* Initially hidden */
-  pointer-events: none; /* Click through */
-  z-index: 1; /* Above the image in its container */
-  border-radius: inherit; /* Match poster radius */
+  transform: skewX(-25deg); 
+  opacity: 0; 
+  pointer-events: none; 
+  z-index: 1; 
+  border-radius: inherit; 
+}
+
+.carousel-title { /* Existing class, ensure it's styled well */
+    font-size: 2.2em; /* Slightly adjusted if needed */
+    font-weight: 700; /* Orbitron is already bold */
+    font-family: var(--font-orbitron); /* Use Orbitron as per global style */
+    margin-bottom: 30px;
+    text-align: left;
+    width: 100%;
+    /* max-width: 1000px; Remove if it constrains too much, container handles width */
+    padding: 0; /* Remove padding if container handles it */
+    box-sizing: border-box;
+    letter-spacing: -0.5px;
+    /* No margin-left/right auto, let container handle centering */
+    @apply section-title-bar text-foreground; /* Use existing utility for bar */
 }
