@@ -5,13 +5,13 @@ import React, { useState, useMemo } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Autoplay, EffectCoverflow, Controller } from 'swiper/modules';
 import CarouselItem from './CarouselItem';
-import type { Anime } from '@/types/anime';
 import { cn } from '@/lib/utils';
+import type { Anime } from '@/types/anime';
 
-import 'swiper/css';
-import 'swiper/css/effect-coverflow';
-import 'swiper/css/autoplay';
-// Ensure Carousel.css equivalent styles are in globals.css or a module
+// CSS imports are in globals.css as per previous instruction
+// import 'swiper/css';
+// import 'swiper/css/effect-coverflow';
+// import 'swiper/css/autoplay';
 
 interface ShowsCarouselProps {
   tvShows: Anime[];
@@ -27,7 +27,7 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
   );
 
   if (!rankedShows || rankedShows.length === 0) {
-    return null; // Don't render if no TV shows
+    return null;
   }
 
   return (
@@ -36,8 +36,8 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
         {title}
       </h2>
       <div className={cn(
-        "shows-carousel-container-wrapper", // Use this for global CSS targeting if needed
-        "w-full max-w-screen-lg mx-auto relative" // Centering and max-width
+        "shows-carousel-container-wrapper",
+        "w-full max-w-screen-lg mx-auto relative"
       )}>
         <Swiper
           modules={[Autoplay, EffectCoverflow, Controller]}
@@ -45,7 +45,7 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
           grabCursor={true}
           centeredSlides={true}
           slidesPerView={'auto'}
-          loop={rankedShows.length > 5} // Loop only if enough items
+          loop={rankedShows.length > 5}
           autoplay={{
             delay: 3500,
             disableOnInteraction: false,
@@ -53,17 +53,17 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
           }}
           speed={700}
           coverflowEffect={{
-            rotate: 25,      // Slightly less rotation
-            stretch: -20,   // Pull slides slightly closer
-            depth: 120,     // More pronounced depth
+            rotate: 25,
+            stretch: -20,
+            depth: 120,
             modifier: 1,
-            slideShadows: false, // We'll use custom styling or Tailwind shadows
+            slideShadows: false,
           }}
           onSlideChange={(swiper) => setActiveSlideIndex(swiper.realIndex)}
-          className="shows-swiper-container" // Use this for global CSS targeting if needed
+          className="shows-swiper-container"
         >
-          {rankedShows.map((show) => (
-            <SwiperSlide key={show.id} className="shows-swiper-slide"> {/* Use for global CSS */}
+          {rankedShows.map((show, index) => ( // Added index for virtualIndex
+            <SwiperSlide key={show.id} className="shows-swiper-slide" virtualIndex={index}> {/* Added virtualIndex */}
               {({ isActive, isPrev, isNext }) => (
                 <CarouselItem
                   rank={show.rank}
@@ -82,5 +82,4 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
     </section>
   );
 };
-
 export default ShowsCarousel;

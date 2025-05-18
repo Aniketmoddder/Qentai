@@ -12,8 +12,8 @@ interface CarouselItemProps {
   imageUrl: string;
   altText: string;
   isActive: boolean;
-  isPrev: boolean; // Hint for previous visible slide
-  isNext: boolean; // Hint for next visible slide
+  isPrev: boolean;
+  isNext: boolean;
   showId: string;
 }
 
@@ -45,7 +45,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       tl.to(posterEl, { scale: 0.82, y: 0, opacity: 0.6, rotationZ: tiltAngle }, 0)
         .to(numberEl, { scale: 0.88, y: 8, x: -8, opacity: 0.5, rotationZ: tiltAngle / 1.6 }, "<0.05");
     }
-  }, [isActive, isPrev, isNext]);
+  }, [isActive, isPrev, isNext, animationDefaults]); // Added animationDefaults
 
   useEffect(() => {
     const itemElCurrent = itemRef.current;
@@ -68,17 +68,19 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
     itemElCurrent.addEventListener('mouseleave', handleMouseLeave);
 
     return () => {
-      itemElCurrent.removeEventListener('mouseenter', handleMouseEnter);
-      itemElCurrent.removeEventListener('mouseleave', handleMouseLeave);
+      if (itemElCurrent) {
+        itemElCurrent.removeEventListener('mouseenter', handleMouseEnter);
+        itemElCurrent.removeEventListener('mouseleave', handleMouseLeave);
+      }
       gsap.killTweensOf([posterEl, numberEl]);
     };
   }, []);
 
   return (
-    <div className="carousel-item-wrapper" ref={itemRef}> {/* Apply .carousel-item-wrapper styles from globals.css */}
+    <div className="carousel-item-wrapper" ref={itemRef}>
       <div className="ranking-number" ref={numberRef}>{rank}</div>
-      <Link href={`/anime/${showId}`} passHref legacyBehavior>
-        <a className="show-poster-container-link"> {/* Wrapper for Link and poster */}
+      <Link href={`/anime/${showId}`} passHref legacyBehavior={false}>
+        <div className="show-poster-container-link">
           <div className="show-poster-container" ref={posterContainerRef}>
             <Image
               src={imageUrl || `https://placehold.co/180x270.png`}
@@ -90,10 +92,9 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
               priority={rank <= 3}
             />
           </div>
-        </a>
+        </div>
       </Link>
     </div>
   );
 };
-
 export default CarouselItem;
