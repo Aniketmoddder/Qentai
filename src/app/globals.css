@@ -39,8 +39,8 @@
     --ring: 260 100% 75%;
     --highlight: 243 79% 59%; /* #4F46E5 */
     --surface: hsl(var(--card));
-    --text-heading: hsl(var(--foreground));
-    --text-body: hsl(var(--foreground));
+    --text-heading: hsl(var(--foreground)); /* Was #FFFFFF, now themeable */
+    --text-body: hsl(var(--foreground)); /* Was #CBD5E1, now themeable */
     --radius: 0.75rem;
     --chart-1: 260 100% 70%; --chart-2: 262 89% 66%; --chart-3: 337 88% 70%; --chart-4: 243 79% 59%; --chart-5: 215 25% 75%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.15); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
@@ -146,11 +146,12 @@
 @layer utilities {
   .btn-primary-gradient {
     @apply text-primary-foreground transition-all duration-300 ease-in-out shadow-md hover:shadow-primary/50;
-    background: hsl(var(--primary));
+    background: hsl(var(--primary)); /* Fallback */
     background-size: 150% auto;
   }
+  /* Theme specific gradients for buttons */
   html[data-theme="dark-purple-premium"] .btn-primary-gradient {
-    background-image: linear-gradient(135deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
+    background-image: linear-gradient(135deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--highlight-raw-hsl)) 100%);
   }
   html[data-theme="light-pale-purple"] .btn-primary-gradient {
     background-image: linear-gradient(90deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
@@ -161,6 +162,7 @@
   html[data-theme="futuristic-cyberpunk"] .btn-primary-gradient {
     background-image: linear-gradient(90deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
   }
+  /* Universal hover effect */
   html[data-theme] .btn-primary-gradient:hover {
     background-position: right center;
   }
@@ -208,23 +210,22 @@
 
 /* Styles for the ShowsCarousel */
 .shows-carousel-container-wrapper {
-    perspective: 1500px;
+    perspective: 1500px; /* Enhanced perspective */
     width: 100%;
-    overflow: visible;
+    overflow: visible; /* Important for Coverflow & custom styling */
 }
 .shows-swiper-container {
-  padding-top: 20px;
-  padding-bottom: 40px;
+  padding-top: 20px; /* Space for items lifting up */
+  padding-bottom: 40px; /* Space for shadows or items extending down */
   overflow: visible !important;
-  /* perspective: 1200px; /* For 3D effects on children */
 }
 .shows-swiper-slide {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 360px;
+  height: 360px; /* Consistent slide height */
   box-sizing: border-box;
-  width: auto !important; /* Let Swiper handle width with slidesPerView='auto' */
+  width: auto !important; /* Important for slidesPerView: 'auto' in Swiper */
 }
 
 .carousel-item-wrapper {
@@ -233,29 +234,29 @@
   height: 100%; /* Full height of the slide */
   display: flex;
   flex-direction: column;
-  justify-content: flex-end; /* Aligns poster to bottom, number might need absolute */
+  justify-content: flex-end; /* Aligns poster to bottom */
   align-items: center;
   box-sizing: border-box;
   transform-style: preserve-3d; /* Enable 3D transforms for children */
 }
-.show-poster-container-link { /* New wrapper for the link around poster */
+.show-poster-container-link { /* Wrapper for the link around poster */
   display: block;
-  width: 100%; /* Takes width of .carousel-item-wrapper */
+  width: 100%;
   height: 270px; /* Fixed height for poster area */
-  transform-style: preserve-3d; /* For 3D animations on poster */
+  transform-style: preserve-3d;
+  position: relative; /* Needed for z-index to work with glint */
 }
 .show-poster-container {
-  position: relative; /* Keep relative if it's the direct child of the flex container for centering */
-  width: 180px;
-  height: 270px;
+  position: relative;
+  width: 100%; /* Takes full width of link wrapper */
+  height: 100%; /* Takes full height of link wrapper */
   z-index: 2;
   border-radius: 12px;
-  /* Default shadow managed by GSAP for active/inactive states */
-  box-shadow: 0 8px 20px hsla(var(--border-raw-hsl, 240 5% 13%), 0.25);
-  overflow: hidden; /* Important for glint effect if it's a child */
+  box-shadow: 0 8px 20px hsla(var(--border-raw-hsl, 240 5% 13%), 0.25); /* Default shadow */
+  overflow: hidden; /* For glint effect */
   will-change: transform, opacity, box-shadow;
   cursor: pointer;
-  transition: box-shadow 0.3s ease; /* Smooth transition for non-GSAP shadow changes */
+  transition: box-shadow 0.3s ease;
   transform-style: preserve-3d; /* Enable 3D transforms on the poster itself */
 }
 .show-poster-container:hover { /* Subtle hover shadow for non-active cards */
@@ -266,17 +267,16 @@
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 12px; /* Match container's border-radius */
+  border-radius: 12px;
 }
 .ranking-number {
   position: absolute;
-  bottom: 10px; /* Fine-tune as needed */
-  left: -25px;  /* Fine-tune for desired overlap */
-  font-size: 6rem; /* Slightly reduced for balance with 180px card */
-  font-weight: 900; /* Make sure Montserrat is loaded with 900 weight */
-  font-family: var(--font-montserrat), sans-serif; /* Or Orbitron/Zen Dots if preferred */
+  bottom: 10px;
+  left: -25px;
+  font-size: 6rem;
+  font-weight: 900;
+  font-family: var(--font-zen-dots), sans-serif; /* Changed from --font-montserrat */
 
-  /* Gradient Fill for Text - This is key */
   background: var(--ranking-number-gradient, linear-gradient(45deg, hsl(var(--primary-raw-hsl)), hsl(var(--secondary-raw-hsl)) ));
   -webkit-background-clip: text;
   background-clip: text;
@@ -285,16 +285,16 @@
 
   -webkit-text-stroke-width: 2px;
   -webkit-text-stroke-color: var(--ranking-number-stroke-color, hsla(var(--border-raw-hsl), 0.7));
-  paint-order: stroke fill; /* Ensures stroke is behind the fill */
+  paint-order: stroke fill;
 
-  z-index: 3; /* Above poster, below any interactive elements if needed */
-  line-height: 0.7; /* Adjusted for tighter fit */
+  z-index: 3;
+  line-height: 0.7;
   user-select: none;
   will-change: transform, opacity, text-shadow;
-  pointer-events: none; /* So it doesn't interfere with card interactions */
-  opacity: 0.8; /* Base opacity, can be animated */
-  transform: rotate(-5deg); /* Initial slight rotation, can be animated */
-  text-shadow: 1px 1px 0px hsl(var(--background)/0.5); /* Subtle depth against gradient */
+  pointer-events: none;
+  opacity: 0.8;
+  transform: rotate(-5deg);
+  text-shadow: 1px 1px 0px transparent; /* Added default base text-shadow for GSAP */
 }
 
 
@@ -302,26 +302,26 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -150%; /* Start off-screen */
-  width: 40%; /* Width of the glint */
+  left: -150%;
+  width: 40%;
   height: 100%;
   background: linear-gradient(
     to right,
     transparent 0%,
-    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%, /* Use HSL for theme-ability */
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%,
     transparent 100%
   );
-  transform: skewX(-25deg); /* Angled glint */
-  opacity: 0; /* Initially hidden */
-  pointer-events: none; /* No interaction */
-  z-index: 1; /* Above poster image, below other UI if any */
-  border-radius: inherit; /* Inherit border radius from parent */
+  transform: skewX(-25deg);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
 }
 
 .carousel-title {
     font-size: 2.6em;
     font-weight: 900;
-    font-family: var(--font-zen-dots); /* Using Zen Dots as per global h1 styling */
+    font-family: var(--font-zen-dots);
     margin-bottom: 40px;
     text-align: left;
     width: 100%;
@@ -332,5 +332,10 @@
     margin-left: auto;
     margin-right: auto;
     @apply section-title-bar text-foreground;
+}
+
+/* Ensure perspective for items if using 3D transforms directly on them */
+.shows-swiper-slide, .carousel-item-wrapper {
+  transform-style: preserve-3d;
 }
 
