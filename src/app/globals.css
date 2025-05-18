@@ -6,6 +6,8 @@
 /* Swiper.js Styles */
 @import 'swiper/css';
 @import 'swiper/css/navigation';
+@import 'swiper/css/effect-coverflow'; /* For ShowsCarousel */
+@import 'swiper/css/autoplay'; /* For ShowsCarousel */
 
 
 @tailwind base;
@@ -387,4 +389,90 @@
 .swiper-button-disabled-custom { /* Custom class for disabled state */
   opacity: 0 !important;
   pointer-events: none !important;
+}
+
+
+/* Styles for the new ShowsCarousel */
+.shows-swiper-container {
+  padding-top: 20px; /* Space for lifted items */
+  padding-bottom: 40px; /* Space for item content and shadows */
+  overflow: visible !important; /* Allow overflow for coverflow effect if needed */
+}
+
+.shows-swiper-slide {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 360px; /* Height of the slide area */
+  box-sizing: border-box;
+  width: auto !important; /* Allow items to size themselves for coverflow */
+}
+
+.carousel-item-wrapper { /* This is the root div in CarouselItem.tsx */
+  position: relative;
+  width: 180px; /* Width of the card content itself */
+  height: 100%; /* Full height of the slide */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end; /* Align content (poster) to bottom */
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.show-poster-container-link {
+  display: block; /* Make the link a block element to wrap the poster */
+  width: 100%;
+  height: 270px; /* Explicit height for the poster part */
+}
+
+.show-poster-container {
+  position: relative;
+  width: 180px;
+  height: 270px;
+  z-index: 2;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px hsla(var(--primary), 0.2); /* Use theme color for shadow */
+  overflow: hidden;
+  will-change: transform, opacity;
+  cursor: pointer;
+  transition: box-shadow 0.3s ease;
+}
+.show-poster-container:hover {
+   box-shadow: 0 15px 35px hsla(var(--primary), 0.35);
+}
+
+
+.show-poster { /* This is the actual <img> tag */
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px; /* Inherit or set explicitly */
+}
+
+.ranking-number {
+  position: absolute;
+  bottom: 10px; /* Adjusted for better visual balance */
+  left: -25px;  /* Overlap more significantly */
+  font-size: 6rem; /* Adjust based on visual preference */
+  font-weight: 900;
+  color: hsl(var(--foreground)); /* Use theme foreground color */
+  -webkit-text-stroke: 2px hsl(var(--border)); /* Use theme border color */
+  paint-order: stroke fill;
+  z-index: 3;
+  line-height: 0.7; /* Tighten line height */
+  user-select: none;
+  will-change: transform, opacity;
+  pointer-events: none; /* So it doesn't interfere with poster hover */
+  opacity: 0.8; /* Slightly transparent for better blending */
+  transform: rotate(-5deg); /* Slight playful rotation */
+}
+
+/* Swiper Active/Inactive state styling if needed beyond GSAP */
+.shows-swiper-slide.swiper-slide-active .show-poster-container {
+  /* GSAP handles most of this, but you could add base active styles */
+}
+
+.shows-swiper-slide:not(.swiper-slide-active) .show-poster-container {
+  /* GSAP handles most of this */
 }

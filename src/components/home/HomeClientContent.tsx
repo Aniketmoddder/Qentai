@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
+import ShowsCarousel from '@/components/home/ShowsCarousel'; // New Carousel
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -16,17 +17,8 @@ import HeroSkeleton from '@/components/home/HeroSkeleton';
 import AnimeCardSkeleton from '@/components/anime/AnimeCardSkeleton';
 import HomePageGenreSection from './HomePageGenreSection';
 import RecommendationsSection from '../anime/recommendations-section';
+import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 
-
-const shuffleArray = <T,>(array: T[]): T[] => {
-  if (!array || array.length === 0) return [];
-  const newArray = [...array];
-  for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-  }
-  return newArray;
-};
 
 const getYouTubeVideoId = (url?: string): string | null => {
   if (!url) return null;
@@ -50,58 +42,56 @@ const getYouTubeVideoId = (url?: string): string | null => {
 };
 
 export interface HomeClientProps {
-  initialAllAnimeData?: Anime[];
-  initialFeaturedAnimes?: Anime[];
+  initialAllAnimeData: Anime[];
+  initialFeaturedAnimes: Anime[];
   fetchError: string | null;
 }
 
 const ARTIFICIAL_SKELETON_DELAY = 750; 
 
 export default function HomeClient({
-    initialAllAnimeData,
-    initialFeaturedAnimes,
+    initialAllAnimeData: rawInitialAllAnimeData,
+    initialFeaturedAnimes: rawInitialFeaturedAnimes,
     fetchError: initialFetchError
 }: HomeClientProps) {
-  const [allAnime, setAllAnime] = useState<Anime[]>(initialAllAnimeData || []);
-  const [featuredAnimesList, setFeaturedAnimesList] = useState<Anime[]>(initialFeaturedAnimes || []);
+  const [allAnime, setAllAnime] = useState<Anime[]>(() => rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
+  const [featuredAnimesList, setFeaturedAnimesList] = useState<Anime[]>(() => rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError);
-  const [isLoadingData, setIsLoadingData] = useState(!initialAllAnimeData || !initialFeaturedAnimes);
-  const [isInitialSkeletonPhase, setIsInitialSkeletonPhase] = useState(true);
+  
+  const [isArtificiallyLoading, setIsArtificiallyLoading] = useState(true); // For the stylish skeleton delay
+  const [isDataActuallyLoading, setIsDataActuallyLoading] = useState(
+    !rawInitialAllAnimeData || rawInitialAllAnimeData.length === 0
+  );
 
   const [playTrailer, setPlayTrailer] = useState(false);
   const [isTrailerMuted, setIsTrailerMuted] = useState(true);
 
   useEffect(() => {
-    // This effect handles the initial data setting and error state.
-    // If initial props are provided, data loading might be considered complete.
+    const artificialDelayTimer = setTimeout(() => {
+      setIsArtificiallyLoading(false);
+    }, ARTIFICIAL_SKELETON_DELAY);
+
+    return () => clearTimeout(artificialDelayTimer);
+  }, []);
+
+  useEffect(() => {
     if (initialFetchError) {
       setFetchError(initialFetchError);
       setAllAnime([]);
       setFeaturedAnimesList([]);
-      setIsLoadingData(false);
-    } else if (initialAllAnimeData && initialFeaturedAnimes) {
-      setAllAnime(initialAllAnimeData);
-      setFeaturedAnimesList(initialFeaturedAnimes);
-      setFetchError(null);
-      setIsLoadingData(false); 
+      setIsDataActuallyLoading(false);
     } else {
-      // This case means initial data was not provided, so actual fetching might be needed
-      // or it's an empty state.
-      setIsLoadingData(true); // Or true if you intend to fetch client-side as fallback
+      // This assumes data is passed correctly and processed by useState initializers
+      setAllAnime(rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
+      setFeaturedAnimesList(rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
+      setFetchError(null);
+      setIsDataActuallyLoading(rawInitialAllAnimeData.length === 0 && rawInitialFeaturedAnimes.length === 0);
     }
-  }, [initialAllAnimeData, initialFeaturedAnimes, initialFetchError]);
-
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialSkeletonPhase(false);
-    }, ARTIFICIAL_SKELETON_DELAY);
-    return () => clearTimeout(timer);
-  }, []);
+  }, [rawInitialAllAnimeData, rawInitialFeaturedAnimes, initialFetchError]);
 
 
   const heroAnime = useMemo(() => {
-    return featuredAnimesList[0] || (allAnime.length > 0 ? shuffleArray([...allAnime])[0] : undefined);
+    return featuredAnimesList[0] || (allAnime.length > 0 ? allAnime.sort((a,b) => (b.popularity || 0) - (a.popularity || 0))[0] : undefined);
   }, [featuredAnimesList, allAnime]);
 
   const youtubeVideoId = useMemo(() => {
@@ -110,36 +100,38 @@ export default function HomeClient({
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (heroAnime && youtubeVideoId && !playTrailer && !fetchError && !isLoadingData && !isInitialSkeletonPhase) {
+    if (heroAnime && youtubeVideoId && !playTrailer && !fetchError && !isDataActuallyLoading && !isArtificiallyLoading) {
       timer = setTimeout(() => {
         setPlayTrailer(true);
       }, 3000); 
     }
     return () => clearTimeout(timer);
-  }, [heroAnime, youtubeVideoId, playTrailer, fetchError, isLoadingData, isInitialSkeletonPhase]);
+  }, [heroAnime, youtubeVideoId, playTrailer, fetchError, isDataActuallyLoading, isArtificiallyLoading]);
 
   const trendingAnime = useMemo(() => {
-    return allAnime.length > 0 ? shuffleArray([...allAnime]).slice(0, 15) : []; // Max 15 for carousel
+    return allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15) : [];
   }, [allAnime]);
+
+  const trendingTvShows = useMemo(() => {
+    return trendingAnime.filter(anime => anime.type === 'TV').slice(0,15);
+  }, [trendingAnime]);
 
   const popularAnime = useMemo(() => {
     return allAnime.length > 0
     ? [...allAnime]
         .filter(a => a.averageRating !== undefined && a.averageRating !== null && a.averageRating >= 7.0)
         .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-        .slice(0, 15) // Max 15
+        .slice(0, 15) 
     : [];
   }, [allAnime]);
 
   const recentlyAddedAnime = useMemo(() => {
     return allAnime.length > 0
     ? [...allAnime].sort((a,b) => {
-        const dateAValue = a.updatedAt || a.createdAt || (a.year ? new Date(a.year, 0, 1).toISOString() : '1970-01-01T00:00:00.000Z');
-        const dateBValue = b.updatedAt || b.createdAt || (a.year ? new Date(a.year, 0, 1).toISOString() : '1970-01-01T00:00:00.000Z');
-        const dateA = new Date(dateAValue).getTime();
-        const dateB = new Date(dateBValue).getTime();
+        const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
         return dateB - dateA;
-      }).slice(0,15) // Max 15
+      }).slice(0,15)
     : [];
   }, [allAnime]);
 
@@ -147,10 +139,10 @@ export default function HomeClient({
     return allAnime.length > 0 ? [...allAnime]
     .filter(a => a.averageRating !== undefined && a.averageRating !== null)
     .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
-    .slice(0, 10) : []; // Top 10 for list view
+    .slice(0, 10) : [];
   }, [allAnime]);
 
-  const showSkeleton = isInitialSkeletonPhase || (isLoadingData && !fetchError);
+  const showSkeleton = isArtificiallyLoading || (isDataActuallyLoading && !fetchError);
 
   if (showSkeleton) {
     return (
@@ -158,16 +150,16 @@ export default function HomeClient({
         <HeroSkeleton />
         <Container className="py-8">
           <div className="mb-8">
-            <AnimeCardSkeleton className="h-8 w-1/3 mb-4 rounded-md bg-muted/50" />
+            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Title Skeleton */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <AnimeCardSkeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50" />
-                <AnimeCardSkeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50 hidden md:block" />
+                <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50" /> {/* Featured Card Skeleton */}
+                <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50 hidden md:block" />
             </div>
           </div>
-          {[...Array(3)].map((_, i) => (
+          {[...Array(4)].map((_, i) => ( // Skeleton for 4 carousels
             <div key={`carousel-skeleton-${i}`} className="mb-8">
-              <AnimeCardSkeleton className="h-8 w-1/3 mb-4 rounded-md bg-muted/50" />
-              <div className="flex overflow-x-auto pb-4 gap-3 sm:gap-4 md:gap-x-5 scrollbar-hide">
+              <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Carousel Title Skeleton */}
+              <div className="flex overflow-x-auto pb-4 gap-3 sm:gap-4 scrollbar-hide">
                 {[...Array(5)].map((_, j) => (
                   <div key={`card-skeleton-${i}-${j}`} className="flex-shrink-0">
                     <AnimeCardSkeleton />
@@ -177,18 +169,18 @@ export default function HomeClient({
             </div>
           ))}
            <div className="mb-8">
-            <AnimeCardSkeleton className="h-8 w-1/3 mb-6 rounded-md bg-muted/50" />
+            <Skeleton className="h-8 w-1/3 mb-6 rounded bg-muted/50" /> {/* Top Anime List Title Skeleton */}
             <div className="space-y-3">
-                {[...Array(5)].map((_, k) => (
-                    <AnimeCardSkeleton key={`top-item-skeleton-${k}`} className="h-28 w-full rounded-lg bg-muted/50" />
+                {[...Array(5)].map((_, k) => ( // Skeleton for 5 top anime list items
+                    <Skeleton key={`top-item-skeleton-${k}`} className="h-28 w-full rounded-lg bg-muted/50" />
                 ))}
             </div>
           </div>
            <div className="mb-8">
-            <AnimeCardSkeleton className="h-8 w-1/3 mb-4 rounded-md bg-muted/50" />
+            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Genre Section Title Skeleton */}
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-                {[...Array(6)].map((_, l) => (
-                    <AnimeCardSkeleton key={`genre-skeleton-${l}`} className="h-[100px] md:h-[120px] rounded-lg bg-muted/50" />
+                {[...Array(6)].map((_, l) => ( // Skeleton for 6 genre cards
+                    <Skeleton key={`genre-skeleton-${l}`} className="h-[100px] md:h-[120px] rounded-lg bg-muted/50" />
                 ))}
             </div>
           </div>
@@ -214,7 +206,7 @@ export default function HomeClient({
     );
   }
 
-  const noContentAvailable = !isLoadingData && !fetchError && !isInitialSkeletonPhase && allAnime.length === 0 && featuredAnimesList.length === 0 && !heroAnime;
+  const noContentAvailable = !isDataActuallyLoading && !fetchError && !isArtificiallyLoading && allAnime.length === 0 && featuredAnimesList.length === 0 && !heroAnime;
 
   return (
     <>
@@ -234,7 +226,7 @@ export default function HomeClient({
               </div>
             ) : (
               <Image
-                src={heroAnime.bannerImage || `https://picsum.photos/seed/${heroAnime.id}-hero/1600/900`}
+                src={heroAnime.bannerImage || `https://placehold.co/1600x900.png`}
                 alt={`${heroAnime.title} banner`}
                 fill
                 style={{ objectFit: 'cover' }}
@@ -303,7 +295,7 @@ export default function HomeClient({
         </section>
       )}
 
-      <Container className="py-8"> {/* Removed overflow-x-clip */}
+      <Container className="py-8">
         {noContentAvailable && (
            <div className="my-8 p-6 bg-card border border-border rounded-lg text-center">
             <h3 className="font-semibold text-xl font-orbitron">No Anime Found</h3>
@@ -326,6 +318,8 @@ export default function HomeClient({
             </div>
           </section>
         )}
+        
+        {trendingTvShows.length > 0 && <ShowsCarousel tvShows={trendingTvShows} title="Trending TV Shows" />}
 
         {trendingAnime.length > 0 && <AnimeCarousel title="Trending Now" animeList={trendingAnime} />}
         
