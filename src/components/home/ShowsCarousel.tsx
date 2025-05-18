@@ -3,12 +3,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, EffectCoverflow } from 'swiper/modules'; // Controller removed previously
+import { Autoplay, EffectCoverflow } from 'swiper/modules';
 import CarouselItem from './CarouselItem';
 import { cn } from '@/lib/utils';
 import type { Anime } from '@/types/anime';
 
-// CSS imports are in globals.css
+// Swiper styles from globals.css are applied via className="shows-swiper-container"
+// and specific .swiper-slide styling within globals.css if needed.
 
 interface ShowsCarouselProps {
   tvShows: Anime[];
@@ -16,7 +17,7 @@ interface ShowsCarouselProps {
 }
 
 const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trending TV Shows" }) => {
-  const [activeSlideIndex, setActiveSlideIndex] = useState(0);
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0); 
 
   const rankedShows = useMemo(() =>
     tvShows.map((show, index) => ({ ...show, rank: index + 1 })),
@@ -24,7 +25,7 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
   );
 
   if (!rankedShows || rankedShows.length === 0) {
-    return null;
+    return null; 
   }
 
   return (
@@ -41,11 +42,11 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
           effect="coverflow"
           grabCursor={true}
           centeredSlides={true}
-          slidesPerView={'auto'}
+          slidesPerView={'auto'} 
           loop={rankedShows.length > 5} 
           autoplay={{
             delay: 3500,
-            disableOnInteraction: false,
+            disableOnInteraction: false, 
             pauseOnMouseEnter: true,
           }}
           speed={700} 
@@ -57,20 +58,22 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
             slideShadows: false, 
           }}
           onSlideChange={(swiper) => setActiveSlideIndex(swiper.realIndex)}
-          className="shows-swiper-container" 
+          className="shows-swiper-container" // Class for global styles
         >
           {rankedShows.map((show) => ( 
-            <SwiperSlide key={show.id} className="shows-swiper-slide"> {/* REMOVED virtualIndex prop */}
-              {({ isActive, isPrev, isNext }) => ( 
-                <CarouselItem
-                  rank={show.rank}
-                  imageUrl={show.coverImage || `https://placehold.co/180x270.png`}
-                  altText={show.title}
-                  isActive={isActive}
-                  isPrev={isPrev}
-                  isNext={isNext}
-                  showId={show.id}
-                />
+            <SwiperSlide key={show.id} className="shows-swiper-slide"> {/* Removed virtualIndex as per last attempt */}
+              {({ isActive, isPrev, isNext }) => (
+                <> {/* Explicit React.Fragment */}
+                  <CarouselItem
+                    rank={show.rank}
+                    imageUrl={show.coverImage || `https://placehold.co/180x270.png`}
+                    altText={show.title}
+                    isActive={isActive}
+                    isPrev={isPrev}
+                    isNext={isNext}
+                    showId={show.id}
+                  />
+                </>
               )}
             </SwiperSlide>
           ))}
