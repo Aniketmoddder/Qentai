@@ -18,6 +18,7 @@ import AnimeCardSkeleton from '@/components/anime/AnimeCardSkeleton';
 import HomePageGenreSection from './HomePageGenreSection';
 import RecommendationsSection from '../anime/recommendations-section';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 const getYouTubeVideoId = (url?: string): string | null => {
@@ -67,11 +68,11 @@ export default function HomeClient({
   const [isTrailerMuted, setIsTrailerMuted] = useState(true);
 
   useEffect(() => {
-    const artificialDelayTimer = setTimeout(() => {
+    const timer = setTimeout(() => {
       setIsArtificiallyLoading(false);
     }, ARTIFICIAL_SKELETON_DELAY);
 
-    return () => clearTimeout(artificialDelayTimer);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -81,7 +82,6 @@ export default function HomeClient({
       setFeaturedAnimesList([]);
       setIsDataActuallyLoading(false);
     } else {
-      // This assumes data is passed correctly and processed by useState initializers
       setAllAnime(rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
       setFeaturedAnimesList(rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
       setFetchError(null);
@@ -91,7 +91,7 @@ export default function HomeClient({
 
 
   const heroAnime = useMemo(() => {
-    return featuredAnimesList[0] || (allAnime.length > 0 ? allAnime.sort((a,b) => (b.popularity || 0) - (a.popularity || 0))[0] : undefined);
+    return featuredAnimesList[0] || (allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0))[0] : undefined);
   }, [featuredAnimesList, allAnime]);
 
   const youtubeVideoId = useMemo(() => {
@@ -350,3 +350,4 @@ export default function HomeClient({
     </>
   );
 }
+
