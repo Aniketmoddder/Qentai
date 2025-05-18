@@ -3,15 +3,12 @@
 
 import React, { useState, useMemo } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Autoplay, EffectCoverflow, Controller } from 'swiper/modules';
+import { Autoplay, EffectCoverflow } from 'swiper/modules'; // Removed Controller
 import CarouselItem from './CarouselItem';
 import { cn } from '@/lib/utils';
 import type { Anime } from '@/types/anime';
 
-// CSS imports are in globals.css as per previous instruction
-// import 'swiper/css';
-// import 'swiper/css/effect-coverflow';
-// import 'swiper/css/autoplay';
+// CSS imports are in globals.css
 
 interface ShowsCarouselProps {
   tvShows: Anime[];
@@ -36,31 +33,31 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
         {title}
       </h2>
       <div className={cn(
-        "shows-carousel-container-wrapper",
-        "w-full max-w-screen-lg mx-auto relative"
+        "shows-carousel-container-wrapper", // New wrapper class for potential future styling
+        "w-full max-w-screen-lg mx-auto relative" // Centering and max-width
       )}>
         <Swiper
-          modules={[Autoplay, EffectCoverflow, Controller]}
+          modules={[Autoplay, EffectCoverflow]} // Removed Controller module
           effect="coverflow"
           grabCursor={true}
           centeredSlides={true}
           slidesPerView={'auto'}
-          loop={rankedShows.length > 5}
+          loop={rankedShows.length > 5} // Loop only if enough slides
           autoplay={{
-            delay: 3500,
+            delay: 3500, // Slightly increased delay
             disableOnInteraction: false,
             pauseOnMouseEnter: true,
           }}
-          speed={700}
+          speed={700} // Smooth transition speed
           coverflowEffect={{
-            rotate: 25,
-            stretch: -20,
-            depth: 120,
-            modifier: 1,
-            slideShadows: false,
+            rotate: 25, // Rotation of side slides
+            stretch: -20,  // Negative stretch for a tighter feel
+            depth: 120,   // Depth offset of side slides
+            modifier: 1,  // Effect multiplier
+            slideShadows: false, // Disable default shadows if using custom
           }}
           onSlideChange={(swiper) => setActiveSlideIndex(swiper.realIndex)}
-          className="shows-swiper-container"
+          className="shows-swiper-container" // Global CSS class for Swiper instance
         >
           {rankedShows.map((show, index) => ( // Added index for virtualIndex
             <SwiperSlide key={show.id} className="shows-swiper-slide" virtualIndex={index}> {/* Added virtualIndex */}
