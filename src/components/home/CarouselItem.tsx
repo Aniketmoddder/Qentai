@@ -45,7 +45,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       tl.to(posterEl, { scale: 0.82, y: 0, opacity: 0.6, rotationZ: tiltAngle }, 0)
         .to(numberEl, { scale: 0.88, y: 8, x: -8, opacity: 0.5, rotationZ: tiltAngle / 1.6 }, "<0.05");
     }
-  }, [isActive, isPrev, isNext, animationDefaults]); // Added animationDefaults
+  }, [isActive, isPrev, isNext, animationDefaults]);
 
   useEffect(() => {
     const itemElCurrent = itemRef.current;

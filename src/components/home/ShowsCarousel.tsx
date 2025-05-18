@@ -61,7 +61,7 @@ const ShowsCarousel: React.FC<ShowsCarouselProps> = ({ tvShows, title = "Trendin
           className="shows-swiper-container" // Class for global styles
         >
           {rankedShows.map((show) => ( 
-            <SwiperSlide key={show.id} className="shows-swiper-slide"> {/* Removed virtualIndex as per last attempt */}
+            <SwiperSlide key={show.id} className="shows-swiper-slide">
               {({ isActive, isPrev, isNext }) => (
                 <> {/* Explicit React.Fragment */}
                   <CarouselItem
