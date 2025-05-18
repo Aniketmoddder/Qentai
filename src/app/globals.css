@@ -49,6 +49,7 @@
     --secondary-raw-hsl: 262 89% 66%;
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 243 79% 59%;
+    --border-raw-hsl: 240 5% 13%;
   }
 
   html[data-theme="light-pale-purple"] {
@@ -67,6 +68,7 @@
     --secondary-raw-hsl: 173 78% 40%;
     --accent-raw-hsl: 270 85% 77%;
     --highlight-raw-hsl: 262 84% 72%;
+    --border-raw-hsl: 220 13% 91%;
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -85,6 +87,7 @@
     --secondary-raw-hsl: 352 96% 71%;
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 291 92% 72%;
+    --border-raw-hsl: 287 67% 18%;
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -103,6 +106,7 @@
     --secondary-raw-hsl: 300 100% 50%;
     --accent-raw-hsl: 157 100% 50%;
     --highlight-raw-hsl: 250 66% 62%;
+    --border-raw-hsl: 231 25% 20%;
   }
 
   /* Global styles that apply to all themes */
@@ -195,87 +199,101 @@
 .swiper-button-disabled-custom { opacity: 0 !important; pointer-events: none !important; }
 
 /* Styles for the new ShowsCarousel */
-.shows-carousel-container-wrapper { /* Added to allow perspective to be higher up */
-    perspective: 1200px; /* For 3D tilt effects */
+.shows-carousel-container-wrapper { 
+    perspective: 1500px; /* Increased perspective */
+    width: 100%; /* Ensure it takes full width available */
+    overflow: hidden; /* Prevent items from spilling out visually during extreme tilts if any */
 }
 .shows-swiper-container {
-  padding-top: 20px;
-  padding-bottom: 40px;
-  overflow: visible !important;
+  padding-top: 20px; /* Space for lifted items */
+  padding-bottom: 40px; /* Space for item content and shadows */
+  overflow: visible !important; /* Important for coverflow effect and shadows */
 }
 .shows-swiper-slide {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 360px;
+  height: 360px; 
   box-sizing: border-box;
-  width: auto !important;
+  width: auto !important; /* Let Swiper determine based on slidesPerView and Coverflow */
 }
+
 .carousel-item-wrapper {
   position: relative;
-  width: 180px;
-  height: 100%;
+  width: 180px; /* Fixed width for the item wrapper */
+  height: 100%; /* Takes full height of the slide */
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-end; 
   align-items: center;
   box-sizing: border-box;
-  transform-style: preserve-3d; /* Essential for children 3D transforms */
+  transform-style: preserve-3d; /* Essential for GSAP 3D transforms */
 }
-.show-poster-container-link {
+.show-poster-container-link { /* Added this wrapper for the Link component */
   display: block;
-  width: 100%;
-  height: 270px;
+  width: 100%; /* Takes width of parent (.carousel-item-wrapper) */
+  height: 270px; /* Fixed height for poster area */
   transform-style: preserve-3d; /* Ensure 3D transforms are seen */
 }
 .show-poster-container {
-  position: relative;
-  width: 180px;
-  height: 270px;
+  position: relative; /* Keep relative for normal flow within its link wrapper */
+  width: 180px; /* Fixed width for the poster */
+  height: 270px; /* Fixed height for the poster */
   z-index: 2;
   border-radius: 12px;
-  box-shadow: 0 12px 30px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.2);
-  overflow: hidden;
+  box-shadow: 0 12px 30px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.2); /* Default shadow */
+  overflow: hidden; /* Important for rounded corners on image and glint */
   will-change: transform, opacity, box-shadow;
   cursor: pointer;
-  transition: box-shadow 0.3s ease;
-  transform-style: preserve-3d; /* For 3D effects */
+  transition: box-shadow 0.3s ease; /* Smooth shadow transition */
+  transform-style: preserve-3d; /* For GSAP 3D effects on the poster itself */
 }
 .show-poster-container:hover {
-   box-shadow: 0 15px 35px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.45);
+   box-shadow: 0 15px 35px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.45); /* Enhanced hover shadow */
 }
 .show-poster {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 12px;
+  border-radius: 12px; /* Image itself should also have radius if poster container overflows */
 }
 .ranking-number {
   position: absolute;
-  bottom: 10px;
-  left: -25px;
-  font-size: 6rem; /* Adjust based on visual preference */
-  font-weight: 900; /* Inter Black or similar */
-  font-family: var(--font-montserrat); /* Ensure using a bold font */
+  bottom: 10px; /* Adjusted for potentially smaller poster if item height reduces */
+  left: -25px;  /* Keep the overlapping style */
+  font-size: 6rem; /* Slightly smaller to fit potential card size adjustments */
+  font-weight: 900; /* Inter Black or similar bold variant */
+  font-family: var(--font-montserrat), sans-serif; /* Fallback font */
   color: hsl(var(--foreground));
-  -webkit-text-stroke: 2px hsl(var(--border));
+  -webkit-text-stroke: 2px hsl(var(--border)); /* Use theme border color */
   paint-order: stroke fill;
   z-index: 3;
-  line-height: 0.7;
+  line-height: 0.7; /* Tight line height for large numbers */
   user-select: none;
   will-change: transform, opacity, text-shadow;
   pointer-events: none;
-  opacity: 0.8;
+  opacity: 0.8; /* Initial opacity before GSAP animation */
   transform: rotate(-5deg); /* Initial playful rotation */
   text-shadow: 1px 1px 1px hsla(var(--border-raw-hsl, 240 5% 13%), 0.2); /* Subtle depth */
 }
 
-/* Ensure perspective for 3D transforms on item */
-.carousel-item-wrapper {
-    transform-style: preserve-3d;
+.glint-overlay {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%; /* Start off-screen */
+  width: 40%; /* Glint width */
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%, /* Use theme's highlight color */
+    transparent 100%
+  );
+  transform: skewX(-25deg); /* Angled shine */
+  opacity: 0; /* Initially hidden */
+  pointer-events: none; /* Click through */
+  z-index: 1; /* Above the image in its container */
+  border-radius: inherit; /* Match poster radius */
 }
-.shows-carousel-container-wrapper {
-    perspective: 1500px; /* Apply perspective to the parent of swiper */
-}
-

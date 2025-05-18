@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
-import ShowsCarousel from '@/components/home/ShowsCarousel'; // New Carousel
+import ShowsCarousel from '@/components/home/ShowsCarousel'; 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -59,7 +59,7 @@ export default function HomeClient({
   const [featuredAnimesList, setFeaturedAnimesList] = useState<Anime[]>(() => rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError);
   
-  const [isArtificiallyLoading, setIsArtificiallyLoading] = useState(true); // For the stylish skeleton delay
+  const [isArtificiallyLoading, setIsArtificiallyLoading] = useState(true);
   const [isDataActuallyLoading, setIsDataActuallyLoading] = useState(
     !rawInitialAllAnimeData || rawInitialAllAnimeData.length === 0
   );
@@ -156,7 +156,20 @@ export default function HomeClient({
                 <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50 hidden md:block" />
             </div>
           </div>
-          {[...Array(4)].map((_, i) => ( // Skeleton for 4 carousels
+          <div className="mb-8"> {/* Skeleton for ShowsCarousel Title */}
+            <Skeleton className="h-10 w-1/2 md:w-1/3 mb-6 md:mb-8 rounded bg-muted/50" />
+             <div className="flex overflow-x-auto pb-4 gap-x-5 scrollbar-hide">
+                {[...Array(5)].map((_, j) => (
+                  <div key={`show-card-skeleton-${j}`} className="flex-shrink-0">
+                     <div className="w-[180px] h-[360px] bg-card/50 rounded-lg shadow-md animate-pulse border border-border/20 p-3 space-y-2">
+                       <Skeleton className="h-[270px] w-full rounded-md bg-muted/40" />
+                       <Skeleton className="h-12 w-1/2 -ml-3 -mb-3 rounded-md bg-muted/30 opacity-50" /> 
+                     </div>
+                  </div>
+                ))}
+              </div>
+          </div>
+          {[...Array(3)].map((_, i) => ( // Skeleton for 3 other carousels
             <div key={`carousel-skeleton-${i}`} className="mb-8">
               <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Carousel Title Skeleton */}
               <div className="flex overflow-x-auto pb-4 gap-3 sm:gap-4 scrollbar-hide">
@@ -181,6 +194,14 @@ export default function HomeClient({
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
                 {[...Array(6)].map((_, l) => ( // Skeleton for 6 genre cards
                     <Skeleton key={`genre-skeleton-${l}`} className="h-[100px] md:h-[120px] rounded-lg bg-muted/50" />
+                ))}
+            </div>
+          </div>
+           <div className="mb-8">
+            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Recommendations Section Title Skeleton */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 place-items-center sm:place-items-stretch">
+                {[...Array(5)].map((_, m) => (
+                  <AnimeCardSkeleton key={`reco-skeleton-${m}`} />
                 ))}
             </div>
           </div>
@@ -319,7 +340,14 @@ export default function HomeClient({
           </section>
         )}
         
-        {trendingTvShows.length > 0 && <ShowsCarousel tvShows={trendingTvShows} title="Trending TV Shows" />}
+        {trendingTvShows.length > 0 && (
+          <section className="pt-2 pb-8 md:pt-4 md:pb-12"> {/* Reduced top padding */}
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6 md:mb-8 text-center md:text-left font-zen-dots section-title-bar">
+              Trending TV Shows
+            </h2>
+            <ShowsCarousel tvShows={trendingTvShows} />
+          </section>
+        )}
 
         {trendingAnime.length > 0 && <AnimeCarousel title="Trending Now" animeList={trendingAnime} />}
         
@@ -350,4 +378,3 @@ export default function HomeClient({
     </>
   );
 }
-

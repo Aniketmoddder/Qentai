@@ -1,4 +1,3 @@
-
 // src/components/home/CarouselItem.tsx
 'use client';
 
@@ -22,10 +21,13 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
   const itemRef = useRef<HTMLDivElement>(null);
   const posterRef = useRef<HTMLDivElement>(null);
   const numberRef = useRef<HTMLDivElement>(null);
+  const glintOverlayRef = useRef<HTMLDivElement>(null);
+  const hoverFloatTlRef = useRef<gsap.core.Timeline | null>(null);
+
 
   const animationDefaults = {
-    duration: 0.65, // Slightly longer for smoother feel
-    ease: "power3.out", // Smoother easing
+    duration: 0.65,
+    ease: "power3.out",
   };
 
   const scrambleChars = "!<>-_\\/[]{}—=+*^?#0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -35,94 +37,86 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
   useEffect(() => {
     const posterEl = posterRef.current;
     const numberEl = numberRef.current;
+    const itemEl = itemRef.current;
 
-    if (!posterEl || !numberEl) return;
 
-    gsap.killTweensOf([posterEl, numberEl]);
+    if (!posterEl || !numberEl || !itemEl) return;
+
+    gsap.killTweensOf([posterEl, numberEl, itemEl]);
 
     const tl = gsap.timeline({ defaults: animationDefaults });
 
     if (isActive) {
       // --- ACTIVE STATE ---
-      // Card Animation (Poster) - "Perspective Flip & Illuminate"
       tl.to(posterEl, {
         scale: 1.12,
         y: -15,
         opacity: 1,
-        rotationY: -3, // Subtle 3D tilt
-        rotationX: 3,  // Subtle 3D tilt
-        boxShadow: "0px 15px 40px 10px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.45)", // Enhanced themed glow
+        rotationY: -3,
+        rotationX: 3,
+        boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.50)",
       }, 0);
 
-      // Number Entrance - "Digital Cascade Reveal"
-      // 1. Initial state for entrance (hidden, slightly smaller, offset)
+      // Number Entrance
       gsap.set(numberEl, { opacity: 0, scale: 0.7, y: 20, textContent: rank.toString() });
-      
-      // 2. Scramble
       let scrambleCounter = 0;
       const rankStrLength = rank.toString().length;
-      const scrambleAnimation = {
-        textContent: "",
-        duration: 0.03, // Faster scramble step
-        repeat: 12,     // More steps for a denser scramble
+      
+      tl.to(numberEl, { // Scramble part integrated into the main timeline
+        duration: 0.03,
+        repeat: 12,
         ease: "none",
         onStart: () => {
-            gsap.set(numberEl, { opacity: 0.8 }); // Make it visible for scramble
+            gsap.set(numberEl, { opacity: 0.8 });
         },
         onRepeat: () => {
           let text = "";
-          for (let i = 0; i < rankStrLength; i++) {
-            text += randomChar();
-          }
+          for (let i = 0; i < rankStrLength; i++) text += randomChar();
           numberEl.textContent = text;
           scrambleCounter++;
         },
         onComplete: () => {
           numberEl.textContent = rank.toString();
         }
-      };
-      tl.to(numberEl, scrambleAnimation, "<0.1"); // Start scramble slightly after card
-
-      // 3. Pop-in & Position (after scramble)
-      tl.to(numberEl, {
-        scale: 1.1,
+      }, "<0.1")
+      .to(numberEl, { // Pop-in after scramble
+        scale: 1.08, // Slightly reduced from 1.1 for subtlety
         y: 0,
         x: 0,
         opacity: 1,
         rotationZ: 0,
-        ease: "back.out(1.4)", // Slightly less aggressive pop than 1.7
-      }, ">-0.05"); // Overlap slightly
+        ease: "back.out(1.6)", // Slightly softer pop
+      }, ">-0.05");
 
-      // 4. Active Number Neon Pulse (Text Shadow)
+      // Active Number Neon Pulse
       gsap.to(numberEl, {
         textShadow: `
-          0 0 8px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.7),
-          0 0 16px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.5),
-          0 0 25px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.3),
-          1px 1px 2px hsla(var(--border-raw-hsl, 240 5% 13%), 0.5)
+          0 0 5px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.6),
+          0 0 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.4),
+          0 0 20px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.25),
+          1px 1px 1px hsla(var(--border-raw-hsl, 240 5% 13%), 0.4)
         `,
-        duration: 1.2,
+        duration: 1.3,
         ease: "sine.inOut",
         repeat: -1,
         yoyo: true,
-        delay: tl.duration() - 0.5, // Start pulsing after main entrance
+        delay: tl.duration() - 0.4,
       });
 
       // Continuous subtle breathing for active card
       gsap.to(posterEl, {
-        scale: 1.135, // Slightly more scale for breath
-        boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.50)",
-        duration: 1.5,
+        scale: 1.13, // Slightly more scale for breath
+        boxShadow: "0px 20px 50px 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.55)",
+        duration: 1.6,
         ease: "sine.inOut",
         repeat: -1,
         yoyo: true,
-        delay: tl.duration() -0.3,
+        delay: tl.duration() -0.2,
       });
-
 
     } else {
       // --- INACTIVE STATE ---
-      const tiltAngle = isPrev ? -4 : (isNext ? 4 : 0); // Slightly more defined tilt for side cards
+      const tiltAngle = isPrev ? -3.5 : (isNext ? 3.5 : 0); // Slightly more defined tilt
       tl.to(posterEl, {
         scale: 0.82,
         y: 0,
@@ -130,87 +124,81 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         rotationY: 0,
         rotationX: 0,
         rotationZ: tiltAngle,
-        boxShadow: "0 8px 20px rgba(0,0,0,0.3)", // Standard less intense shadow
+        boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
       }, 0);
 
       tl.to(numberEl, {
         scale: 0.88,
         y: 10,
-        x: -10,
+        x: -10, // Keep the offset for depth
         opacity: 0.45,
-        rotationZ: tiltAngle / 1.5,
-        textShadow: "1px 1px 1px hsla(var(--border-raw-hsl, 240 5% 13%), 0.3)", // Simpler shadow
-        onStart: () => { // Ensure textContent is correct if exiting scramble
+        rotationZ: tiltAngle / 1.5, // Synchronized tilt
+        textShadow: "1px 1px 1px hsla(var(--border-raw-hsl, 240 5% 13%), 0.3)",
+        onStart: () => {
             if(numberEl.textContent !== rank.toString()) numberEl.textContent = rank.toString();
         }
       }, "<0.05");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isPrev, isNext, rank]);
+  }, [isActive, isPrev, isNext, rank, animationDefaults]); // animationDefaults added
 
-  // HOVER ANIMATIONS (Dynamic 3D Tilt & Enhanced Illumination)
+  // HOVER ANIMATIONS
   useEffect(() => {
     const itemElCurrent = itemRef.current;
-    const posterEl = posterRef.current;
-    const numberEl = numberRef.current;
+    const posterElCurrent = posterRef.current;
+    const numberElCurrent = numberRef.current;
+    const glintOverlayEl = glintOverlayRef.current;
 
-    if (!itemElCurrent || !posterEl || !numberEl) return;
+    if (!itemElCurrent || !posterElCurrent || !numberElCurrent) return;
 
     const handleMouseMove = (event: MouseEvent) => {
-      if (!isActive) return; // Only apply intense 3D tilt to active card on hover
-
+      if (!isActive) return;
       const rect = itemElCurrent.getBoundingClientRect();
       const x = event.clientX - rect.left - rect.width / 2;
       const y = event.clientY - rect.top - rect.height / 2;
-
-      const rotateX = (y / rect.height) * -10; // Max tilt 5deg
-      const rotateY = (x / rect.width) * 10;  // Max tilt 5deg
-
-      gsap.to(posterEl, {
-        rotationX: 3 + rotateX, // Add to base active tilt
-        rotationY: -3 + rotateY, // Add to base active tilt
-        duration: 0.4,
-        ease: "power1.out",
-      });
+      const rotateX = (y / rect.height) * -12; // Increased tilt sensitivity
+      const rotateY = (x / rect.width) * 12;
+      gsap.to(posterElCurrent, { rotationX: 3 + rotateX, rotationY: -3 + rotateY, duration: 0.35, ease: "power1.out" });
     };
 
     const handleMouseEnter = () => {
-      gsap.to(posterEl, {
-        scale: isActive ? 1.15 : "+=0.03", // Slightly larger pop on active
-        boxShadow: isActive ? "0px 20px 50px 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.55)" : "0 12px 30px rgba(0,0,0,0.45)",
-        y: isActive ? "-=5" : "-=3",
-        duration: 0.25,
-        ease: "power2.out"
-      });
-      gsap.to(numberEl, {
-        scale: isActive ? 1.13 : "+=0.03",
-        duration: 0.25,
-        ease: "power2.out"
-      });
-      if (isActive) {
-        itemElCurrent.addEventListener('mousemove', handleMouseMove);
+      gsap.to(posterElCurrent, { scale: isActive ? 1.16 : 0.85, y: isActive ? "-=5" : "-=3", duration: 0.25, ease: "power2.out" });
+      gsap.to(numberElCurrent, { scale: isActive ? 1.12 : 0.91, duration: 0.25, ease: "power2.out" });
+      
+      if (glintOverlayEl) {
+        gsap.killTweensOf(glintOverlayEl);
+        gsap.set(glintOverlayEl, { x: '-150%', opacity: 0 });
+        gsap.to(glintOverlayEl, {
+            x: '150%',
+            opacity: 1,
+            duration: 0.55,
+            ease: 'power1.inOut',
+            onComplete: () => gsap.to(glintOverlayEl, { opacity: 0, duration: 0.25 })
+        });
       }
+
+      if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
+      hoverFloatTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
+          .to(itemElCurrent, { y: isActive ? (parseFloat(gsap.getProperty(itemElCurrent, "y").toString()) - 2) : (parseFloat(gsap.getProperty(itemElCurrent, "y").toString()) -1) , duration: 1.7, ease: "sine.inOut" });
+
+
+      if (isActive) itemElCurrent.addEventListener('mousemove', handleMouseMove);
     };
 
     const handleMouseLeave = () => {
-      // Revert to the base active/inactive state defined in the other useEffect
-      gsap.to(posterEl, {
-        rotationX: isActive ? 3 : 0,
-        rotationY: isActive ? -3 : 0,
-        scale: isActive ? 1.135 : 0.82, // Matches the continuous active scale or inactive scale
-        y: isActive ? -15 : 0,
-        boxShadow: isActive ? "0px 18px 45px 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.50)" : "0 8px 20px rgba(0,0,0,0.3)",
-        duration: 0.35,
-        ease: "power2.inOut"
+      gsap.to(posterElCurrent, {
+        rotationX: isActive ? 3 : 0, rotationY: isActive ? -3 : 0,
+        scale: isActive ? 1.13 : 0.82, y: isActive ? -15 : 0,
+        duration: 0.35, ease: "power2.inOut"
       });
-      gsap.to(numberEl, {
-        scale: isActive ? 1.1 : 0.88,
-        duration: 0.35,
-        ease: "power2.inOut"
-      });
-      if (isActive) {
-        itemElCurrent.removeEventListener('mousemove', handleMouseMove);
+      gsap.to(numberElCurrent, { scale: isActive ? 1.08 : 0.88, y: isActive ? 0 : 10, duration: 0.35, ease: "power2.inOut" });
+
+      if (hoverFloatTlRef.current) {
+        hoverFloatTlRef.current.kill();
+        gsap.to(itemElCurrent, { y: isActive ? -15 : 0, duration: 0.3, ease: "power2.out" }); // Ensure it returns to base y
       }
+
+      if (isActive) itemElCurrent.removeEventListener('mousemove', handleMouseMove);
     };
 
     itemElCurrent.addEventListener('mouseenter', handleMouseEnter);
@@ -222,10 +210,11 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         itemElCurrent.removeEventListener('mouseleave', handleMouseLeave);
         itemElCurrent.removeEventListener('mousemove', handleMouseMove);
       }
-      gsap.killTweensOf([posterEl, numberEl]);
+      if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
+      gsap.killTweensOf([posterElCurrent, numberElCurrent, itemElCurrent, glintOverlayEl]);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isPrev, isNext]); // Depend on isActive to correctly apply/remove mousemove
+  }, [isActive, isPrev, isNext]);
 
   return (
     <div className="carousel-item-wrapper" ref={itemRef}>
@@ -242,6 +231,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
               data-ai-hint="anime tvshow poster"
               priority={rank <= 3}
             />
+            <div className="glint-overlay" ref={glintOverlayRef}></div>
           </div>
         </div>
       </Link>
