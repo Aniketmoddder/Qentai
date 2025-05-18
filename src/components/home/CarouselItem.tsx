@@ -1,7 +1,7 @@
 // src/components/home/CarouselItem.tsx
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -25,14 +25,13 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
   const hoverFloatTlRef = useRef<gsap.core.Timeline | null>(null);
 
   const animationDefaults = {
-    duration: 0.65, // Slightly increased for smoother feel
+    duration: 0.65,
     ease: "power3.out",
   };
 
   const scrambleChars = "!<>-_\\/[]{}—=+*^?#0123456789";
   const randomChar = () => scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
 
-  // Entrance & Active/Inactive State Animations
   useEffect(() => {
     const posterEl = posterRef.current;
     const numberEl = numberRef.current;
@@ -40,30 +39,35 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
 
     if (!posterEl || !numberEl || !itemEl) return;
 
-    gsap.killTweensOf([posterEl, numberEl, itemEl]); // Kill previous tweens on these elements
+    gsap.killTweensOf([posterEl, numberEl, itemEl]);
 
     const tl = gsap.timeline({ defaults: animationDefaults });
+    const rankStrLength = rank.toString().length;
+
+    // Base inactive text shadow for numbers (ensure it's valid)
+    const inactiveNumberTextShadow = `1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, 0 0% 0% / 0.4), 0.4)`;
+
 
     if (isActive) {
-      // --- ACTIVE STATE ---
+      // CARD - ACTIVE
       tl.to(posterEl, {
         scale: 1.12,
         y: -15,
         opacity: 1,
         rotationY: -3,
         rotationX: 3,
-        boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.35)", // Themed glow
-        ease: "expo.out", // A bit more dynamic for active
+        rotationZ: 0,
+        boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.35)",
+        ease: "expo.out",
       }, 0);
 
-      // Number Entrance - Scramble then Pop
-      gsap.set(numberEl, { opacity: 0, scale: 0.7, y: 20, textContent: rank.toString(), color: 'transparent', webkitTextFillColor: 'transparent' });
+      // NUMBER - ACTIVE - Entrance Scramble & Pop
+      gsap.set(numberEl, { opacity: 0, scale: 0.7, y: 20, color: 'transparent', webkitTextFillColor: 'transparent', textShadow: inactiveNumberTextShadow });
       let scrambleCounter = 0;
-      const rankStrLength = rank.toString().length;
-
+      
       tl.to(numberEl, { // Scramble part
-        duration: 0.025, // Faster scramble
-        repeat: 10, // Fewer repeats for quicker reveal
+        duration: 0.03,
+        repeat: 10,
         ease: "none",
         onStart: () => {
           gsap.set(numberEl, { opacity: 0.8, color: 'transparent', webkitTextFillColor: 'transparent' });
@@ -77,37 +81,39 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         onComplete: () => {
           numberEl.textContent = rank.toString();
         }
-      }, "<0.1") // Start slightly after poster animation begins
+      }, "<0.1")
       .to(numberEl, { // Pop-in after scramble
         scale: 1.08,
         y: 0,
         x: 0,
         opacity: 1,
         rotationZ: 0,
-        color: 'transparent', // Ensure transparent for gradient
-        webkitTextFillColor: 'transparent', // Ensure transparent for gradient
+        color: 'transparent',
+        webkitTextFillColor: 'transparent',
         ease: "back.out(1.6)",
-      }, ">-0.05"); // Overlap slightly with scramble end
+      }, ">-0.05");
 
-      // Active Number Neon Pulse (Text Shadow)
+      // NUMBER - ACTIVE - Neon Pulse (Text Shadow) - applied after pop-in
+      // Ensure the text-shadow string is robust
+      const activeTextShadow = `
+        0 0 8px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.7),
+        0 0 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.5),
+        0 0 25px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.3),
+        1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, 0 0% 0% / 0.5), 0.5)
+      `;
       gsap.to(numberEl, {
-        textShadow: `
-          0 0 8px hsla(var(--primary-raw-hsl), 0.7),
-          0 0 15px hsla(var(--primary-raw-hsl), 0.5),
-          0 0 25px hsla(var(--primary-raw-hsl), 0.3),
-          1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, var(--border-raw-hsl)), 0.5)
-        `, // Adjusted for theme stroke
+        textShadow: activeTextShadow,
         duration: 1.5,
         ease: "sine.inOut",
         repeat: -1,
         yoyo: true,
-        delay: tl.duration() - 0.5, // Start pulse as pop-in finishes
+        delay: tl.duration() - 0.4, // Start as pop-in finishes
       });
 
-      // Continuous subtle breathing for active card
+      // CARD - ACTIVE - Continuous subtle breathing
       gsap.to(posterEl, {
-        scale: 1.135, // Slightly more scale for breath
-        boxShadow: "0px 20px 50px 15px hsla(var(--primary-raw-hsl), 0.40)",
+        scale: 1.135,
+        boxShadow: "0px 20px 50px 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.40)",
         duration: 1.8,
         ease: "sine.inOut",
         repeat: -1,
@@ -115,9 +121,9 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         delay: tl.duration() - 0.3,
       });
 
-    } else {
-      // --- INACTIVE STATE ---
+    } else { // INACTIVE STATE
       const tiltAngle = isPrev ? -3.5 : (isNext ? 3.5 : 0);
+      // CARD - INACTIVE
       tl.to(posterEl, {
         scale: 0.82,
         y: 0,
@@ -128,24 +134,24 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         boxShadow: "0 6px 18px hsla(var(--border-raw-hsl, 240 5% 13%), 0.25)",
       }, 0);
 
+      // NUMBER - INACTIVE
       tl.to(numberEl, {
         scale: 0.88,
         y: 10,
         x: -10,
         opacity: 0.45,
         rotationZ: tiltAngle / 1.5,
-        color: 'transparent', // Ensure transparent for gradient
-        webkitTextFillColor: 'transparent', // Ensure transparent for gradient
-        textShadow: "1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, var(--border-raw-hsl)), 0.4)",
+        color: 'transparent',
+        webkitTextFillColor: 'transparent',
+        textShadow: inactiveNumberTextShadow,
         onStart: () => {
             if(numberEl.textContent !== rank.toString()) numberEl.textContent = rank.toString();
         }
       }, "<0.05");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isPrev, isNext, rank, animationDefaults]);
+  }, [isActive, isPrev, isNext, rank, animationDefaults]); // Added animationDefaults
 
-  // HOVER ANIMATIONS
   useEffect(() => {
     const itemElCurrent = itemRef.current;
     const posterElCurrent = posterRef.current;
@@ -159,29 +165,33 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       const rect = itemElCurrent.getBoundingClientRect();
       const x = event.clientX - rect.left - rect.width / 2;
       const y = event.clientY - rect.top - rect.height / 2;
-      const rotateX = (y / rect.height) * -10; // Reduced tilt sensitivity for subtlety
-      const rotateY = (x / rect.width) * 8;
-      gsap.to(posterElCurrent, { rotationX: 3 + rotateX, rotationY: -3 + rotateY, duration: 0.4, ease: "power1.out" });
+      const rotateXVal = 3 + (y / rect.height) * -10;
+      const rotateYVal = -3 + (x / rect.width) * 8;
+      gsap.to(posterElCurrent, { rotationX: rotateXVal, rotationY: rotateYVal, duration: 0.4, ease: "power1.out" });
     };
 
     const handleMouseEnter = () => {
+      const activeShadowHover = `
+        0 0 10px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.8),
+        0 0 18px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.6),
+        0 0 30px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.4),
+        1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, 0 0% 0% / 0.5), 0.5)
+      `;
+      const inactiveNumberTextShadowHover = `1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, 0 0% 0% / 0.45), 0.45)`;
+
+
       gsap.to(posterElCurrent, {
-        scale: isActive ? 1.16 : 0.85, // Active pops more
+        scale: isActive ? 1.16 : 0.85,
         y: isActive ? "-=5" : "-=3",
         boxShadow: isActive
-            ? "0px 22px 55px 18px hsla(var(--primary-raw-hsl), 0.45)" // Enhanced active hover glow
-            : "0 8px 22px hsla(var(--border-raw-hsl), 0.30)", // Subtle inactive hover shadow
+            ? "0px 22px 55px 18px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.45)"
+            : "0 8px 22px hsla(var(--border-raw-hsl, 240 5% 13%), 0.30)",
         duration: 0.25,
         ease: "power2.out"
       });
       gsap.to(numberElCurrent, {
-        scale: isActive ? 1.12 : 0.91, // Number scales with poster
-        textShadow: isActive ? `
-            0 0 10px hsla(var(--primary-raw-hsl), 0.8),
-            0 0 18px hsla(var(--primary-raw-hsl), 0.6),
-            0 0 30px hsla(var(--primary-raw-hsl), 0.4),
-            1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, var(--border-raw-hsl)), 0.5)
-        ` : "1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, var(--border-raw-hsl)), 0.45)",
+        scale: isActive ? 1.12 : 0.91,
+        textShadow: isActive ? activeShadowHover : inactiveNumberTextShadowHover,
         duration: 0.25,
         ease: "power2.out"
        });
@@ -191,8 +201,8 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         gsap.set(glintOverlayEl, { x: '-150%', opacity: 0 });
         gsap.to(glintOverlayEl, {
             x: '150%',
-            opacity: 0.8, // Slightly more visible glint
-            duration: 0.5, // Slightly quicker
+            opacity: 0.8,
+            duration: 0.5,
             ease: 'power1.inOut',
             onComplete: () => gsap.to(glintOverlayEl, { opacity: 0, duration: 0.2 })
         });
@@ -203,36 +213,37 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       hoverFloatTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
           .to(itemElCurrent, { y: currentY - (isActive ? 3 : 1.5) , duration: 1.6, ease: "sine.inOut" });
 
-
       if (isActive) itemElCurrent.addEventListener('mousemove', handleMouseMove);
     };
 
     const handleMouseLeave = () => {
+      const activeShadow = `
+        0 0 8px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.7),
+        0 0 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.5),
+        0 0 25px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.3),
+        1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, 0 0% 0% / 0.5), 0.5)
+      `;
+      const inactiveNumberTextShadowDefault = `1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, 0 0% 0% / 0.4), 0.4)`;
+
       gsap.to(posterElCurrent, {
         rotationX: isActive ? 3 : 0, rotationY: isActive ? -3 : 0,
-        scale: isActive ? 1.135 : 0.82, // Back to breathing or inactive scale
+        scale: isActive ? 1.135 : 0.82,
         y: isActive ? -15 : 0,
         boxShadow: isActive
-            ? "0px 20px 50px 15px hsla(var(--primary-raw-hsl), 0.40)" // Back to active breathing glow
-            : "0 6px 18px hsla(var(--border-raw-hsl), 0.25)", // Back to inactive shadow
+            ? "0px 20px 50px 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.40)"
+            : "0 6px 18px hsla(var(--border-raw-hsl, 240 5% 13%), 0.25)",
         duration: 0.35,
         ease: "power2.inOut"
       });
        gsap.to(numberElCurrent, {
         scale: isActive ? 1.08 : 0.88,
-        textShadow: isActive ? `
-            0 0 8px hsla(var(--primary-raw-hsl), 0.7),
-            0 0 15px hsla(var(--primary-raw-hsl), 0.5),
-            0 0 25px hsla(var(--primary-raw-hsl), 0.3),
-            1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, var(--border-raw-hsl)), 0.5)
-        ` : "1px 1px 0px hsla(var(--ranking-number-stroke-color-raw-hsl, var(--border-raw-hsl)), 0.4)",
+        textShadow: isActive ? activeShadow : inactiveNumberTextShadowDefault,
         duration: 0.35,
         ease: "power2.inOut"
       });
 
       if (hoverFloatTlRef.current) {
         hoverFloatTlRef.current.kill();
-        // Smoothly return to its original y position (either active -15 or inactive 0)
         gsap.to(itemElCurrent, { y: isActive ? -15 : 0, duration: 0.3, ease: "power2.out" });
       }
 
@@ -252,7 +263,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       gsap.killTweensOf([posterElCurrent, numberElCurrent, itemElCurrent, glintOverlayEl]);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isActive, isPrev, isNext, rank]); // `rank` is added as it's used in number display
+  }, [isActive, isPrev, isNext, rank]);
 
   return (
     <div className="carousel-item-wrapper" ref={itemRef}>
@@ -260,7 +271,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         className="ranking-number"
         ref={numberRef}
         style={{
-          color: 'transparent', // Initial explicit transparency for CSS gradient
+          color: 'transparent', 
           WebkitTextFillColor: 'transparent'
         }}
       >
@@ -275,7 +286,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
               sizes="180px"
               className="show-poster"
               data-ai-hint="anime tvshow poster"
-              priority={rank <= 3} // Prioritize loading for top-ranked items
+              priority={rank <= 3}
             />
             <div className="glint-overlay" ref={glintOverlayRef}></div>
           </div>
