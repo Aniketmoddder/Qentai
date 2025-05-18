@@ -16,353 +16,170 @@
 
 
 @layer base {
-  /* Default Theme (Dark Purple Premium - Redesigned) */
+  /* Default Theme (Dark Purple Premium - Redesigned & Enhanced) */
   :root, html[data-theme="dark-purple-premium"] {
     --background: 240 7% 6%; /* #0E0E10 */
     --foreground: 215 28% 84%; /* #CBD5E1 (text-body) */
-
     --card: 240 7% 7%; /* #111113 (surface) */
     --card-foreground: 215 28% 84%; /* #CBD5E1 */
-
-    --popover: 240 7% 5%; /* Slightly darker than background */
-    --popover-foreground: 215 28% 84%; /* #CBD5E1 */
-
+    --popover: 240 7% 5%;
+    --popover-foreground: 215 28% 84%;
     --primary: 260 100% 70%; /* #A064FF */
-    --primary-foreground: 0 0% 100%; /* White for text on new primary */
-    
-    --secondary: 262 89% 66%; /* #8B5CF6 (Old primary, now secondary for this theme) */
-    --secondary-foreground: 0 0% 100%; /* White for text on new secondary */
-
-    --muted: 240 6% 10%; /* Muted background */
-    --muted-foreground: 215 20% 70%; /* Muted text, derived from new foreground */
-
-    --accent: 337 88% 70%; /* #F472B6 (Modern Candy Pink - kept from previous) */
-    --accent-foreground: 240 23% 6%; /* Dark text for on-accent - kept */
-
-    --destructive: 0 70% 55%; /* Standard red, good contrast - kept */
-    --destructive-foreground: 0 0% 98%; /* Kept */
-
-    --border: 240 5% 13%; /* #1F1F23 */
-    --input: 240 6% 9%; /* Darker than muted, lighter than card */
-    --ring: 260 100% 75%; /* Lighter primary for focus rings */
-    
-    --highlight: 243 79% 59%; /* #4F46E5 (New Highlight) */
-    --surface: hsl(var(--card)); /* surface will be same as card by default */
-    --text-heading: hsl(var(--foreground)); /* text-heading will be same as foreground */
-    --text-body: hsl(var(--foreground)); /* text-body will be same as foreground */
-
-    --radius: 0.75rem;
-
-    /* Chart colors using the new palette */
-    --chart-1: 260 100% 70%; /* Primary (#A064FF) */
-    --chart-2: 262 89% 66%; /* Secondary (#8B5CF6) */
-    --chart-3: 337 88% 70%;  /* Accent (#F472B6) */
-    --chart-4: 243 79% 59%;   /* Highlight (#4F46E5) */
-    --chart-5: 215 25% 75%;     /* Light Gray variant from new foreground */
-    
-    /* Sidebar colors derived from the new palette */
-    --sidebar-background: hsl(var(--background)); 
-    --sidebar-foreground: hsl(var(--foreground));
-    --sidebar-border: hsl(var(--border));
-    --sidebar-accent: hsl(var(--primary) / 0.15); /* Accent color for sidebar items, e.g., hover */
-    --sidebar-accent-foreground: hsl(var(--primary)); /* Text color on sidebar accent */
-    --sidebar-ring: hsl(var(--ring));
-  }
-
-  /* Light Theme (Elegant Light / Clean Pale Purple) */
-  html[data-theme="light-pale-purple"] {
-    --background: 220 60% 98%; /* #F9FAFB */
-    --foreground: 222 47% 11%; /* #111827 */
-    
-    --card: 0 0% 100%; /* #FFFFFF (Surface) */
-    --card-foreground: 222 47% 11%;
-    
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    
-    --primary: 250 66% 62%; /* #7C3AED */
-    --primary-foreground: 0 0% 100%; /* White */
-    
-    --secondary-hsl: 173 78% 40%; /* HSL for #14B8A6 */
-    --secondary: var(--secondary-hsl);
-    --secondary-foreground: 0 0% 100%; /* White text for Teal */
-    
-    --muted: 220 14% 93%; /* Standard light gray for muted backgrounds */
-    --muted-foreground: 220 10% 45%; /* Darker gray for muted text */
-    
-    --accent: 270 85% 77%; /* #C084FC */
-    --accent-foreground: 222 47% 11%; /* Dark text */
-    
-    --destructive: 0 84% 60%; /* Standard red for destructive actions */
-    --destructive-foreground: 0 0% 100%; /* White */
-    
-    --border: 220 13% 91%; /* #E5E7EB */
-    --input: 0 0% 100%; /* White input background */
-    --ring: 250 66% 67%; /* Lighter primary for focus rings */
-
-    --highlight: 262 84% 72%; /* #A78BFA (Light Purple) */
-    --surface: hsl(var(--card));
-    --text-heading: hsl(var(--foreground)); 
-    --text-body: hsl(var(--foreground)); 
-    
-    --radius: 0.75rem;
-
-    /* Chart colors for Elegant Light theme */
-    --chart-1: 250 66% 62%; /* Primary */
-    --chart-2: 173 78% 40%; /* Secondary (Teal) */
-    --chart-3: 270 85% 77%;  /* Accent */
-    --chart-4: 262 84% 72%; /* Highlight: #A78BFA (Light Purple) */
-    --chart-5: 220 10% 65%; /* Muted Gray for charts */
-    
-    /* Sidebar colors for Elegant Light theme */
-    --sidebar-background: hsl(var(--background)); 
-    --sidebar-foreground: hsl(var(--foreground));
-    --sidebar-border: hsl(var(--border));
-    --sidebar-accent: hsl(var(--primary) / 0.1); 
-    --sidebar-accent-foreground: hsl(var(--primary)); 
-    --sidebar-ring: hsl(var(--ring));
-  }
-
-  /* Kawaii Pink Vibe Theme */
-  html[data-theme="kawaii-pink-vibe"] {
-    --background: 287 50% 8%; /* #1A0A1E */
-    --foreground: 287 100% 98%; /* #FDF4FF */
-
-    --card: 287 67% 13%; /* #2B0D35 (Surface) */
-    --card-foreground: 287 100% 98%;
-
-    --popover: 287 50% 6%; /* Darker than background */
-    --popover-foreground: 287 100% 98%;
-
-    --primary: 327 82% 60%; /* #EC4899 */
-    --primary-foreground: 287 100% 98%; 
-    
-    --secondary: 352 96% 71%; /* #FB7185 */
-    --secondary-foreground: 287 50% 8%; /* Dark text for this secondary */
-
-    --muted: 287 60% 11%; /* Darker purple-ish gray */
-    --muted-foreground: 287 30% 60%; /* Lighter gray for muted text */
-
+    --primary-foreground: 0 0% 100%;
+    --secondary: 262 89% 66%; /* #8B5CF6 */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 6% 10%;
+    --muted-foreground: 215 20% 70%;
     --accent: 337 88% 70%; /* #F472B6 */
-    --accent-foreground: 287 50% 8%; /* Dark text for this accent */
-
-    --destructive: 0 70% 55%; /* Standard red */
-    --destructive-foreground: 0 0% 98%; /* Standard light text */
-
-    --border: 287 67% 18%; /* #3F0E4F */
-    --input: 287 67% 11%; /* Slightly darker than card */
-    --ring: 327 82% 65%; /* Lighter primary */
-
-    --highlight: 291 92% 72%; /* #E879F9 (from user prompt) */
+    --accent-foreground: 240 23% 6%;
+    --destructive: 0 70% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5% 13%; /* #1F1F23 */
+    --input: 240 6% 9%;
+    --ring: 260 100% 75%;
+    --highlight: 243 79% 59%; /* #4F46E5 */
     --surface: hsl(var(--card));
-    --text-heading: hsl(var(--foreground)); 
-    --text-body: hsl(var(--foreground)); 
-    
+    --text-heading: hsl(var(--foreground));
+    --text-body: hsl(var(--foreground));
     --radius: 0.75rem;
-
-    /* Chart colors */
-    --chart-1: 327 82% 60%; /* Primary */
-    --chart-2: 352 96% 71%; /* Secondary */
-    --chart-3: 337 88% 70%;  /* Accent */
-    --chart-4: 291 92% 72%;   /* Highlight */
-    --chart-5: 287 30% 60%;     /* Muted Foreground */
-    
-    /* Sidebar colors */
-    --sidebar-background: hsl(var(--background)); 
-    --sidebar-foreground: hsl(var(--foreground));
-    --sidebar-border: hsl(var(--border));
-    --sidebar-accent: hsl(var(--primary) / 0.2); 
-    --sidebar-accent-foreground: hsl(var(--primary)); 
-    --sidebar-ring: hsl(var(--ring));
+    --chart-1: 260 100% 70%; --chart-2: 262 89% 66%; --chart-3: 337 88% 70%; --chart-4: 243 79% 59%; --chart-5: 215 25% 75%;
+    --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.15); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
+    /* Raw HSL for GSAP */
+    --primary-raw-hsl: 260 100% 70%;
+    --secondary-raw-hsl: 262 89% 66%;
+    --accent-raw-hsl: 337 88% 70%;
+    --highlight-raw-hsl: 243 79% 59%;
   }
 
-  /* Futuristic Cyberpunk Theme */
+  html[data-theme="light-pale-purple"] {
+    --background: 220 60% 98%; --foreground: 222 47% 11%; --card: 0 0% 100%; --card-foreground: 222 47% 11%; --popover: 0 0% 100%; --popover-foreground: 222 47% 11%;
+    --primary: 250 66% 62%; --primary-foreground: 0 0% 100%;
+    --secondary-hsl: 173 78% 40%; --secondary: var(--secondary-hsl); --secondary-foreground: 0 0% 100%;
+    --muted: 220 14% 93%; --muted-foreground: 220 10% 45%;
+    --accent: 270 85% 77%; --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%; --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%; --input: 0 0% 100%; --ring: 250 66% 67%;
+    --highlight: 262 84% 72%; --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
+    --chart-1: 250 66% 62%; --chart-2: 173 78% 40%; --chart-3: 270 85% 77%; --chart-4: 262 84% 72%; --chart-5: 220 10% 65%;
+    --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.1); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
+    /* Raw HSL */
+    --primary-raw-hsl: 250 66% 62%;
+    --secondary-raw-hsl: 173 78% 40%;
+    --accent-raw-hsl: 270 85% 77%;
+    --highlight-raw-hsl: 262 84% 72%;
+  }
+
+  html[data-theme="kawaii-pink-vibe"] {
+    --background: 287 50% 8%; --foreground: 287 100% 98%; --card: 287 67% 13%; --card-foreground: 287 100% 98%; --popover: 287 50% 6%; --popover-foreground: 287 100% 98%;
+    --primary: 327 82% 60%; --primary-foreground: 287 100% 98%;
+    --secondary: 352 96% 71%; --secondary-foreground: 287 50% 8%;
+    --muted: 287 60% 11%; --muted-foreground: 287 30% 60%;
+    --accent: 337 88% 70%; --accent-foreground: 287 50% 8%;
+    --destructive: 0 70% 55%; --destructive-foreground: 0 0% 98%;
+    --border: 287 67% 18%; --input: 287 67% 11%; --ring: 327 82% 65%;
+    --highlight: 291 92% 72%; --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
+    --chart-1: 327 82% 60%; --chart-2: 352 96% 71%; --chart-3: 337 88% 70%; --chart-4: 291 92% 72%; --chart-5: 287 30% 60%;
+    --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.2); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
+    /* Raw HSL */
+    --primary-raw-hsl: 327 82% 60%;
+    --secondary-raw-hsl: 352 96% 71%;
+    --accent-raw-hsl: 337 88% 70%;
+    --highlight-raw-hsl: 291 92% 72%;
+  }
+
   html[data-theme="futuristic-cyberpunk"] {
-    --background: 231 25% 8%;    /* #0F0F1A */
-    --foreground: 220 13% 91%;   /* #E2E8F0 */
-
-    --card: 231 25% 12%;      /* #1A1A2F (Surface) */
-    --card-foreground: 220 13% 91%;
-
-    --popover: 231 25% 6%;    /* Darker than background */
-    --popover-foreground: 220 13% 91%;
-
-    --primary: 180 100% 50%;  /* #00FFFF (Cyan) */
-    --primary-foreground: 231 25% 8%; /* Dark text for high contrast on primary */
-    
-    --secondary: 300 100% 50%; /* #FF00FF (Magenta) */
-    --secondary-foreground: 231 25% 8%; /* Dark text for high contrast on secondary */
-
-    --muted: 231 25% 10%;     /* Darker than card for muted backgrounds */
-    --muted-foreground: 220 10% 55%; /* Muted text */
-
-    --accent: 157 100% 50%;   /* #00FF9D (Neon Green) */
-    --accent-foreground: 231 25% 8%; /* Dark text for high contrast on accent */
-
-    --destructive: 0 100% 60%;   /* Bright Red */
-    --destructive-foreground: 0 0% 98%; /* Light text */
-
-    --border: 231 25% 20%;    /* #2D2D44 */
-    --input: 231 25% 10%;     /* Darker than card/surface */
-    --ring: 180 100% 55%;     /* Brighter primary for focus rings */
-    
-    --highlight: 250 66% 62%; /* #7C3AED (Deep Violet from palette) */
-    --surface: hsl(var(--card));
-    --text-heading: hsl(var(--foreground)); 
-    --text-body: hsl(var(--foreground)); 
-
-    --radius: 0.5rem; /* Sharper corners for cyberpunk */
-
-    /* Chart colors */
-    --chart-1: 180 100% 50%; /* Primary (Cyan) */
-    --chart-2: 300 100% 50%; /* Secondary (Magenta) */
-    --chart-3: 157 100% 50%; /* Accent (Neon Green) */
-    --chart-4: 250 66% 62%;  /* Highlight (Deep Violet) */
-    --chart-5: 220 10% 70%;  /* Light Gray variant */
-    
-    /* Sidebar colors */
-    --sidebar-background: hsl(var(--background)); 
-    --sidebar-foreground: hsl(var(--foreground));
-    --sidebar-border: hsl(var(--border));
-    --sidebar-accent: hsl(var(--primary) / 0.25); 
-    --sidebar-accent-foreground: hsl(var(--primary)); 
-    --sidebar-ring: hsl(var(--ring));
+    --background: 231 25% 8%; --foreground: 220 13% 91%; --card: 231 25% 12%; --card-foreground: 220 13% 91%; --popover: 231 25% 6%; --popover-foreground: 220 13% 91%;
+    --primary: 180 100% 50%; --primary-foreground: 231 25% 8%;
+    --secondary: 300 100% 50%; --secondary-foreground: 231 25% 8%;
+    --muted: 231 25% 10%; --muted-foreground: 220 10% 55%;
+    --accent: 157 100% 50%; --accent-foreground: 231 25% 8%;
+    --destructive: 0 100% 60%; --destructive-foreground: 0 0% 98%;
+    --border: 231 25% 20%; --input: 231 25% 10%; --ring: 180 100% 55%;
+    --highlight: 250 66% 62%; --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.5rem;
+    --chart-1: 180 100% 50%; --chart-2: 300 100% 50%; --chart-3: 157 100% 50%; --chart-4: 250 66% 62%; --chart-5: 220 10% 70%;
+    --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.25); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
+    /* Raw HSL */
+    --primary-raw-hsl: 180 100% 50%;
+    --secondary-raw-hsl: 300 100% 50%;
+    --accent-raw-hsl: 157 100% 50%;
+    --highlight-raw-hsl: 250 66% 62%;
   }
-
 
   /* Global styles that apply to all themes */
   :root {
-     --header-height: 4rem; 
+     --header-height: 4rem;
   }
 
   html {
-    @apply overflow-x-hidden; 
-    -webkit-tap-highlight-color: transparent; 
+    @apply overflow-x-hidden;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased flex flex-col min-h-full overflow-x-hidden;
   }
   main {
-    @apply flex-grow; 
+    @apply flex-grow;
   }
 
-  h1 {
-    @apply font-zen-dots; /* Zen Dots for h1 */
-  }
-  h2, h3 {
-    @apply font-orbitron; /* Orbitron for h2, h3 */
-  }
+  h1 { @apply font-zen-dots; }
+  h2, h3 { @apply font-orbitron; }
 
-
-  /* Custom scrollbar for a more modern look */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  ::-webkit-scrollbar-track {
-    background: hsl(var(--background) / 0.3);
-    border-radius: 10px;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--secondary) / 0.8);
-    border-radius: 10px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary));
-  }
-  /* For Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--secondary)) hsl(var(--background) / 0.3);
-  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: hsl(var(--background) / 0.3); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--secondary) / 0.8); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
+  * { scrollbar-width: thin; scrollbar-color: hsl(var(--secondary)) hsl(var(--background) / 0.3); }
 }
 
 @layer utilities {
   .btn-primary-gradient {
     @apply text-primary-foreground transition-all duration-300 ease-in-out shadow-md hover:shadow-primary/50;
-    /* Default to primary solid color if gradient not specified by theme */
-    background: hsl(var(--primary)); 
-    background-size: 150% auto; /* Added for hover effect */
+    background: hsl(var(--primary));
+    background-size: 150% auto;
   }
   html[data-theme="dark-purple-premium"] .btn-primary-gradient {
-    /* Specific gradient for the redesigned dark-purple-premium theme */
-    background-image: linear-gradient(135deg, hsl(260, 100%, 70%) 0%, hsl(250, 66%, 62%) 100%);
+    background-image: linear-gradient(135deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
   }
   html[data-theme="light-pale-purple"] .btn-primary-gradient {
-    background-image: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--secondary-hsl)) 100%);
+    background-image: linear-gradient(90deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
   }
   html[data-theme="kawaii-pink-vibe"] .btn-primary-gradient {
-     background-image: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--highlight)) 100%);
+     background-image: linear-gradient(90deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--highlight-raw-hsl)) 100%);
   }
   html[data-theme="futuristic-cyberpunk"] .btn-primary-gradient {
-    background-image: linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
+    background-image: linear-gradient(90deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
+  }
+  html[data-theme] .btn-primary-gradient:hover {
+    background-position: right center;
   }
 
-  /* Shared hover effect for all themes with gradients */
-  html[data-theme="dark-purple-premium"] .btn-primary-gradient:hover,
-  html[data-theme="light-pale-purple"] .btn-primary-gradient:hover,
-  html[data-theme="kawaii-pink-vibe"] .btn-primary-gradient:hover,
-  html[data-theme="futuristic-cyberpunk"] .btn-primary-gradient:hover {
-    background-position: right center; 
-  }
+  .scrollbar-thin { scrollbar-width: thin; scrollbar-color: hsl(var(--muted)) transparent; }
+  .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 3px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
 
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted)) transparent; 
-  }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted));
-    border-radius: 3px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary));
-  }
+  .section-title-bar { @apply relative pl-4; }
+  .section-title-bar::before { content: ''; @apply absolute left-0 top-1/2 -translate-y-1/2 h-3/5 w-[3px] bg-primary rounded-full; }
 
-  .scrollbar-hide {
-    -ms-overflow-style: none;  
-    scrollbar-width: none;  
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;  
-  }
-
-  .section-title-bar {
-    @apply relative pl-4; /* Increased space for the bar */
-  }
-  .section-title-bar::before {
-    content: '';
-    @apply absolute left-0 top-1/2 -translate-y-1/2 h-3/5 w-[3px] bg-primary rounded-full; /* Adjusted height and width */
-  }
-
-  .card-shadow {
-    box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -2px hsl(var(--primary) / 0.1);
-  }
-  .card-shadow:hover {
-    box-shadow: 0 10px 15px -3px hsl(var(--primary) / 0.15), 0 4px 6px -4px hsl(var(--primary) / 0.15);
-  }
+  .card-shadow { box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -2px hsl(var(--primary) / 0.1); }
+  .card-shadow:hover { box-shadow: 0 10px 15px -3px hsl(var(--primary) / 0.15), 0 4px 6px -4px hsl(var(--primary) / 0.15); }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
 }
 
 /* Custom Swiper Navigation Styles */
 .swiper-button-prev,
 .swiper-button-next {
-  color: #ffffff !important; /* Bold white */
-  background-image: none !important; /* Remove default Swiper arrow images */
-  width: 40px !important; /* Adjust size as needed */
-  height: 40px !important; /* Adjust size as needed */
+  color: #ffffff !important;
+  background-image: none !important;
+  width: 40px !important;
+  height: 40px !important;
   top: 50% !important;
   transform: translateY(-50%) !important;
   transition: opacity 0.2s ease-in-out;
@@ -371,109 +188,94 @@
   align-items: center;
   justify-content: center;
 }
-
 .swiper-button-prev::after,
-.swiper-button-next::after {
-  font-size: 24px !important; /* Adjust icon size */
-  font-weight: bold !important;
-}
-
-.swiper-button-prev {
-  left: 10px !important;
-}
-
-.swiper-button-next {
-  right: 10px !important;
-}
-
-.swiper-button-disabled-custom { /* Custom class for disabled state */
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
+.swiper-button-next::after { font-size: 24px !important; font-weight: bold !important; }
+.swiper-button-prev { left: 10px !important; }
+.swiper-button-next { right: 10px !important; }
+.swiper-button-disabled-custom { opacity: 0 !important; pointer-events: none !important; }
 
 /* Styles for the new ShowsCarousel */
-.shows-swiper-container {
-  padding-top: 20px; /* Space for lifted items */
-  padding-bottom: 40px; /* Space for item content and shadows */
-  overflow: visible !important; /* Allow overflow for coverflow effect if needed */
+.shows-carousel-container-wrapper { /* Added to allow perspective to be higher up */
+    perspective: 1200px; /* For 3D tilt effects */
 }
-
+.shows-swiper-container {
+  padding-top: 20px;
+  padding-bottom: 40px;
+  overflow: visible !important;
+}
 .shows-swiper-slide {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 360px; /* Height of the slide area */
+  height: 360px;
   box-sizing: border-box;
-  width: auto !important; /* Allow items to size themselves for coverflow */
+  width: auto !important;
 }
-
-.carousel-item-wrapper { /* This is the root div in CarouselItem.tsx */
+.carousel-item-wrapper {
   position: relative;
-  width: 180px; /* Width of the card content itself */
-  height: 100%; /* Full height of the slide */
+  width: 180px;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end; /* Align content (poster) to bottom */
+  justify-content: flex-end;
   align-items: center;
   box-sizing: border-box;
+  transform-style: preserve-3d; /* Essential for children 3D transforms */
 }
-
 .show-poster-container-link {
-  display: block; /* Make the link a block element to wrap the poster */
+  display: block;
   width: 100%;
-  height: 270px; /* Explicit height for the poster part */
+  height: 270px;
+  transform-style: preserve-3d; /* Ensure 3D transforms are seen */
 }
-
 .show-poster-container {
   position: relative;
   width: 180px;
   height: 270px;
   z-index: 2;
   border-radius: 12px;
-  box-shadow: 0 12px 30px hsla(var(--primary), 0.2); /* Use theme color for shadow */
+  box-shadow: 0 12px 30px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.2);
   overflow: hidden;
-  will-change: transform, opacity;
+  will-change: transform, opacity, box-shadow;
   cursor: pointer;
   transition: box-shadow 0.3s ease;
+  transform-style: preserve-3d; /* For 3D effects */
 }
 .show-poster-container:hover {
-   box-shadow: 0 15px 35px hsla(var(--primary), 0.35);
+   box-shadow: 0 15px 35px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.45);
 }
-
-
-.show-poster { /* This is the actual <img> tag */
+.show-poster {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 12px; /* Inherit or set explicitly */
+  border-radius: 12px;
 }
-
 .ranking-number {
   position: absolute;
-  bottom: 10px; /* Adjusted for better visual balance */
-  left: -25px;  /* Overlap more significantly */
+  bottom: 10px;
+  left: -25px;
   font-size: 6rem; /* Adjust based on visual preference */
-  font-weight: 900;
-  color: hsl(var(--foreground)); /* Use theme foreground color */
-  -webkit-text-stroke: 2px hsl(var(--border)); /* Use theme border color */
+  font-weight: 900; /* Inter Black or similar */
+  font-family: var(--font-montserrat); /* Ensure using a bold font */
+  color: hsl(var(--foreground));
+  -webkit-text-stroke: 2px hsl(var(--border));
   paint-order: stroke fill;
   z-index: 3;
-  line-height: 0.7; /* Tighten line height */
+  line-height: 0.7;
   user-select: none;
-  will-change: transform, opacity;
-  pointer-events: none; /* So it doesn't interfere with poster hover */
-  opacity: 0.8; /* Slightly transparent for better blending */
-  transform: rotate(-5deg); /* Slight playful rotation */
+  will-change: transform, opacity, text-shadow;
+  pointer-events: none;
+  opacity: 0.8;
+  transform: rotate(-5deg); /* Initial playful rotation */
+  text-shadow: 1px 1px 1px hsla(var(--border-raw-hsl, 240 5% 13%), 0.2); /* Subtle depth */
 }
 
-/* Swiper Active/Inactive state styling if needed beyond GSAP */
-.shows-swiper-slide.swiper-slide-active .show-poster-container {
-  /* GSAP handles most of this, but you could add base active styles */
+/* Ensure perspective for 3D transforms on item */
+.carousel-item-wrapper {
+    transform-style: preserve-3d;
 }
-
-.shows-swiper-slide:not(.swiper-slide-active) .show-poster-container {
-  /* GSAP handles most of this */
+.shows-carousel-container-wrapper {
+    perspective: 1500px; /* Apply perspective to the parent of swiper */
 }
 
