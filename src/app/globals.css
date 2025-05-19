@@ -204,14 +204,14 @@
     margin-bottom: 2rem; /* Space after the carousel section */
 }
 
-.shows-swiper-container { /* The main Swiper instance */
+.netflix-swiper-container { /* The main Swiper instance */
   padding-top: 25px; /* Space for lifted items */
   padding-bottom: 45px; /* Space for shadows and potential number overlap */
   overflow: visible !important; /* Ensure slides aren't clipped by Swiper */
   width: 100%;
 }
 
-.shows-swiper-slide { /* Individual Swiper slide, direct child of swiper-wrapper */
+.netflix-swiper-slide { /* Individual Swiper slide, direct child of swiper-wrapper */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -223,7 +223,7 @@
 }
 
 /* Wrapper for the actual card content (poster + number) inside a SwiperSlide */
-.carousel-item-wrapper {
+.netflix-carousel-item-wrapper {
   position: relative;
   width: 190px; /* Base width of the content area */
   height: 100%; /* Take full height of the SwiperSlide */
@@ -236,11 +236,11 @@
   cursor: grab;
   overflow: visible; /* This wrapper should not clip its children (poster, number) */
 }
-.carousel-item-wrapper:active {
+.netflix-carousel-item-wrapper:active {
   cursor: grabbing;
 }
 
-.show-poster-container {
+.netflix-show-poster-container {
   position: relative; /* If ranking number is absolutely positioned relative to this */
   width: 180px;  /* Desired poster width */
   height: 270px; /* Desired poster height */
@@ -254,7 +254,7 @@
 }
 
 /* Default hover gradient overlay for poster (can be enhanced by GSAP) */
-.show-poster-container::before {
+.netflix-show-poster-container::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -264,11 +264,11 @@
     z-index: 1; /* Above image, below glint */
     border-radius: inherit;
 }
-.carousel-item-wrapper:hover .show-poster-container::before {
+.netflix-carousel-item-wrapper:hover .netflix-show-poster-container::before {
     opacity: 1;
 }
 
-.show-poster { /* The actual <img> tag */
+.netflix-show-poster { /* The actual <img> tag */
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -277,7 +277,7 @@
   will-change: transform; /* Hint for GSAP scaling */
 }
 
-.glint-overlay { /* For the hover glint effect */
+.netflix-glint-overlay { /* For the hover glint effect */
   position: absolute;
   top: 0;
   left: -150%; /* Start off-screen */
@@ -297,21 +297,19 @@
 }
 
 /* Precise styling for the ranking number overlay */
-.ranking-number-overlay {
+.netflix-ranking-number-overlay {
   font-family: var(--font-orbitron), sans-serif; /* Using Orbitron as per general heading style */
   font-size: clamp(5rem, 12vw, 10rem); /* Responsive font size */
   font-weight: 900;
   color: hsl(var(--accent)); /* Fill color from theme's accent */
   -webkit-text-stroke-width: 2px;
   -webkit-text-stroke-color: var(--ranking-number-stroke-color); /* Defined per theme */
-  /* text-shadow: 1px 1px 0px var(--ranking-number-stroke-color); */ /* Fallback if stroke not supported, or for different effect */
   text-shadow: 1px 1px 0px transparent; /* Minimal default for GSAP */
 
-
   position: absolute;
-  bottom: 10px;  /* Adjust to overlap poster correctly */
-  left: 0px;   /* Adjust: Start from left edge of item, or slightly in */
-  z-index: 1;    /* Behind poster if poster is z-index 2, or above if poster is lower */
+  bottom: 15px;  /* Adjust to overlap poster correctly */
+  left: 5px;   /* Adjust: Start slightly inside its parent */
+  z-index: 1;    /* Behind poster if poster is z-index 2. If number should be above poster, set to 3 or more. */
   opacity: 0;    /* Initially hidden, GSAP will animate opacity for active items */
   line-height: 0.7; /* Tight line height for large numbers */
   user-select: none;
@@ -321,10 +319,10 @@
 }
 
 /* Theme-specific stroke colors for ranking number */
-html[data-theme="dark-purple-premium"] .ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
-html[data-theme="light-pale-purple"] .ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
-html[data-theme="kawaii-pink-vibe"] .ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
-html[data-theme="futuristic-cyberpunk"] .ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+html[data-theme="dark-purple-premium"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+html[data-theme="light-pale-purple"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+html[data-theme="kawaii-pink-vibe"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+html[data-theme="futuristic-cyberpunk"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
 
 
 /* Custom Swiper Navigation (if not using built-in, or to style built-in) */
