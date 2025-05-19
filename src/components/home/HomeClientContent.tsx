@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
-// Removed ShowsCarousel import
+import NetflixShowsCarousel from '@/components/home/NetflixShowsCarousel'; // Corrected import name
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,6 +20,7 @@ import HomePageGenreSection from './HomePageGenreSection';
 import RecommendationsSection from '../anime/recommendations-section';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 import { Skeleton } from '@/components/ui/skeleton';
+import NetflixCarouselSkeleton from '@/components/home/NetflixCarouselSkeleton';
 
 
 const getYouTubeVideoId = (url?: string): string | null => {
@@ -49,7 +50,7 @@ export interface HomeClientProps {
   fetchError: string | null;
 }
 
-const ARTIFICIAL_SKELETON_DELAY = 750; 
+const ARTIFICIAL_SKELETON_DELAY = 750;
 
 export default function HomeClient({
     initialAllAnimeData: rawInitialAllAnimeData,
@@ -59,7 +60,7 @@ export default function HomeClient({
   const [allAnime, setAllAnime] = useState<Anime[]>(() => rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
   const [featuredAnimesList, setFeaturedAnimesList] = useState<Anime[]>(() => rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError);
-  
+
   const [isArtificiallyLoading, setIsArtificiallyLoading] = useState(true);
   const [isDataActuallyLoading, setIsDataActuallyLoading] = useState(
     !rawInitialAllAnimeData || rawInitialAllAnimeData.length === 0
@@ -86,7 +87,7 @@ export default function HomeClient({
       setAllAnime(rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
       setFeaturedAnimesList(rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
       setFetchError(null);
-      setIsDataActuallyLoading(rawInitialAllAnimeData.length === 0 && rawInitialFeaturedAnimes.length === 0);
+      setIsDataActuallyLoading(rawInitialAllAnimeData.length === 0 && rawInitialFeaturedAnimes.length === 0 && !initialFetchError);
     }
   }, [rawInitialAllAnimeData, rawInitialFeaturedAnimes, initialFetchError]);
 
@@ -104,7 +105,7 @@ export default function HomeClient({
     if (heroAnime && youtubeVideoId && !playTrailer && !fetchError && !isDataActuallyLoading && !isArtificiallyLoading) {
       timer = setTimeout(() => {
         setPlayTrailer(true);
-      }, 3000); 
+      }, 3000);
     }
     return () => clearTimeout(timer);
   }, [heroAnime, youtubeVideoId, playTrailer, fetchError, isDataActuallyLoading, isArtificiallyLoading]);
@@ -113,14 +114,18 @@ export default function HomeClient({
     return allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15) : [];
   }, [allAnime]);
 
-  // trendingTvShows logic removed as ShowsCarousel is removed
+  const trendingTvShows = useMemo(() => {
+    return allAnime.filter(a => a.type === 'TV')
+                   .sort((a,b) => (b.popularity || 0) - (a.popularity || 0))
+                   .slice(0, 15); // Max 15 shows as per prompt
+  }, [allAnime]);
 
   const popularAnime = useMemo(() => {
     return allAnime.length > 0
     ? [...allAnime]
         .filter(a => a.averageRating !== undefined && a.averageRating !== null && a.averageRating >= 7.0)
         .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
-        .slice(0, 15) 
+        .slice(0, 15)
     : [];
   }, [allAnime]);
 
@@ -148,17 +153,22 @@ export default function HomeClient({
       <>
         <HeroSkeleton />
         <Container className="py-8">
+          {/* Featured section skeleton */}
           <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Title Skeleton */}
+            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50" /> {/* Featured Card Skeleton */}
+                <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50" />
                 <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50 hidden md:block" />
             </div>
           </div>
-          {/* Removed Skeleton for ShowsCarousel Title and Cards */}
-          {[...Array(3)].map((_, i) => ( // Skeleton for 3 other carousels
+
+          {/* NetflixShowsCarousel Skeleton */}
+          <NetflixCarouselSkeleton />
+
+          {/* Skeletons for other AnimeCarousels */}
+          {[...Array(2)].map((_, i) => (
             <div key={`carousel-skeleton-${i}`} className="mb-8">
-              <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Carousel Title Skeleton */}
+              <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
               <div className="flex overflow-x-auto pb-4 gap-3 sm:gap-4 scrollbar-hide">
                 {[...Array(5)].map((_, j) => (
                   <div key={`card-skeleton-${i}-${j}`} className="flex-shrink-0">
@@ -169,23 +179,23 @@ export default function HomeClient({
             </div>
           ))}
            <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-6 rounded bg-muted/50" /> {/* Top Anime List Title Skeleton */}
+            <Skeleton className="h-8 w-1/3 mb-6 rounded bg-muted/50" />
             <div className="space-y-3">
-                {[...Array(5)].map((_, k) => ( // Skeleton for 5 top anime list items
+                {[...Array(5)].map((_, k) => (
                     <Skeleton key={`top-item-skeleton-${k}`} className="h-28 w-full rounded-lg bg-muted/50" />
                 ))}
             </div>
           </div>
            <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Genre Section Title Skeleton */}
+            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-                {[...Array(6)].map((_, l) => ( // Skeleton for 6 genre cards
+                {[...Array(6)].map((_, l) => (
                     <Skeleton key={`genre-skeleton-${l}`} className="h-[100px] md:h-[120px] rounded-lg bg-muted/50" />
                 ))}
             </div>
           </div>
            <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Recommendations Section Title Skeleton */}
+            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 place-items-center sm:place-items-stretch">
                 {[...Array(5)].map((_, m) => (
                   <AnimeCardSkeleton key={`reco-skeleton-${m}`} />
@@ -312,7 +322,7 @@ export default function HomeClient({
         )}
 
         {featuredAnimesList.length > 0 && (
-          <section className="py-6 md:py-8">
+          <section className="pt-2 pb-8 md:pt-4 md:pb-12"> {/* Adjusted padding */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron">Featured Anime</h2>
               <Button variant="link" asChild className="text-primary hover:text-primary/80 font-poppins">
@@ -326,11 +336,14 @@ export default function HomeClient({
             </div>
           </section>
         )}
-        
-        {/* Removed the ShowsCarousel for Trending TV Shows */}
+
+        {/* NetflixShowsCarousel - Placed after Featured Anime */}
+        {trendingTvShows.length > 0 && (
+           <NetflixShowsCarousel shows={trendingTvShows} title="Trending TV Shows"/>
+        )}
 
         {trendingAnime.length > 0 && <AnimeCarousel title="Trending Now" animeList={trendingAnime} />}
-        
+
         <HomePageGenreSection />
 
         {popularAnime.length > 0 && <AnimeCarousel title="Popular This Season" animeList={popularAnime} />}
