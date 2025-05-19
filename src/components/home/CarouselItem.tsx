@@ -57,11 +57,11 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         rotationY: -3,
         rotationX: 3,
         rotationZ: 0,
-        boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.35)",
+        boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl), 0.35)", // Using HSL variable
       }, 0);
 
       // NUMBER - ACTIVE - Entrance Scramble & Pop
-      gsap.set(numberEl, { opacity: 0, scale: 0.7, y: 20, x: 0, color: 'transparent', webkitTextFillColor: 'transparent', willChange: 'transform, opacity, text-shadow, color, -webkit-text-fill-color' });
+      gsap.set(numberEl, { opacity: 0, scale: 0.7, y: 20, x: 0, willChange: 'transform, opacity, text-shadow, color' });
       
       let scrambleCounter = 0;
       tl.to(numberEl, { 
@@ -69,7 +69,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         repeat: 10,
         ease: "none",
         onStart: () => {
-          gsap.set(numberEl, { opacity: 0.8, color: 'transparent', webkitTextFillColor: 'transparent' });
+          gsap.set(numberEl, { opacity: 0.8 });
         },
         onRepeat: () => {
           let text = "";
@@ -79,7 +79,6 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         },
         onComplete: () => {
           numberEl.textContent = rankStr;
-          gsap.set(numberEl, { color: 'transparent', webkitTextFillColor: 'transparent'}); 
         }
       }, "<0.1")
       .to(numberEl, { 
@@ -88,16 +87,14 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         x: 0, 
         opacity: 1,
         rotationZ: 0,
-        color: 'transparent',
-        webkitTextFillColor: 'transparent',
         ease: "back.out(1.6)",
       }, ">-0.05")
       .to(numberEl, { 
         textShadow: `
-          0 0 8px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.7),
-          0 0 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.5),
-          0 0 25px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.3),
-          1px 1px 0px var(--ranking-number-stroke-color, hsla(0,0%,0%,0.5))
+          0 0 8px hsla(var(--accent-raw-hsl), 0.7),
+          0 0 15px hsla(var(--accent-raw-hsl), 0.5),
+          0 0 25px hsla(var(--accent-raw-hsl), 0.3),
+          1px 1px 0px var(--ranking-number-stroke-color)
         `,
         duration: 1.5,
         ease: "sine.inOut",
@@ -108,7 +105,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       // CARD - ACTIVE - Continuous subtle breathing
       gsap.to(posterEl, {
         scale: 1.135, 
-        boxShadow: "0px 20px 50px 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.40)",
+        boxShadow: "0px 20px 50px 15px hsla(var(--primary-raw-hsl), 0.40)",
         duration: 1.8,
         ease: "sine.inOut",
         repeat: -1,
@@ -125,22 +122,19 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         rotationY: 0,
         rotationX: 0,
         rotationZ: tiltAngle,
-        boxShadow: "0 6px 18px hsla(var(--border-raw-hsl, 240 5% 13%), 0.25)",
+        boxShadow: "0 6px 18px hsla(var(--border-raw-hsl), 0.25)",
       }, 0);
 
-      gsap.set(numberEl, { willChange: 'transform, opacity, text-shadow, color, -webkit-text-fill-color' });
+      gsap.set(numberEl, { willChange: 'transform, opacity, text-shadow, color' });
       tl.to(numberEl, {
         scale: 0.88,
-        y: 10, // Keep this y for inactive, ensures it's lower on side cards
+        y: 10, 
         x: 0, 
         opacity: 0.45,
         rotationZ: tiltAngle / 1.5,
-        color: 'transparent',
-        webkitTextFillColor: 'transparent',
-        textShadow: `1px 1px 0px var(--ranking-number-stroke-color, hsla(0,0%,0%,0.4))`,
+        textShadow: `1px 1px 0px var(--ranking-number-stroke-color)`,
         onStart: () => {
             if(numberEl.textContent !== rankStr) numberEl.textContent = rankStr;
-            gsap.set(numberEl, { color: 'transparent', webkitTextFillColor: 'transparent'});
         }
       }, "<0.05");
     }
@@ -179,30 +173,31 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       }
       
       if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
-      const currentItemY = gsap.getProperty(itemElCurrent, "y") as number;
+      const baseItemY = gsap.getProperty(itemElCurrent, "y") as number; // Get current y before starting
       const targetItemYOffset = isActive ? 4 : 2; 
+      
       hoverFloatTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
-          .to(itemElCurrent, { y: currentItemY - targetItemYOffset, duration: 1.7, ease: "sine.inOut" });
+          .to(itemElCurrent, { y: baseItemY - targetItemYOffset, duration: 1.7, ease: "sine.inOut" });
 
       if (isActive) {
         itemElCurrent.addEventListener('mousemove', handleMouseMove);
         gsap.to(posterElCurrent, {
-            boxShadow: "0px 22px 55px 18px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.45)",
+            boxShadow: "0px 22px 55px 18px hsla(var(--primary-raw-hsl), 0.45)",
             duration: 0.25, ease: "power2.out", overwrite: "auto"
         });
         gsap.to(numberElCurrent, {
             textShadow: `
-              0 0 10px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.8),
-              0 0 18px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.6),
-              0 0 30px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.4),
-              1px 1px 0px var(--ranking-number-stroke-color, hsla(0,0%,0%,0.5))
+              0 0 10px hsla(var(--accent-raw-hsl), 0.8),
+              0 0 18px hsla(var(--accent-raw-hsl), 0.6),
+              0 0 30px hsla(var(--accent-raw-hsl), 0.4),
+              1px 1px 0px var(--ranking-number-stroke-color)
             `,
             duration: 0.25, ease: "power2.out", overwrite: "auto"
         });
       } else {
          gsap.to(posterElCurrent, { 
              y: "-=5", opacity: 0.7, 
-             boxShadow: "0 8px 22px hsla(var(--border-raw-hsl, 240 5% 13%), 0.30)",
+             boxShadow: "0 8px 22px hsla(var(--border-raw-hsl), 0.30)",
              duration: 0.25, ease: "power2.out", overwrite: "auto" 
          });
       }
@@ -213,34 +208,41 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       
       if (hoverFloatTlRef.current) {
         hoverFloatTlRef.current.kill();
-        const baseItemY = isActive ? -15 : 0; // Revert to base y of item, poster y is separate
-        gsap.to(itemElCurrent, { y: baseItemY, duration: 0.3, ease: "power2.out" });
+         // Get the original base Y position for the item (could be 0 or -15 for active items)
+        const originalBaseY = gsap.getProperty(itemRef.current, "data-original-y") || (isActive ? -15 : 0); // Fallback
+        gsap.to(itemElCurrent, { y: originalBaseY, duration: 0.3, ease: "power2.out" });
       }
       
       if (isActive) {
         itemElCurrent.removeEventListener('mousemove', handleMouseMove);
         gsap.to(posterElCurrent, { 
             rotationX: 3, rotationY: -3, 
-            boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.35)",
+            boxShadow: "0px 18px 45px 12px hsla(var(--primary-raw-hsl), 0.35)",
             duration: 0.35, ease: "power2.inOut", overwrite: "auto" 
         });
         gsap.to(numberElCurrent, {
             textShadow: `
-              0 0 8px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.7),
-              0 0 15px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.5),
-              0 0 25px hsla(var(--primary-raw-hsl, 262 89% 66%), 0.3),
-              1px 1px 0px var(--ranking-number-stroke-color, hsla(0,0%,0%,0.5))
+              0 0 8px hsla(var(--accent-raw-hsl), 0.7),
+              0 0 15px hsla(var(--accent-raw-hsl), 0.5),
+              0 0 25px hsla(var(--accent-raw-hsl), 0.3),
+              1px 1px 0px var(--ranking-number-stroke-color)
             `,
             duration: 0.35, ease: "power2.inOut", overwrite: "auto"
         });
       } else {
           gsap.to(posterElCurrent, { 
             y: 0, opacity: 0.55, 
-            boxShadow: "0 6px 18px hsla(var(--border-raw-hsl, 240 5% 13%), 0.25)",
+            boxShadow: "0 6px 18px hsla(var(--border-raw-hsl), 0.25)",
             duration: 0.35, ease: "power2.inOut", overwrite: "auto" 
           });
       }
     };
+    
+    // Store original y for hover float revert
+    if(itemElCurrent && !gsap.getProperty(itemRef.current, "data-original-y")) {
+        gsap.set(itemRef.current, {"data-original-y": gsap.getProperty(itemRef.current, "y")});
+    }
+
 
     itemElCurrent.addEventListener('mouseenter', handleMouseEnter);
     itemElCurrent.addEventListener('mouseleave', handleMouseLeave);
@@ -254,17 +256,13 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
       gsap.killTweensOf([posterElCurrent, numberElCurrent, itemElCurrent, glintOverlayEl]);
     };
-  }, [isActive, animationDefaults]);
+  }, [isActive, animationDefaults]); // isActive in dependency array to re-evaluate hover original y
 
   return (
     <div className="carousel-item-wrapper" ref={itemRef}>
       <div
         className="ranking-number"
         ref={numberRef}
-        style={{
-          color: 'transparent', 
-          WebkitTextFillColor: 'transparent'
-        }}
       >
         {rank}
       </div>
