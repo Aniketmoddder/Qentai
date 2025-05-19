@@ -50,8 +50,8 @@
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 243 79% 59%;
     --border-raw-hsl: 240 5% 13%;
-    --ranking-number-stroke-color-raw-hsl: 240 5% 13%; /* Default to border color */
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl, 240 5% 13%), 0.7);
+    --ranking-number-stroke-color-raw-hsl: 240 5% 13%;
+    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
   }
 
   html[data-theme="light-pale-purple"] {
@@ -72,7 +72,7 @@
     --highlight-raw-hsl: 262 84% 72%;
     --border-raw-hsl: 220 13% 91%;
     --ranking-number-stroke-color-raw-hsl: 220 10% 45%;
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl, 220 10% 45%), 0.6);
+    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -93,7 +93,7 @@
     --highlight-raw-hsl: 291 92% 72%;
     --border-raw-hsl: 287 67% 18%;
     --ranking-number-stroke-color-raw-hsl: 287 67% 18%;
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl, 287 67% 18%), 0.7);
+    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -114,7 +114,7 @@
     --highlight-raw-hsl: 250 66% 62%;
     --border-raw-hsl: 231 25% 20%;
     --ranking-number-stroke-color-raw-hsl: 231 25% 20%;
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl, 231 25% 20%), 0.7);
+    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
   }
 
   /* Global styles that apply to all themes */
@@ -255,7 +255,6 @@
   height: 100%; /* Takes full height of link wrapper */
   z-index: 2;
   border-radius: 12px;
-  /* Default shadow, GSAP will override for active states */
   box-shadow: 0 10px 20px rgba(0,0,0,0.1); /* Default simple shadow */
   overflow: hidden;
   will-change: transform, opacity, box-shadow;
@@ -274,26 +273,24 @@
 
 .ranking-number {
   position: absolute;
-  left: 0px;      /* Adjusted from -15px */
-  bottom: 10px;   /* Adjusted from 15px */
+  left: 0px;
+  bottom: 15px;
+  font-family: var(--font-zen-dots), sans-serif;
   font-size: 7rem;
   font-weight: 900;
-  font-family: var(--font-zen-dots), sans-serif; /* Changed from Montserrat */
   color: hsl(var(--accent)); /* Solid accent color fill */
-  /* Simple initial text shadow for GSAP to animate from */
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
   -webkit-text-stroke-width: 2px;
   -webkit-text-stroke-color: var(--ranking-number-stroke-color);
   paint-order: stroke fill;
+  text-shadow: 1px 1px 0px var(--ranking-number-stroke-color); /* Default simple shadow */
   z-index: 3;
   line-height: 0.7;
   user-select: none;
   will-change: transform, opacity, text-shadow, color;
   pointer-events: none;
-  opacity: 0.8; /* Default opacity */
-  transform-origin: bottom left;
+  opacity: 0.85; /* Default opacity */
+  transform-origin: bottom left; /* Important for rotation pivot */
 }
-
 
 .glint-overlay {
   content: '';
@@ -337,9 +334,8 @@ html, body {
 }
 
 /* Additional explicit overflow control for potential culprits */
-.shows-carousel-container, 
+.shows-carousel-container,
 .swiper-container, /* Alias for .shows-swiper-container if used directly */
 .swiper-wrapper {
     overflow: visible !important; /* Overriding Swiper's default to ensure content isn't clipped */
 }
-
