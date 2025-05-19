@@ -50,8 +50,8 @@
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 243 79% 59%;
     --border-raw-hsl: 240 5% 13%;
-    --ranking-number-stroke-color-raw-hsl: 240 5% 13%;
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    --ranking-number-stroke-color-raw-hsl: 240 5% 13%; /* Default if not overridden by theme */
+    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7); /* Default stroke color */
   }
 
   html[data-theme="light-pale-purple"] {
@@ -208,54 +208,55 @@
 .swiper-button-next { right: 10px !important; }
 .swiper-button-disabled-custom { opacity: 0 !important; pointer-events: none !important; }
 
-/* Styles for the ShowsCarousel */
+/* Styles for the REMOVED ShowsCarousel - These will be removed */
+/*
 .shows-carousel-container-wrapper {
-    perspective: 1200px; /* Perspective for 3D effects */
+    perspective: 1200px; 
     width: 100%;
-    overflow: visible; /* Allow items to pop out */
+    overflow: visible; 
 }
 .shows-swiper-container {
-  padding-top: 20px; /* Space for items lifting up */
-  padding-bottom: 40px; /* Space for shadows or items extending down */
-  overflow: visible !important; /* Critical for Coverflow effect and custom animations */
+  padding-top: 20px; 
+  padding-bottom: 40px; 
+  overflow: visible !important; 
 }
 .shows-swiper-slide {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 360px; /* Consistent slide height */
+  height: 360px; 
   box-sizing: border-box;
-  width: auto !important; /* Important for slidesPerView: 'auto' in Swiper */
-  overflow: visible; /* Ensure slides don't clip content like ranking numbers */
-  transform-style: preserve-3d; /* Enable 3D transforms for children */
+  width: auto !important; 
+  overflow: visible; 
+  transform-style: preserve-3d; 
 }
 
 .carousel-item-wrapper {
-  position: relative; /* For absolute positioning of ranking-number */
-  width: 180px; /* Defined width for the item wrapper */
-  height: 100%; /* Full height of the slide */
+  position: relative; 
+  width: 180px; 
+  height: 100%; 
   display: flex;
   flex-direction: column;
-  justify-content: flex-end; /* Aligns poster to bottom */
+  justify-content: flex-end; 
   align-items: center;
   box-sizing: border-box;
-  transform-style: preserve-3d; /* Enable 3D transforms for children */
-  overflow: visible; /* Ensure this wrapper also allows overflow */
+  transform-style: preserve-3d; 
+  overflow: visible; 
 }
-.show-poster-container-link { /* Wrapper for the link around poster */
+.show-poster-container-link { 
   display: block;
   width: 100%;
-  height: 270px; /* Fixed height for poster area */
+  height: 270px; 
   transform-style: preserve-3d;
-  position: relative; /* Needed for z-index to work with glint */
+  position: relative; 
 }
 .show-poster-container {
   position: relative;
-  width: 100%; /* Takes full width of link wrapper */
-  height: 100%; /* Takes full height of link wrapper */
+  width: 100%; 
+  height: 100%; 
   z-index: 2;
   border-radius: 12px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1); /* Default simple shadow */
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
   overflow: hidden;
   will-change: transform, opacity, box-shadow;
   cursor: pointer;
@@ -273,44 +274,46 @@
 
 .ranking-number {
   position: absolute;
-  left: 0px;
-  bottom: 15px;
+  left: 0px; 
+  bottom: 15px; 
   font-family: var(--font-zen-dots), sans-serif;
   font-size: 7rem;
   font-weight: 900;
-  color: hsl(var(--accent)); /* Solid accent color fill */
+  color: hsl(var(--accent)); 
   -webkit-text-stroke-width: 2px;
   -webkit-text-stroke-color: var(--ranking-number-stroke-color);
   paint-order: stroke fill;
-  text-shadow: 1px 1px 0px var(--ranking-number-stroke-color); /* Default simple shadow */
+  text-shadow: 1px 1px 0px transparent; 
   z-index: 3;
   line-height: 0.7;
   user-select: none;
   will-change: transform, opacity, text-shadow, color;
   pointer-events: none;
-  opacity: 0.85; /* Default opacity */
-  transform-origin: bottom left; /* Important for rotation pivot */
+  opacity: 0.85; 
+  transform-origin: bottom left; 
 }
+
 
 .glint-overlay {
   content: '';
   position: absolute;
   top: 0;
-  left: -150%; /* Start off-screen */
-  width: 40%; /* Width of the glint */
+  left: -150%; 
+  width: 40%; 
   height: 100%;
   background: linear-gradient(
     to right,
     transparent 0%,
-    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%, /* Use highlight color */
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%, 
     transparent 100%
   );
-  transform: skewX(-25deg); /* Angle of the glint */
-  opacity: 0; /* Initially hidden */
+  transform: skewX(-25deg); 
+  opacity: 0; 
   pointer-events: none;
-  z-index: 1; /* Above the poster image */
-  border-radius: inherit; /* Match poster rounding if any */
+  z-index: 1; 
+  border-radius: inherit; 
 }
+*/
 
 .carousel-title {
     font-size: 2.6em;
@@ -334,8 +337,10 @@ html, body {
 }
 
 /* Additional explicit overflow control for potential culprits */
+/*
 .shows-carousel-container,
-.swiper-container, /* Alias for .shows-swiper-container if used directly */
+.swiper-container, 
 .swiper-wrapper {
-    overflow: visible !important; /* Overriding Swiper's default to ensure content isn't clipped */
+    overflow: visible !important; 
 }
+*/

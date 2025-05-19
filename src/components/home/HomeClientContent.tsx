@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
-import ShowsCarousel from '@/components/home/ShowsCarousel'; 
+// Removed ShowsCarousel import
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -113,9 +113,7 @@ export default function HomeClient({
     return allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15) : [];
   }, [allAnime]);
 
-  const trendingTvShows = useMemo(() => {
-    return trendingAnime.filter(anime => anime.type === 'TV').slice(0,15);
-  }, [trendingAnime]);
+  // trendingTvShows logic removed as ShowsCarousel is removed
 
   const popularAnime = useMemo(() => {
     return allAnime.length > 0
@@ -157,19 +155,7 @@ export default function HomeClient({
                 <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50 hidden md:block" />
             </div>
           </div>
-          <div className="mb-8"> {/* Skeleton for ShowsCarousel Title */}
-            <Skeleton className="h-10 w-1/2 md:w-1/3 mb-6 md:mb-8 rounded bg-muted/50" />
-             <div className="flex overflow-x-auto pb-4 gap-x-5 scrollbar-hide">
-                {[...Array(5)].map((_, j) => (
-                  <div key={`show-card-skeleton-${j}`} className="flex-shrink-0">
-                     <div className="w-[180px] h-[360px] bg-card/50 rounded-lg shadow-md animate-pulse border border-border/20 p-3 space-y-2">
-                       <Skeleton className="h-[270px] w-full rounded-md bg-muted/40" />
-                       <Skeleton className="h-12 w-1/2 -ml-3 -mb-3 rounded-md bg-muted/30 opacity-50" /> 
-                     </div>
-                  </div>
-                ))}
-              </div>
-          </div>
+          {/* Removed Skeleton for ShowsCarousel Title and Cards */}
           {[...Array(3)].map((_, i) => ( // Skeleton for 3 other carousels
             <div key={`carousel-skeleton-${i}`} className="mb-8">
               <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" /> {/* Carousel Title Skeleton */}
@@ -341,11 +327,7 @@ export default function HomeClient({
           </section>
         )}
         
-        {/* Removed the duplicate h2 for Trending TV Shows here */}
-        {trendingTvShows.length > 0 && (
-          <ShowsCarousel tvShows={trendingTvShows} title="Trending TV Shows" /> 
-        )}
-
+        {/* Removed the ShowsCarousel for Trending TV Shows */}
 
         {trendingAnime.length > 0 && <AnimeCarousel title="Trending Now" animeList={trendingAnime} />}
         
@@ -376,4 +358,3 @@ export default function HomeClient({
     </>
   );
 }
-
