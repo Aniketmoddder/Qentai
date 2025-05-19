@@ -22,9 +22,11 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
   const posterRef = useRef<HTMLDivElement>(null);
   const numberRef = useRef<HTMLDivElement>(null);
   const glintOverlayRef = useRef<HTMLDivElement>(null);
+  const hoverFloatTlRef = useRef<gsap.core.Timeline | null>(null);
+
 
   const animationDefaults = {
-    duration: 0.65, // Slightly longer for smoother feel
+    duration: 0.65,
     ease: "power3.out",
   };
 
@@ -45,41 +47,45 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
 
     const rootStyle = getComputedStyle(document.documentElement);
     const primaryHSLString = rootStyle.getPropertyValue('--primary-raw-hsl').trim();
-    // const accentHSLString = rootStyle.getPropertyValue('--accent-raw-hsl').trim(); // For number fill
-    // const strokeHSLString = rootStyle.getPropertyValue('--ranking-number-stroke-color-raw-hsl').trim(); // For number stroke
+    const currentStrokeColor = rootStyle.getPropertyValue('--ranking-number-stroke-color').trim() || 'rgba(0,0,0,0.7)';
 
     const tl = gsap.timeline({
       defaults: animationDefaults,
       onComplete: () => {
         if (isActive) {
-          // Subtle continuous breathing for active card's poster glow
           gsap.to(posterEl, {
-            boxShadow: primaryHSLString ? `0px 28px 70px 22px hsla(${primaryHSLString}, 0.5)` : "0 25px 60px rgba(139,92,246,0.45)",
             scale: 1.13, // Slight scale variation for breathing
             duration: 2.2,
             ease: "sine.inOut",
             repeat: -1,
             yoyo: true,
           });
+          // For number active state continuous animation (e.g., text shadow pulse)
+           // Temporarily removed complex textShadow pulse to avoid GSAP color parsing issues.
+           // A simpler pulse or static styled shadow will be used.
+           // For example, if keeping a static but prominent shadow for active:
+           // gsap.set(numberEl, { textShadow: `0 0 10px hsla(${primaryHSLString}, 0.7), 0 0 20px hsla(${primaryHSLString}, 0.5)` });
+        } else {
+            // gsap.set(numberEl, { textShadow: `1px 1px 0px ${currentStrokeColor}` }); // Reset to base shadow
         }
       }
     });
 
-    const tiltAngle = isPrev ? -2.5 : (isNext ? 2.5 : 0);
+    const tiltAngle = isPrev ? -2.0 : (isNext ? 2.0 : 0); // Reduced tilt
 
     if (isActive) {
       gsap.set(itemEl, { zIndex: 10 });
       tl.to(posterEl, {
         scale: 1.12, y: -15, opacity: 1,
         rotationY: -3, rotationX: 3, rotationZ: 0,
-        boxShadow: primaryHSLString ? `0px 25px 65px 18px hsla(${primaryHSLString}, 0.45)` : "0px 20px 50px 15px rgba(139,92,246,0.4)",
+        boxShadow: primaryHSLString ? `0px 22px 55px 18px hsla(${primaryHSLString}, 0.50)` : "0px 20px 50px 15px rgba(139,92,246,0.4)",
       }, 0);
 
       // Number Entrance: Digital Cascade Reveal
-      gsap.set(numberEl, { textContent: rankStr, opacity: 0, scale: 0.7, y: 20, x:0 });
+      gsap.set(numberEl, { opacity: 0, scale: 0.7, y: 20, x:0, color: 'hsl(var(--accent))', webkitTextFillColor: 'hsl(var(--accent))' });
       let scrambleCounter = 0;
       const scrambleDuration = 0.025;
-      const scrambleRepeats = Math.max(10, rankStrLength * 3); // More scrambles for longer numbers
+      const scrambleRepeats = Math.max(8, rankStrLength * 2);
 
       tl.to(numberEl, { // Start of scramble visibility
         opacity: 0.85,
@@ -98,31 +104,35 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         onComplete: () => { if (numberEl) numberEl.textContent = rankStr; }
       }, ">")
       .to(numberEl, { // Pop-in after scramble
-        scale: 1.0, y: -12, x: 0, opacity: 1,
-        ease: "back.out(1.4)", // More impactful ease
-        // color: `hsl(var(--accent))`, // Ensured by CSS
-        // webkitTextFillColor: 'transparent', // If using gradient text, otherwise remove
-      }, `>${scrambleDuration * (scrambleRepeats -1) }`); // Ensure it starts as scramble finishes
+        scale: 1.08, y: -30, x: 0, opacity: 1, // Increased negative y for active number
+        ease: "back.out(1.6)",
+        color: 'hsl(var(--accent))',
+        webkitTextFillColor: 'hsl(var(--accent))',
+        // textShadow: `0 0 8px hsla(${primaryHSLString},0.6), 0 0 15px hsla(${primaryHSLString},0.4), 1px 1px 0px ${currentStrokeColor}` // Example active shadow
+      }, `>${scrambleDuration * (scrambleRepeats -1) }`);
 
     } else { // INACTIVE STATE
       gsap.set(itemEl, { zIndex: isPrev || isNext ? 5 : 1 });
-      gsap.set(numberEl, { textContent: rankStr }); // Ensure correct number shown for inactive
+      if (numberEl) numberEl.textContent = rankStr;
+
       tl.to(posterEl, {
         scale: 0.82, y: 0, opacity: 0.55,
         rotationY: 0, rotationX: 0, rotationZ: tiltAngle,
         boxShadow: "0 8px 20px hsla(var(--border-raw-hsl, 240 5% 13%), 0.28)",
       }, 0)
       .to(numberEl, {
-        scale: 0.88, y: 10, x: 0, opacity: 0.65, // Slightly more visible inactive number
-        rotationZ: tiltAngle / 1.5,
-        // color: `hsl(var(--accent))`, // Ensured by CSS
+        scale: 0.88, y: 10, x: 0, opacity: 0.65, // Ensure x is 0 or small positive
+        rotationZ: tiltAngle / 1.5, // Adjusted tilt for number
+        color: 'hsl(var(--accent))',
+        webkitTextFillColor: 'hsl(var(--accent))',
+        // textShadow: `1px 1px 0px ${currentStrokeColor}` // Base shadow for inactive
       }, "<0.05");
     }
     return () => {
       tl.kill();
       gsap.killTweensOf([posterEl, numberEl, itemEl]);
     };
-  }, [isActive, isPrev, isNext, rankStr, rankStrLength, animationDefaults]);
+  }, [isActive, isPrev, isNext, rankStr, rankStrLength, animationDefaults]); // Added rankStr, rankStrLength as they are used in effects
 
 
   // HOVER AND MOUSEMOVE LISTENER SETUP
@@ -134,23 +144,22 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
 
     if (!itemElCurrent || !posterElCurrent || !numberElCurrent || !glintOverlayEl) return;
 
-    let hoverFloatTl: gsap.core.Timeline | null = null;
-    let originalBaseY = 0;
+    let originalBaseY = 0; // Store the original y before float
 
     const handleMouseEnter = () => {
-      const isCurrentlyActive = itemElCurrent.closest('.swiper-slide-active') !== null || isActive;
+      const isCurrentlyActive = itemElCurrent.closest('.swiper-slide-active') !== null || isActive; // More reliable check
       const rootStyle = getComputedStyle(document.documentElement);
       const primaryHSLString = rootStyle.getPropertyValue('--primary-raw-hsl').trim();
 
       gsap.to(posterElCurrent, {
-        scale: isCurrentlyActive ? 1.12 * 1.03 : 0.82 * 1.05, // Slightly different pop based on active state
+        scale: isCurrentlyActive ? 1.12 * 1.02 : 0.82 * 1.03,
         boxShadow: isCurrentlyActive
-          ? (primaryHSLString ? `0px 28px 75px 25px hsla(${primaryHSLString}, 0.55)` : "0 25px 60px rgba(139,92,246,0.5)")
-          : "0 12px 35px hsla(var(--border-raw-hsl, 240 5% 13%), 0.45)",
+          ? (primaryHSLString ? `0px 25px 60px 20px hsla(${primaryHSLString}, 0.55)` : "0 25px 60px rgba(139,92,246,0.5)")
+          : "0 10px 30px hsla(var(--border-raw-hsl, 240 5% 13%), 0.40)",
         duration: 0.3, ease: "power2.out", overwrite: "auto"
       });
       gsap.to(numberElCurrent, {
-        scale: isCurrentlyActive ? 1.0 * 1.03 : 0.88 * 1.05,
+        scale: isCurrentlyActive ? 1.08 * 1.02 : 0.88 * 1.03,
         duration: 0.3, ease: "power2.out", overwrite: "auto"
       });
 
@@ -158,16 +167,16 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       gsap.killTweensOf(glintOverlayEl);
       gsap.set(glintOverlayEl, { x: '-150%', opacity: 0 });
       gsap.to(glintOverlayEl, {
-        x: '150%', opacity: 0.6, duration: 0.5, ease: 'power1.inOut',
-        onComplete: () => gsap.to(glintOverlayEl, { opacity: 0, duration: 0.25 })
+        x: '150%', opacity: 0.5, duration: 0.45, ease: 'power1.inOut',
+        onComplete: () => gsap.to(glintOverlayEl, { opacity: 0, duration: 0.2 })
       });
 
       // Float effect
-      if (hoverFloatTl) hoverFloatTl.kill();
+      if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
       originalBaseY = parseFloat(gsap.getProperty(itemElCurrent, "y") as string) || (isCurrentlyActive ? -15 : 0) ;
-      const targetItemYOffset = isCurrentlyActive ? 2.5 : 1.5;
-      hoverFloatTl = gsap.timeline({ repeat: -1, yoyo: true })
-        .to(itemElCurrent, { y: originalBaseY - targetItemYOffset, duration: 2.1, ease: "sine.inOut" });
+      const targetItemYOffset = isCurrentlyActive ? 2.0 : 1.0; // Smaller float
+      hoverFloatTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
+        .to(itemElCurrent, { y: originalBaseY - targetItemYOffset, duration: 1.8, ease: "sine.inOut" });
     };
 
     const handleMouseLeave = () => {
@@ -176,23 +185,24 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
       const primaryHSLString = rootStyle.getPropertyValue('--primary-raw-hsl').trim();
       
       gsap.to(posterElCurrent, {
-        scale: isCurrentlyActive ? 1.12 : 0.82, // Revert to base active/inactive scale
+        scale: isCurrentlyActive ? 1.12 : 0.82,
         boxShadow: isCurrentlyActive
-          ? (primaryHSLString ? `0px 25px 65px 18px hsla(${primaryHSLString}, 0.45)` : "0px 20px 50px 15px rgba(139,92,246,0.4)")
+          ? (primaryHSLString ? `0px 22px 55px 18px hsla(${primaryHSLString}, 0.50)` : "0px 20px 50px 15px rgba(139,92,246,0.4)")
           : "0 8px 20px hsla(var(--border-raw-hsl, 240 5% 13%), 0.28)",
-        rotationX: isCurrentlyActive ? 3 : 0, // Revert 3D tilt if it was only on hover
+        rotationX: isCurrentlyActive ? 3 : 0,
         rotationY: isCurrentlyActive ? -3 : 0,
         duration: 0.35, ease: "power2.inOut", overwrite: "auto"
       });
       gsap.to(numberElCurrent, {
-        scale: isCurrentlyActive ? 1.0 : 0.88, // Revert to base active/inactive scale
+        scale: isCurrentlyActive ? 1.08 : 0.88,
         duration: 0.35, ease: "power2.inOut", overwrite: "auto"
       });
 
-      if (hoverFloatTl) {
-        hoverFloatTl.kill();
-        hoverFloatTl = null;
-        const targetY = isCurrentlyActive ? -15 : 0; // Revert to base active/inactive y
+      if (hoverFloatTlRef.current) {
+        hoverFloatTlRef.current.kill();
+        hoverFloatTlRef.current = null;
+        // Revert to base active/inactive y, which is handled by the main useEffect
+        const targetY = isCurrentlyActive ? -15 : 0;
         gsap.to(itemElCurrent, { y: targetY, duration: 0.35, ease: "power2.out", overwrite: "auto" });
       }
     };
@@ -200,7 +210,7 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
     const handleMouseMoveActiveCard = (event: MouseEvent) => {
         const isCurrentlyActive = itemElCurrent.closest('.swiper-slide-active') !== null || isActive;
         if (!isCurrentlyActive || !itemElCurrent.contains(event.target as Node) || !posterElCurrent) {
-           if (!isCurrentlyActive && posterElCurrent) { // Reset non-active card tilt if mouse moves off it
+           if (!isCurrentlyActive && posterElCurrent) { 
              gsap.to(posterElCurrent, { rotationX: 0, rotationY: 0, duration: 0.4, ease: "power1.out" });
            }
            return;
@@ -210,10 +220,9 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         const x = event.clientX - rect.left - rect.width / 2;
         const y = event.clientY - rect.top - rect.height / 2;
 
-        // More pronounced 3D tilt reacting to mouse
-        const rotateXVal = 3 + (y / rect.height) * -12; // Increased multiplier for more tilt
-        const rotateYVal = -3 + (x / rect.width) * 10;  // Increased multiplier
-        gsap.to(posterElCurrent, { rotationX: rotateXVal, rotationY: rotateYVal, duration: 0.4, ease: "power1.out" });
+        const rotateXVal = 3 + (y / rect.height) * -10; 
+        const rotateYVal = -3 + (x / rect.width) * 8;  
+        gsap.to(posterElCurrent, { rotationX: rotateXVal, rotationY: rotateYVal, duration: 0.35, ease: "power1.out" });
     };
 
     itemElCurrent.addEventListener('mouseenter', handleMouseEnter);
@@ -226,16 +235,16 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
         itemElCurrent.removeEventListener('mouseleave', handleMouseLeave);
         itemElCurrent.removeEventListener('mousemove', handleMouseMoveActiveCard);
       }
-      if (hoverFloatTl) hoverFloatTl.kill();
+      if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
       gsap.killTweensOf([itemElCurrent, posterElCurrent, numberElCurrent, glintOverlayEl]);
     };
-  }, [isActive, isPrev, isNext, animationDefaults]); // Ensure dependencies are correct for listener setup logic
+  }, [isActive, isPrev, isNext, animationDefaults]); // Added isActive, isPrev, isNext, animationDefaults
 
 
   return (
     <div className="carousel-item-wrapper" ref={itemRef}>
       <div
-        className={cn("ranking-number")} // Styled by globals.css for font, color, stroke
+        className={cn("ranking-number")} 
         ref={numberRef}
       >
         {rank}
@@ -246,10 +255,10 @@ const CarouselItem: React.FC<CarouselItemProps> = ({ rank, imageUrl, altText, is
               src={imageUrl || `https://placehold.co/180x270.png`}
               alt={altText}
               fill
-              sizes="180px" // Fixed size for these cards
+              sizes="180px" 
               className="show-poster"
               data-ai-hint="anime tvshow poster"
-              priority={rank <= 3} // Prioritize loading images for initially visible or important items
+              priority={rank <= 3} 
             />
             <div className="glint-overlay" ref={glintOverlayRef}></div>
           </div>
