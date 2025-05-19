@@ -53,7 +53,7 @@
     --border-raw-hsl: 240 5% 13%;
     --background-raw-hsl: 240 7% 6%;
     --foreground-raw-hsl: 215 28% 84%;
-    --ranking-number-stroke-color-raw-hsl: 240 5% 13%;
+    --ranking-number-stroke-color-raw-hsl: 240 5% 13%; /* Default for dark-purple-premium */
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
   }
 
@@ -200,7 +200,7 @@
 .netflix-carousel-container-wrapper {
     perspective: 1500px;
     width: 100%;
-    overflow: visible; /* Crucial for seeing parts of side cards */
+    overflow: visible !important; /* Crucial for seeing parts of side cards and offset numbers */
     margin-bottom: 2rem; /* Space after the carousel section */
 }
 
@@ -224,7 +224,7 @@
 
 /* Wrapper for the actual card content (poster + number) inside a SwiperSlide */
 .netflix-carousel-item-wrapper {
-  position: relative;
+  position: relative; /* Crucial for absolute positioning of ranking number */
   width: 190px; /* Base width of the content area */
   height: 100%; /* Take full height of the SwiperSlide */
   display: flex;
@@ -234,7 +234,7 @@
   box-sizing: border-box;
   transform-style: preserve-3d; /* For 3D animations on children */
   cursor: grab;
-  overflow: visible; /* This wrapper should not clip its children (poster, number) */
+  overflow: visible !important; /* This wrapper should not clip its children (poster, number) */
 }
 .netflix-carousel-item-wrapper:active {
   cursor: grabbing;
@@ -244,9 +244,9 @@
   position: relative; /* If ranking number is absolutely positioned relative to this */
   width: 180px;  /* Desired poster width */
   height: 270px; /* Desired poster height */
-  z-index: 2; /* Above the number if number is z-index:1 or behind using -1 */
-  border-radius: 12px; /* Rounded corners for the poster */
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1); /* Default subtle shadow for inactive */
+  z-index: 2; /* Poster in front of the number */
+  border-radius: 20px; /* Rounded corners for the poster */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); /* Default shadow for inactive */
   overflow: hidden; /* Clip image to rounded corners */
   will-change: transform, opacity, box-shadow;
   transform-style: preserve-3d; /* For internal 3D effects like glint */
@@ -292,26 +292,27 @@
   transform: skewX(-25deg); /* Angle of the glint */
   opacity: 0; /* Initially hidden */
   pointer-events: none; /* Doesn't interfere with mouse events */
-  z-index: 2; /* Above gradient overlay, below any text on poster */
+  z-index: 3; /* Above gradient overlay, below any text on poster */
   border-radius: inherit; /* Match poster rounding */
 }
 
 /* Precise styling for the ranking number overlay */
 .netflix-ranking-number-overlay {
-  font-family: var(--font-orbitron), sans-serif; /* Using Orbitron as per general heading style */
-  font-size: clamp(5rem, 12vw, 10rem); /* Responsive font size */
+  font-family: var(--font-orbitron), sans-serif;
+  font-size: clamp(4rem, 10vw, 10rem); /* As per prompt */
   font-weight: 900;
-  color: hsl(var(--accent)); /* Fill color from theme's accent */
+  color: transparent; /* For text-stroke to work */
   -webkit-text-stroke-width: 2px;
-  -webkit-text-stroke-color: var(--ranking-number-stroke-color); /* Defined per theme */
-  text-shadow: 1px 1px 0px transparent; /* Minimal default for GSAP */
+  -webkit-text-stroke-color: hsl(var(--ranking-number-stroke-color, hsl(var(--foreground)) ) ); /* Use variable, fallback to foreground */
+  text-stroke: 2px hsl(var(--ranking-number-stroke-color, hsl(var(--foreground)) ) ); /* Standard property, less support */
+  text-shadow: 1px 1px 0px transparent; /* Base for GSAP text-shadow animation for pulse */
 
   position: absolute;
-  bottom: 15px;  /* Adjust to overlap poster correctly */
-  left: 5px;   /* Adjust: Start slightly inside its parent */
-  z-index: 1;    /* Behind poster if poster is z-index 2. If number should be above poster, set to 3 or more. */
-  opacity: 0;    /* Initially hidden, GSAP will animate opacity for active items */
-  line-height: 0.7; /* Tight line height for large numbers */
+  bottom: -20px;  /* As per prompt */
+  left: -20px;   /* As per prompt */
+  z-index: 1;    /* BEHIND the poster (poster will be z-index 2) */
+  opacity: 0;    /* Initially hidden, GSAP will animate opacity to 0.9 for active items */
+  line-height: 0.75; /* Adjusted for better vertical fit */
   user-select: none;
   pointer-events: none;
   will-change: transform, opacity, filter, text-shadow, color, -webkit-text-stroke-color;
@@ -319,10 +320,7 @@
 }
 
 /* Theme-specific stroke colors for ranking number */
-html[data-theme="dark-purple-premium"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
-html[data-theme="light-pale-purple"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
-html[data-theme="kawaii-pink-vibe"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
-html[data-theme="futuristic-cyberpunk"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+/* These are already defined via --ranking-number-stroke-color in each theme block */
 
 
 /* Custom Swiper Navigation (if not using built-in, or to style built-in) */

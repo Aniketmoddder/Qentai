@@ -31,12 +31,13 @@ const NetflixCarouselItem: React.FC<NetflixCarouselItemProps> = ({ anime, isActi
   const [isMounted, setIsMounted] = useState(false);
   const [primaryHSLString, setPrimaryHSLString] = useState<string | null>(null);
   const [accentHSLString, setAccentHSLString] = useState<string | null>(null);
+  const [currentRankText, setCurrentRankText] = useState(""); // For text scramble
 
   const rankStr = anime.rank.toString();
   const rankStrLength = rankStr.length;
 
   const animationDefaults = {
-    duration: 0.6,
+    duration: 0.6, // Slightly longer for smoother feel
     ease: "power3.out",
   };
 
@@ -45,13 +46,15 @@ const NetflixCarouselItem: React.FC<NetflixCarouselItemProps> = ({ anime, isActi
     if (typeof window !== 'undefined') {
       const computedPrimaryHSL = getComputedStyle(document.documentElement).getPropertyValue('--primary-raw-hsl').trim();
       const computedAccentHSL = getComputedStyle(document.documentElement).getPropertyValue('--accent-raw-hsl').trim();
-      if (computedPrimaryHSL) setPrimaryHSLString(computedPrimaryHSL);
-      if (computedAccentHSL) setAccentHSLString(computedAccentHSL);
+      const computedForeground = getComputedStyle(document.documentElement).getPropertyValue('--foreground').trim();
+      
+      setPrimaryHSLString(computedPrimaryHSL || null);
+      setAccentHSLString(computedAccentHSL || null);
     }
   }, []);
 
   useLayoutEffect(() => {
-    if (!itemRef.current || !posterRef.current || !numberRef.current || !imageRef.current || !isMounted) return;
+    if (!itemRef.current || !posterRef.current || !numberRef.current || !isMounted) return;
 
     const itemEl = itemRef.current;
     const posterEl = posterRef.current;
@@ -67,76 +70,79 @@ const NetflixCarouselItem: React.FC<NetflixCarouselItemProps> = ({ anime, isActi
 
     if (isActive) {
       tl.to(posterEl, {
-        scale: 1.12,
+        scale: 1.1, // Slightly less than 1.12 from prompt for subtlety
         y: -15,
         opacity: 1,
-        rotationY: -3,
-        rotationX: 3,
-        boxShadow: primaryHSLString ? `0px 15px 35px -5px hsla(${primaryHSLString}, 0.3)` : "0px 15px 35px -5px rgba(139,92,246,0.25)",
-        zIndex: 10,
+        rotationY: -5, // As per prompt
+        boxShadow: primaryHSLString ? `0px 18px 40px -10px hsla(${primaryHSLString}, 0.35)` : "0px 18px 40px -10px rgba(139,92,246,0.3)",
+        zIndex: 2, // Poster on top of number (if number z-index is 1)
       }, 0);
 
-      gsap.set(numberEl, { opacity: 0, scale: 0.7, y: 30, x: 0 });
-      let scrambleCounter = 0;
-      const scrambleDuration = 0.025;
-      const scrambleRepeats = Math.max(8, rankStrLength * 2);
-
+      gsap.set(numberEl, { opacity: 0, scale: 0.8, y: 0, x:0, rotationZ:0 }); // Initial state for entrance
+      
+      // Number Counter Animation with TextPlugin
       tl.to(numberEl, {
-        duration: scrambleDuration * scrambleRepeats,
-        onStart: () => { numberEl.style.color = accentHSLString ? `hsl(${accentHSLString})` : 'hsl(var(--accent))'; },
-        onUpdate: function() {
-          scrambleCounter++;
-          if (scrambleCounter < scrambleRepeats) {
-            let randomText = "";
-            for (let i = 0; i < rankStrLength; i++) {
-              randomText += Math.random() > 0.5 ? Math.floor(Math.random() * 10) : "!<>-_#?*".charAt(Math.floor(Math.random() * 8));
-            }
-            numberEl.textContent = randomText;
-          } else {
-            numberEl.textContent = rankStr;
-          }
+        duration: 0.8, // Duration for the count-up
+        text: {
+          value: rankStr,
+          delimiter: "", // No delimiter between digits
         },
-        ease: "none"
-      }, "<0.1")
-      .to(numberEl, {
-        opacity: 1, 
-        scale: 1.0, 
-        y: -15, // Adjusted y for active number
-        x: 0,
-        ease: "back.out(1.2)",
-        onComplete: () => {
-          if (activeNumberPulseTlRef.current) activeNumberPulseTlRef.current.kill();
-            activeNumberPulseTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
-            .to(numberEl, {
-                textShadow: primaryHSLString ? `0 0 8px hsla(${primaryHSLString},0.5), 0 0 15px hsla(${primaryHSLString},0.3)` : `0 0 8px rgba(139,92,246,0.4), 0 0 15px rgba(139,92,246,0.25)`,
-                duration: 1.5,
-                ease: "sine.inOut"
-            });
+        ease: "power2.inOut",
+        onStart: () => { numberEl.style.opacity = "0"; }, // Hide before TextPlugin starts for smoother reveal
+        onComplete: () => { // Then fade in and scale
+          gsap.to(numberEl, {
+            opacity: 0.9, // As per prompt
+            scale: 1,
+            filter: "blur(0px)",
+            duration: 0.4,
+            ease: "power3.out"
+          });
         }
-      }, `-=${scrambleDuration * scrambleRepeats * 0.2}`);
+      }, "<0.1") // Start slightly after poster animation
+      .to(numberEl, { // Initial blur for reveal
+          filter: "blur(5px)", 
+          opacity:0, 
+          duration:0, // Set initial blur immediately
+          immediateRender: true
+      }, "<0.1");
 
-    } else {
-      const tiltAngle = isPrev ? -2.0 : (isNext ? 2.0 : 0);
+
+      // Optional: Continuous number glow/color shift (subtle)
+      if (accentHSLString) {
+         activeNumberPulseTlRef.current = gsap.timeline({ repeat: -1, yoyo: true, delay: 1 })
+          .to(numberEl, {
+            webkitTextStrokeColor: `hsla(${accentHSLString}, 0.8)`,
+            duration: 1.5,
+            ease: "sine.inOut"
+          })
+          .to(numberEl, {
+            webkitTextStrokeColor: `hsl(var(--ranking-number-stroke-color, hsl(var(--foreground))))`, // Revert to original
+            duration: 1.5,
+            ease: "sine.inOut"
+          }, ">");
+      }
+
+    } else { // Inactive state
+      const tiltAngle = isPrev ? 10 : (isNext ? -10 : 0); // Slight perspective tilt for side cards
       tl.to(posterEl, {
-        scale: 0.82,
+        scale: 0.9, // As per prompt
         y: 0,
-        opacity: 0.55,
-        rotationY: 0,
-        rotationX: 0,
-        rotationZ: tiltAngle,
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-        zIndex: 1,
+        opacity: 0.5, // As per prompt
+        rotationY: tiltAngle,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.4)", // Default shadow
+        zIndex: 0,
       }, 0);
 
       if (activeNumberPulseTlRef.current) {
         activeNumberPulseTlRef.current.kill();
-         gsap.set(numberEl, {textShadow: '1px 1px 0px transparent'}); // Reset shadow immediately
+        gsap.set(numberEl, { webkitTextStrokeColor: `hsl(var(--ranking-number-stroke-color, hsl(var(--foreground))))`});
       }
       tl.to(numberEl, {
-        opacity: 0,
+        opacity: 0, // Hidden for inactive cards
         scale: 0.8,
-        y: 10,
-        x: 0, 
+        filter: "blur(5px)",
+        x:0, y:0, // Reset transforms for inactive
+        rotationZ: 0,
       }, "<0.05");
     }
     return () => {
@@ -144,56 +150,52 @@ const NetflixCarouselItem: React.FC<NetflixCarouselItemProps> = ({ anime, isActi
       if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
       if (activeNumberPulseTlRef.current) activeNumberPulseTlRef.current.kill();
     }
-  }, [isActive, isPrev, isNext, rankStr, rankStrLength, animationDefaults, isMounted, primaryHSLString, accentHSLString]);
+  }, [isActive, isPrev, isNext, rankStr, animationDefaults, isMounted, primaryHSLString, accentHSLString]);
 
-  useEffect(() => {
-    if (!itemRef.current || !isMounted) return;
+  useEffect(() => { // Hover effects
+    if (!itemRef.current || !posterRef.current || !numberRef.current || !glintOverlayRef.current || !isMounted) return;
 
     const itemEl = itemRef.current;
     const posterEl = posterRef.current;
+    const numberEl = numberRef.current; // Not directly animated on general item hover by this effect
     const glintEl = glintOverlayRef.current;
 
     const handleMouseEnter = () => {
-      const currentIsActive = itemRef.current?.closest('.swiper-slide-active') !== null || isActive;
-      if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
-      hoverFloatTlRef.current = gsap.timeline({ repeat: -1, yoyo: true })
-        .to(itemEl, { y: currentIsActive ? "-=3" : "-=4", duration: 1.5, ease: "sine.inOut" });
+      const currentIsActive = itemRef.current?.closest('.swiper-slide-active') !== null;
+      
+      if(hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
+      hoverFloatTlRef.current = gsap.timeline({repeat: -1, yoyo: true})
+        .to(posterEl, { y: currentIsActive ? (gsap.getProperty(posterEl, "y") as number) - 3 : (gsap.getProperty(posterEl, "y") as number) - 4, duration: 2, ease: "sine.inOut" });
 
-      gsap.to(posterEl, {
-        scale: currentIsActive ? 1.15 : 0.85,
-        boxShadow: currentIsActive 
-            ? (primaryHSLString ? `0px 18px 40px -2px hsla(${primaryHSLString}, 0.35)`: "0px 18px 40px -2px rgba(139,92,246,0.3)")
-            : "0 10px 28px rgba(0,0,0,0.45)",
-        duration: 0.3, 
+      gsap.to(posterEl, { 
+        scale: currentIsActive ? 1.12 : 0.92, // Slight extra pop
+        duration: 0.25, 
         ease: "power2.out" 
       });
       
-      if (glintEl) {
-        gsap.set(glintEl, { x: "-120%", opacity: 0.6 });
-        gsap.to(glintEl, {
-          x: "120%",
-          duration: 0.7,
-          ease: "power2.inOut",
-          onComplete: () => gsap.set(glintEl, { opacity: 0 })
-        });
-      }
+      // Glint effect
+      gsap.set(glintEl, { x: "-120%", opacity: 0.6 });
+      gsap.to(glintEl, {
+        x: "120%",
+        duration: 0.7,
+        ease: "power2.inOut",
+        onComplete: () => gsap.set(glintEl, { opacity: 0 })
+      });
     };
 
     const handleMouseLeave = () => {
-      const currentIsActive = itemRef.current?.closest('.swiper-slide-active') !== null || isActive;
+      const currentIsActive = itemRef.current?.closest('.swiper-slide-active') !== null;
       if (hoverFloatTlRef.current) {
         hoverFloatTlRef.current.kill();
-        gsap.to(itemEl, { y: 0, duration: 0.3, ease: "power2.out" });
+        // Revert y to its active/inactive base y
+        gsap.to(posterEl, { y: currentIsActive ? -15 : 0, duration: 0.3, ease: "power2.out" });
       }
       gsap.to(posterEl, { 
-        scale: currentIsActive ? 1.12 : 0.82,
-        boxShadow: currentIsActive 
-            ? (primaryHSLString ? `0px 15px 35px -5px hsla(${primaryHSLString}, 0.3)` : "0px 15px 35px -5px rgba(139,92,246,0.25)")
-            : "0 8px 24px rgba(0,0,0,0.4)",
+        scale: currentIsActive ? 1.1 : 0.9, // Revert to base active/inactive scale
         duration: 0.4, 
         ease: "power3.out" 
       });
-      if (glintEl) gsap.set(glintEl, { opacity: 0 });
+      gsap.set(glintEl, { opacity: 0 });
     };
     
     if (itemEl) {
@@ -208,14 +210,14 @@ const NetflixCarouselItem: React.FC<NetflixCarouselItemProps> = ({ anime, isActi
       }
       if (hoverFloatTlRef.current) hoverFloatTlRef.current.kill();
     };
-  }, [isActive, isMounted, primaryHSLString, accentHSLString]); // Added accentHSLString
+  }, [isMounted, primaryHSLString, accentHSLString, isActive]); // Added isActive to re-evaluate hover base positions
 
   const placeholderCover = `https://placehold.co/180x270.png`;
 
   return (
     <div className="netflix-carousel-item-wrapper" ref={itemRef}>
       <div className="netflix-ranking-number-overlay" ref={numberRef}>
-        {/* Initial content can be empty or rank; GSAP will animate it */}
+        {/* Content set by GSAP TextPlugin */}
       </div>
       <div className="netflix-show-poster-container" ref={posterRef}>
         <Image
@@ -225,15 +227,15 @@ const NetflixCarouselItem: React.FC<NetflixCarouselItemProps> = ({ anime, isActi
           fill
           sizes="180px"
           className="netflix-show-poster"
-          priority={isActive} // Prioritize loading active slide image
+          priority={isActive}
           data-ai-hint="anime series poster"
         />
         <div className="netflix-glint-overlay" ref={glintOverlayRef}></div>
-        {/* Badges can be added here if needed, absolutely positioned relative to posterRef */}
-        {isActive && (
-          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
+        {/* Badges can be added here */}
+        {(isActive && (anime.isFeatured || anime.rank <=3)) && (
+          <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5 items-end">
             {anime.isFeatured && <Badge variant="secondary" className="text-xs bg-yellow-500/90 text-black shadow-md">Featured</Badge>}
-            <Badge variant="default" className="text-xs bg-primary/90 text-primary-foreground shadow-md">Top {anime.rank}</Badge>
+            {anime.rank <= 10 && <Badge variant="default" className="text-xs bg-primary/90 text-primary-foreground shadow-md">Top {anime.rank}</Badge>}
           </div>
         )}
       </div>
