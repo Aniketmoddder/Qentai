@@ -38,9 +38,9 @@
     --input: 240 6% 9%;
     --ring: 260 100% 75%;
     --highlight: 243 79% 59%; /* #4F46E5 */
-    --surface: hsl(var(--card));
-    --text-heading: hsl(var(--foreground));
-    --text-body: hsl(var(--foreground));
+    --surface: hsl(var(--card)); /* Adjusted to new card */
+    --text-heading: hsl(var(--foreground)); /* Adjusted to new foreground */
+    --text-body: hsl(var(--foreground)); /* Adjusted to new foreground */
     --radius: 0.75rem;
     --chart-1: 260 100% 70%; --chart-2: 262 89% 66%; --chart-3: 337 88% 70%; --chart-4: 243 79% 59%; --chart-5: 215 25% 75%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.15); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
@@ -50,8 +50,10 @@
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 243 79% 59%;
     --border-raw-hsl: 240 5% 13%;
-    --ranking-number-stroke-color-raw-hsl: 240 5% 13%; /* Default if not overridden by theme */
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7); /* Default stroke color */
+    --background-raw-hsl: 240 7% 6%;
+    --foreground-raw-hsl: 215 28% 84%;
+    --ranking-number-stroke-color-raw-hsl: 240 5% 13%; /* Dark stroke for default theme */
+    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
   }
 
   html[data-theme="light-pale-purple"] {
@@ -71,7 +73,9 @@
     --accent-raw-hsl: 270 85% 77%;
     --highlight-raw-hsl: 262 84% 72%;
     --border-raw-hsl: 220 13% 91%;
-    --ranking-number-stroke-color-raw-hsl: 220 10% 45%;
+    --background-raw-hsl: 220 60% 98%;
+    --foreground-raw-hsl: 222 47% 11%;
+    --ranking-number-stroke-color-raw-hsl: 220 10% 45%; /* Lighter stroke for light theme */
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
   }
 
@@ -92,6 +96,8 @@
     --accent-raw-hsl: 337 88% 70%;
     --highlight-raw-hsl: 291 92% 72%;
     --border-raw-hsl: 287 67% 18%;
+    --background-raw-hsl: 287 50% 8%;
+    --foreground-raw-hsl: 287 100% 98%;
     --ranking-number-stroke-color-raw-hsl: 287 67% 18%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
   }
@@ -113,6 +119,8 @@
     --accent-raw-hsl: 157 100% 50%;
     --highlight-raw-hsl: 250 66% 62%;
     --border-raw-hsl: 231 25% 20%;
+    --background-raw-hsl: 231 25% 8%;
+    --foreground-raw-hsl: 220 13% 91%;
     --ranking-number-stroke-color-raw-hsl: 231 25% 20%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
   }
@@ -208,139 +216,140 @@
 .swiper-button-next { right: 10px !important; }
 .swiper-button-disabled-custom { opacity: 0 !important; pointer-events: none !important; }
 
-/* Styles for the REMOVED ShowsCarousel - These will be removed */
-/*
-.shows-carousel-container-wrapper {
-    perspective: 1200px; 
+
+/* Netflix Style Carousel - Styles */
+.netflix-carousel-container-wrapper {
+    perspective: 1500px; /* Increased perspective for more depth */
     width: 100%;
-    overflow: visible; 
+    overflow: visible; /* Crucial for seeing parts of side cards */
+    margin-bottom: 2rem; /* Space after the carousel section */
 }
-.shows-swiper-container {
-  padding-top: 20px; 
-  padding-bottom: 40px; 
-  overflow: visible !important; 
+
+.netflix-swiper-container { /* Renamed from .shows-swiper-container */
+  padding-top: 25px; /* Space for lifted active items */
+  padding-bottom: 45px; /* Space for item content, shadows, and number overlays */
+  overflow: visible !important; /* Swiper often tries to hide overflow */
 }
-.shows-swiper-slide {
+
+.netflix-carousel-slide { /* Renamed from .shows-swiper-slide */
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 360px; 
+  height: 380px; /* Increased height to accommodate larger cards and numbers */
   box-sizing: border-box;
-  width: auto !important; 
-  overflow: visible; 
-  transform-style: preserve-3d; 
+  width: auto !important; /* Let Swiper's slidesPerView and spacing control width */
+  transform-style: preserve-3d; /* Enable 3D transforms for children */
+  overflow: visible !important; /* Ensure slides themselves don't clip content */
 }
 
-.carousel-item-wrapper {
-  position: relative; 
-  width: 180px; 
-  height: 100%; 
+.netflix-carousel-item-wrapper { /* Renamed from .carousel-item-wrapper */
+  position: relative;
+  width: 190px; /* Slightly wider card */
+  height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end; 
+  justify-content: center; /* Center content vertically to allow lift */
   align-items: center;
   box-sizing: border-box;
-  transform-style: preserve-3d; 
-  overflow: visible; 
-}
-.show-poster-container-link { 
-  display: block;
-  width: 100%;
-  height: 270px; 
   transform-style: preserve-3d;
-  position: relative; 
+  cursor: grab;
+  overflow: visible; /* Key for preventing clipping */
 }
-.show-poster-container {
-  position: relative;
-  width: 100%; 
-  height: 100%; 
-  z-index: 2;
-  border-radius: 12px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1); 
-  overflow: hidden;
-  will-change: transform, opacity, box-shadow;
-  cursor: pointer;
-  transition: box-shadow 0.3s ease;
-  transform-style: preserve-3d;
+.netflix-carousel-item-wrapper:active {
+  cursor: grabbing;
 }
 
-.show-poster {
+
+.netflix-item-poster-container { /* Renamed from .show-poster-container */
+  position: relative;
+  width: 190px;
+  height: 285px;
+  z-index: 2;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px hsla(var(--primary-raw-hsl, 260 100% 70%), 0.05), 0 6px 12px rgba(0,0,0,0.3); /* Default subtle shadow */
+  overflow: hidden;
+  will-change: transform, opacity, box-shadow;
+  transform-style: preserve-3d;
+  transition: box-shadow 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.netflix-item-poster-container::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, hsla(var(--background-raw-hsl, 0 0% 0%), 0.7) 0%, hsla(var(--background-raw-hsl, 0 0% 0%), 0.1) 50%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease-out;
+    z-index: 1;
+    border-radius: inherit;
+}
+.netflix-carousel-item-wrapper:hover .netflix-item-poster-container::before {
+    opacity: 1;
+}
+
+.netflix-item-poster-img { /* Renamed from .show-poster */
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: 12px;
+  border-radius: inherit;
+  will-change: transform;
 }
 
-.ranking-number {
-  position: absolute;
-  left: 0px; 
-  bottom: 15px; 
-  font-family: var(--font-zen-dots), sans-serif;
-  font-size: 7rem;
-  font-weight: 900;
-  color: hsl(var(--accent)); 
-  -webkit-text-stroke-width: 2px;
-  -webkit-text-stroke-color: var(--ranking-number-stroke-color);
-  paint-order: stroke fill;
-  text-shadow: 1px 1px 0px transparent; 
-  z-index: 3;
-  line-height: 0.7;
-  user-select: none;
-  will-change: transform, opacity, text-shadow, color;
-  pointer-events: none;
-  opacity: 0.85; 
-  transform-origin: bottom left; 
-}
-
-
-.glint-overlay {
-  content: '';
+.netflix-item-shimmer-overlay { /* Renamed from .glint-overlay */
   position: absolute;
   top: 0;
-  left: -150%; 
-  width: 40%; 
+  left: -150%;
+  width: 50%;
   height: 100%;
   background: linear-gradient(
     to right,
-    transparent 0%,
-    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.3) 50%, 
-    transparent 100%
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0) 0%,
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.15) 50%,
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0) 100%
   );
-  transform: skewX(-25deg); 
-  opacity: 0; 
+  transform: skewX(-25deg);
+  opacity: 0;
   pointer-events: none;
-  z-index: 1; 
-  border-radius: inherit; 
+  z-index: 2;
+  border-radius: inherit;
 }
-*/
 
-.carousel-title {
-    font-size: 2.6em;
-    font-weight: 900;
-    font-family: var(--font-zen-dots);
-    margin-bottom: 40px;
-    text-align: left;
-    width: 100%;
-    max-width: 1000px;
-    padding: 0 20px;
-    box-sizing: border-box;
-    letter-spacing: -0.5px;
-    margin-left: auto;
-    margin-right: auto;
-    @apply section-title-bar text-foreground;
+
+.netflix-ranking-number-overlay { /* Renamed from .ranking-number-overlay */
+  font-family: var(--font-orbitron), sans-serif;
+  font-size: clamp(4rem, 10vw, 10rem);
+  font-weight: 900;
+  color: hsl(var(--accent)); /* Fill color uses theme's accent */
+  -webkit-text-stroke-width: 2px;
+  -webkit-text-stroke-color: var(--ranking-number-stroke-color); /* Theme-specific stroke */
+  /* paint-order: stroke fill; REMOVED to fix parsing error */
+  position: absolute;
+  bottom: -20px;
+  left: -20px;
+  z-index: -1;
+  opacity: 0; /* GSAP animates this */
+  line-height: 0.7;
+  user-select: none;
+  pointer-events: none;
+  will-change: transform, opacity, filter, text-shadow, color, -webkit-text-stroke-color;
+  text-shadow: 1px 1px 2px hsla(var(--background-raw-hsl, 0 0% 0%), 0.3); /* Default shadow */
+  transform-origin: bottom left;
 }
+
+/* Theme-specific stroke colors for ranking number */
+html[data-theme="dark-purple-premium"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+html[data-theme="light-pale-purple"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+html[data-theme="kawaii-pink-vibe"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+html[data-theme="futuristic-cyberpunk"] .netflix-ranking-number-overlay { -webkit-text-stroke-color: var(--ranking-number-stroke-color); }
+
 
 /* Ensure no accidental overflow issues on html/body */
 html, body {
     overflow-x: hidden;
 }
-
-/* Additional explicit overflow control for potential culprits */
-/*
-.shows-carousel-container,
-.swiper-container, 
-.swiper-wrapper {
-    overflow: visible !important; 
+/* Ensure swiper related containers don't hide overflowing elements for 3D effects */
+.swiper, .swiper-wrapper {
+    overflow: visible !important;
 }
-*/
+
