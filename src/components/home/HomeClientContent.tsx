@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
-import NetflixShowsCarousel from '@/components/home/NetflixShowsCarousel'; // Corrected import name
+// import NetflixShowsCarousel from '@/components/home/NetflixShowsCarousel'; // Removed
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -20,7 +20,7 @@ import HomePageGenreSection from './HomePageGenreSection';
 import RecommendationsSection from '../anime/recommendations-section';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 import { Skeleton } from '@/components/ui/skeleton';
-import NetflixCarouselSkeleton from '@/components/home/NetflixCarouselSkeleton';
+// import NetflixCarouselSkeleton from '@/components/home/NetflixCarouselSkeleton'; // Removed
 
 
 const getYouTubeVideoId = (url?: string): string | null => {
@@ -114,11 +114,12 @@ export default function HomeClient({
     return allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15) : [];
   }, [allAnime]);
 
-  const trendingTvShows = useMemo(() => {
-    return allAnime.filter(a => a.type === 'TV')
-                   .sort((a,b) => (b.popularity || 0) - (a.popularity || 0))
-                   .slice(0, 15); // Max 15 shows as per prompt
-  }, [allAnime]);
+  // Removed trendingTvShows memo as it was specific to the NetflixShowsCarousel
+  // const trendingTvShows = useMemo(() => {
+  //   return allAnime.filter(a => a.type === 'TV')
+  //                  .sort((a,b) => (b.popularity || 0) - (a.popularity || 0))
+  //                  .slice(0, 15); 
+  // }, [allAnime]);
 
   const popularAnime = useMemo(() => {
     return allAnime.length > 0
@@ -162,8 +163,9 @@ export default function HomeClient({
             </div>
           </div>
 
-          {/* NetflixShowsCarousel Skeleton */}
-          <NetflixCarouselSkeleton />
+          {/* NetflixShowsCarousel Skeleton Removed */}
+          {/* <NetflixCarouselSkeleton /> */}
+
 
           {/* Skeletons for other AnimeCarousels */}
           {[...Array(2)].map((_, i) => (
@@ -337,10 +339,11 @@ export default function HomeClient({
           </section>
         )}
 
-        {/* NetflixShowsCarousel - Placed after Featured Anime */}
-        {trendingTvShows.length > 0 && (
+        {/* NetflixShowsCarousel removed from here */}
+        {/* {trendingTvShows.length > 0 && (
            <NetflixShowsCarousel shows={trendingTvShows} title="Trending TV Shows"/>
-        )}
+        )} */}
+
 
         {trendingAnime.length > 0 && <AnimeCarousel title="Trending Now" animeList={trendingAnime} />}
 
