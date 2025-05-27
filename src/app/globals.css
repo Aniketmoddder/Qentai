@@ -17,44 +17,49 @@
 
 
 @layer base {
-  /* Default Theme (Dark Purple Premium - Redesigned & Enhanced) */
-  :root, html[data-theme="dark-purple-premium"] {
-    --background: 240 7% 6%; /* #0E0E10 */
-    --foreground: 215 28% 84%; /* #CBD5E1 (text-body) */
-    --card: 240 7% 7%; /* #111113 (surface) */
-    --card-foreground: 215 28% 84%; /* #CBD5E1 */
-    --popover: 240 7% 5%;
-    --popover-foreground: 215 28% 84%;
-    --primary: 260 100% 70%; /* #A064FF */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 262 89% 66%; /* #8B5CF6 */
-    --secondary-foreground: 0 0% 100%;
-    --muted: 240 6% 10%;
-    --muted-foreground: 215 20% 70%;
-    --accent: 337 88% 70%; /* #F472B6 */
-    --accent-foreground: 240 23% 6%;
-    --destructive: 0 70% 55%;
+  /* Default Theme (Qentai Premium Dark - Revamped) */
+  :root, html[data-theme="qentai-premium-dark"] {
+    --background: 230 10% 6%; /* #0A0A13 - Rich Night Black */
+    --foreground: 220 15% 96%; /* #F4F4F5 - Soft Light Gray */
+    --card: 230 10% 10%; /* #12121A - Slightly Lighter Card Base */
+    --card-foreground: 220 15% 96%;
+    --popover: 230 12% 5%; /* #0A0A0F - Even Darker Popover */
+    --popover-foreground: 220 15% 96%;
+    --primary: 262 89% 66%; /* #8B5CF6 - Premium Neon Violet */
+    --primary-foreground: 0 0% 100%; /* Pure White */
+    --secondary: 200 90% 60%; /* #38BDF8 - Electric Cyan Blue */
+    --secondary-foreground: 230 20% 7%; /* Darker for contrast on secondary */
+    --muted: 230 10% 15%;  /* #1F2029 - Darker Muted */
+    --muted-foreground: 220 10% 60%; /* Lighter Muted Text */
+    --accent: 337 88% 70%; /* #F472B6 - Modern Candy Pink */
+    --accent-foreground: 230 20% 7%; /* Dark text for pink accent */
+    --destructive: 0 75% 58%; /* #E11D48 */
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5% 13%; /* #1F1F23 */
-    --input: 240 6% 9%;
-    --ring: 260 100% 75%;
-    --highlight: 243 79% 59%; /* #4F46E5 */
-    --surface: hsl(var(--card));
+    --border: 230 8% 20%; /* #2A2E3B - Muted Divider Gray */
+    --input: 230 10% 9%; /* #101015 - Slightly darker input */
+    --ring: 200 90% 65%; /* #38BDF8 with slightly more pop for rings */
+    --highlight: 188 82% 57%; /* #22D3EE - Aqua Glow */
+    --surface: 230 12% 11%; /* #1E1B2E - Deep UI Card Color (used for card-like surfaces) */
     --text-heading: hsl(var(--foreground));
-    --text-body: hsl(var(--foreground));
+    --text-body: 220 12% 88%; /* #D9DCE1 - Slightly softer than pure foreground for body */
     --radius: 0.75rem;
-    --chart-1: 260 100% 70%; --chart-2: 262 89% 66%; --chart-3: 337 88% 70%; --chart-4: 243 79% 59%; --chart-5: 215 25% 75%;
+    --chart-1: hsl(var(--primary)); --chart-2: hsl(var(--secondary)); --chart-3: hsl(var(--accent)); --chart-4: hsl(var(--highlight)); --chart-5: 220 12% 75%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.15); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
-    /* Raw HSL for GSAP */
-    --primary-raw-hsl: 260 100% 70%;
-    --secondary-raw-hsl: 262 89% 66%;
+    /* Raw HSL for GSAP & Gradients */
+    --primary-raw-hsl: 262 89% 66%;
+    --secondary-raw-hsl: 200 90% 60%;
     --accent-raw-hsl: 337 88% 70%;
-    --highlight-raw-hsl: 243 79% 59%;
-    --border-raw-hsl: 240 5% 13%;
-    --background-raw-hsl: 240 7% 6%;
-    --foreground-raw-hsl: 215 28% 84%;
-    --ranking-number-stroke-color-raw-hsl: 240 5% 13%; 
+    --highlight-raw-hsl: 188 82% 57%;
+    --border-raw-hsl: 230 8% 20%;
+    --background-raw-hsl: 230 10% 6%;
+    --foreground-raw-hsl: 220 15% 96%;
+    --ranking-number-stroke-color-raw-hsl: 230 8% 20%; /* Muted Divider Gray for stroke */
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    /* Vidstack Player Theme */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
   }
 
   html[data-theme="light-pale-purple"] {
@@ -78,6 +83,11 @@
     --foreground-raw-hsl: 222 47% 11%;
     --ranking-number-stroke-color-raw-hsl: 220 10% 45%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
+    /* Vidstack Player Theme */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -101,6 +111,11 @@
     --foreground-raw-hsl: 287 100% 98%;
     --ranking-number-stroke-color-raw-hsl: 287 67% 18%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    /* Vidstack Player Theme */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -124,6 +139,11 @@
     --foreground-raw-hsl: 220 13% 91%;
     --ranking-number-stroke-color-raw-hsl: 231 25% 20%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    /* Vidstack Player Theme */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
   }
 
   /* Global styles that apply to all themes */
@@ -163,8 +183,8 @@
     background-size: 150% auto;
   }
   /* Theme specific gradients for buttons */
-  html[data-theme="dark-purple-premium"] .btn-primary-gradient {
-    background-image: linear-gradient(135deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--highlight-raw-hsl)) 100%);
+  html[data-theme="qentai-premium-dark"] .btn-primary-gradient {
+    background-image: linear-gradient(135deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
   }
   html[data-theme="light-pale-purple"] .btn-primary-gradient {
     background-image: linear-gradient(90deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);
@@ -195,130 +215,138 @@
   .card-shadow { box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -2px hsl(var(--primary) / 0.1); }
   .card-shadow:hover { box-shadow: 0 10px 15px -3px hsl(var(--primary) / 0.15), 0 4px 6px -4px hsl(var(--primary) / 0.15); }
 }
-
-/* Commented out Netflix Style Carousel CSS as the component was removed */
-/*
+/* Styles for the new Netflix-style carousel */
 .netflix-carousel-container-wrapper {
-    perspective: 1500px;
+    perspective: 1500px; /* Essential for 3D effects on children */
     width: 100%;
-    overflow: visible !important; 
-    margin-bottom: 2rem; 
+    overflow: visible !important; /* Swiper slides might go outside bounds */
+    margin-bottom: 2rem; /* Space below the carousel */
 }
-
-.netflix-swiper-container { 
-  padding-top: 25px; 
-  padding-bottom: 45px; 
-  overflow: visible !important; 
+.carousel-title { /* Title for the Netflix-style carousel */
+    font-family: var(--font-orbitron), sans-serif;
+    font-size: clamp(1.5rem, 4vw, 2rem); /* Responsive font size */
+    font-weight: 700;
+    color: hsl(var(--foreground));
+    margin-bottom: 1.5rem; /* Space below title */
+    padding-left: 0.5rem; /* Align with carousel content if needed */
+    position: relative;
+}
+/* Specific title bar like section-title-bar but for this carousel */
+.netflix-carousel-title::before {
+    content: '';
+    @apply absolute left-0 top-1/2 -translate-y-1/2 h-3/5 w-[3px] bg-primary rounded-full;
+}
+.shows-swiper-container { /* The main Swiper instance */
+  padding-top: 25px; /* Space for lifted active item */
+  padding-bottom: 45px; /* Space for ranking number & shadows */
+  overflow: visible !important; /* Critical for side items and effects */
   width: 100%;
 }
-
-.netflix-swiper-slide { 
+.shows-swiper-slide { /* Individual Swiper slide */
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 380px; 
+  height: 380px; /* Adjust based on item size and desired look */
   box-sizing: border-box;
-  width: auto !important; 
-  transform-style: preserve-3d; 
-  overflow: visible !important; 
+  width: auto !important; /* Let Swiper or item define width based on slidesPerView */
+  transform-style: preserve-3d; /* For 3D transforms on CarouselItem */
+  overflow: visible !important; /* Allow parts of the item (like number) to go outside */
 }
-
-.netflix-carousel-item-wrapper {
-  position: relative; 
-  width: 190px; 
-  height: 100%; 
+.carousel-item-wrapper { /* The main div inside each CarouselItem component */
+  position: relative; /* For absolute positioning of number and glint */
+  width: 190px; /* Card width */
+  height: 100%; /* Takes full height of slide */
   display: flex;
   flex-direction: column;
-  justify-content: center; 
+  justify-content: center; /* Centers the poster container vertically */
   align-items: center;
   box-sizing: border-box;
-  transform-style: preserve-3d; 
+  transform-style: preserve-3d; /* Enable 3D transforms for children */
   cursor: grab;
-  overflow: visible !important; 
+  overflow: visible !important; /* Allow number and effects to peek */
 }
-.netflix-carousel-item-wrapper:active {
+.carousel-item-wrapper:active {
   cursor: grabbing;
 }
-
-.netflix-show-poster-container {
-  position: relative; 
-  width: 180px;  
-  height: 270px; 
-  z-index: 2; 
-  border-radius: 20px; 
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4); 
-  overflow: hidden; 
+.netflix-show-poster-container { /* Container for the poster image */
+  position: relative; /* For z-indexing and glint overlay */
+  width: 180px;  /* Poster width */
+  height: 270px; /* Poster height */
+  z-index: 2; /* Poster in front of number overlay */
+  border-radius: 20px; /* As per prompt */
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4); /* Default shadow */
+  overflow: hidden; /* Clip image to rounded corners */
   will-change: transform, opacity, box-shadow;
-  transform-style: preserve-3d; 
-  transition: box-shadow 0.3s ease-out, transform 0.3s ease-out; 
+  transform-style: preserve-3d; /* For potential 3D effects on the image itself */
+  transition: box-shadow 0.3s ease-out, transform 0.3s ease-out; /* Smooth transition for GSAP changes */
 }
-
-.netflix-show-poster-container::before {
+.netflix-show-poster-container::before { /* Dark gradient overlay on hover */
     content: "";
     position: absolute;
     inset: 0;
     background: linear-gradient(to top, hsla(var(--background-raw-hsl, 0 0% 0%), 0.7) 0%, hsla(var(--background-raw-hsl, 0 0% 0%), 0.1) 50%, transparent 100%);
     opacity: 0;
     transition: opacity 0.4s ease-out;
-    z-index: 1; 
+    z-index: 1; /* Above image, below other content if any */
     border-radius: inherit;
 }
-.netflix-carousel-item-wrapper:hover .netflix-show-poster-container::before {
+.carousel-item-wrapper:hover .netflix-show-poster-container::before {
     opacity: 1;
 }
-
-.netflix-show-poster { 
+.netflix-show-poster { /* The actual <img> tag */
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  border-radius: inherit; 
-  will-change: transform; 
+  border-radius: inherit; /* Inherit border-radius from container */
+  will-change: transform; /* Hint for GSAP image yoyo */
 }
-
-.netflix-glint-overlay { 
+.glint-overlay { /* For the shimmer/glare effect on hover */
   position: absolute;
   top: 0;
-  left: -150%; 
-  width: 50%; 
+  left: -150%; /* Start off-screen */
+  width: 50%; /* Width of the glint */
   height: 100%;
   background: linear-gradient(
     to right,
-    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0) 0%, 
+    hsla(var(--highlight-raw-hsl, 220 100% 70%), 0) 0%, /* Use theme highlight */
     hsla(var(--highlight-raw-hsl, 220 100% 70%), 0.15) 50%,
     hsla(var(--highlight-raw-hsl, 220 100% 70%), 0) 100%
   );
-  transform: skewX(-25deg); 
-  opacity: 0; 
-  pointer-events: none; 
-  z-index: 3; 
-  border-radius: inherit; 
+  transform: skewX(-25deg); /* Skewed glint */
+  opacity: 0; /* Initially hidden */
+  pointer-events: none; /* So it doesn't interfere with poster hover */
+  z-index: 3; /* Above poster image, below any text */
+  border-radius: inherit; /* Match poster rounding */
 }
-
 .netflix-ranking-number-overlay {
-  font-family: var(--font-orbitron), sans-serif;
-  font-size: clamp(4rem, 10vw, 10rem); 
+  font-family: var(--font-orbitron), sans-serif; /* Or your chosen bold font */
+  font-size: clamp(4rem, 10vw, 10rem); /* As per prompt */
   font-weight: 900;
-  color: hsl(var(--accent)); 
+  color: transparent; /* Text fill is transparent */
   -webkit-text-stroke-width: 2px;
-  -webkit-text-stroke-color: hsl(var(--ranking-number-stroke-color, hsl(var(--foreground)) ) ); 
-  text-stroke: 2px hsl(var(--ranking-number-stroke-color, hsl(var(--foreground)) ) ); 
-  text-shadow: 1px 1px 0px transparent; 
+  -webkit-text-stroke-color: hsl(var(--ranking-number-stroke-color, hsl(var(--foreground)) ) ); /* Themeable stroke color */
+  text-stroke: 2px hsl(var(--ranking-number-stroke-color, hsl(var(--foreground)) ) ); /* Standard property */
+  /* text-shadow for inner glow/depth - adjust as needed */
+  text-shadow: 
+    0px 0px 3px hsla(var(--ranking-number-stroke-color-raw-hsl), 0.5), /* Softer inner shadow */
+    0px 0px 8px hsla(var(--primary-raw-hsl), 0.2); /* Subtle primary color aura */
   position: absolute;
-  bottom: 15px; 
-  left: 0px;    
-  z-index: 1; 
-  opacity: 0; 
-  line-height: 0.75; 
+  bottom: 15px;  /* Adjusted from -20px to bring it up a bit */
+  left: 0px;    /* Adjusted from -20px to prevent aggressive left offset */
+  z-index: 1;   /* Behind poster-container (which is z-index 2) */
+  opacity: 0;   /* Initial state, GSAP makes it 0.9 for active */
+  line-height: 0.75; /* For large font alignment */
   user-select: none;
   pointer-events: none;
   will-change: transform, opacity, filter, text-shadow, color, -webkit-text-stroke-color;
-  transform-origin: bottom left; 
+  transform-origin: bottom left; /* For rotation */
 }
 
+/* Swiper Button Overrides (if needed, or use Swiper's default) */
 .swiper-button-prev,
 .swiper-button-next {
-  color: hsl(var(--foreground)) !important; 
+  color: hsl(var(--foreground)) !important; /* Example override */
   opacity: 0.7;
   transition: opacity 0.2s ease;
 }
@@ -331,11 +359,39 @@
   cursor: default !important;
 }
 
+/* Ensure Swiper and its wrapper can show overflowing content from effects */
 html, body {
-    overflow-x: hidden;
+    /* overflow-x: hidden; /* This should be on body not html if still needed */
 }
 .swiper, .swiper-wrapper {
     overflow: visible !important;
 }
-*/
 
+/* Player Page Report Banner */
+.report-banner {
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  border-color: hsl(var(--destructive) / 0.3);
+}
+
+/* Player Page Server Buttons (Example) */
+.server-button-group .badge {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  margin-bottom: 0.3rem;
+}
+.server-button-group .button {
+  font-size: 0.75rem; /* Tailwind text-xs */
+  padding: 0.3rem 0.6rem; /* Tailwind px-2 py-1 approx */
+}
+
+/* Vidstack Player Theming - Ensure it's in @layer base for overrides to take effect */
+/* Already defined in each theme block now */
+/*
+:root {
+  --media-brand: hsl(var(--primary));
+  --media-focus-ring-color: hsl(var(--ring));
+  --media-tooltip-bg: hsl(var(--popover));
+  --media-tooltip-text-color: hsl(var(--popover-foreground));
+}
+*/
