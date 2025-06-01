@@ -51,6 +51,16 @@
     --foreground-raw-hsl: 220 15% 96%;
     --ranking-number-stroke-color-raw-hsl: 230 8% 20%; /* Muted Divider Gray for stroke */
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    /* Vidstack Player Theme Variables */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-menu-text-color: hsl(var(--popover-foreground));
+    --media-menu-bg: hsl(var(--popover));
+    --media-menu-button-hover-bg: hsl(var(--accent));
+    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
+    --media-menu-button-focus-ring-color: hsl(var(--ring));
   }
 
   html[data-theme="light-pale-purple"] {
@@ -74,6 +84,16 @@
     --foreground-raw-hsl: 222 47% 11%;
     --ranking-number-stroke-color-raw-hsl: 220 10% 45%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
+    /* Vidstack Player Theme Variables */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-menu-text-color: hsl(var(--popover-foreground));
+    --media-menu-bg: hsl(var(--popover));
+    --media-menu-button-hover-bg: hsl(var(--accent));
+    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
+    --media-menu-button-focus-ring-color: hsl(var(--ring));
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -97,6 +117,16 @@
     --foreground-raw-hsl: 287 100% 98%;
     --ranking-number-stroke-color-raw-hsl: 287 67% 18%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    /* Vidstack Player Theme Variables */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-menu-text-color: hsl(var(--popover-foreground));
+    --media-menu-bg: hsl(var(--popover));
+    --media-menu-button-hover-bg: hsl(var(--accent));
+    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
+    --media-menu-button-focus-ring-color: hsl(var(--ring));
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -120,6 +150,16 @@
     --foreground-raw-hsl: 220 13% 91%;
     --ranking-number-stroke-color-raw-hsl: 231 25% 20%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    /* Vidstack Player Theme Variables */
+    --media-brand: hsl(var(--primary));
+    --media-focus-ring-color: hsl(var(--ring));
+    --media-tooltip-text-color: hsl(var(--popover-foreground));
+    --media-tooltip-bg: hsl(var(--popover));
+    --media-menu-text-color: hsl(var(--popover-foreground));
+    --media-menu-bg: hsl(var(--popover));
+    --media-menu-button-hover-bg: hsl(var(--accent));
+    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
+    --media-menu-button-focus-ring-color: hsl(var(--ring));
   }
 
   /* Global styles that apply to all themes */
@@ -190,6 +230,38 @@
 
   .card-shadow { box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -2px hsl(var(--primary) / 0.1); }
   .card-shadow:hover { box-shadow: 0 10px 15px -3px hsl(var(--primary) / 0.15), 0 4px 6px -4px hsl(var(--primary) / 0.15); }
+
+  /* Live Search Dropdown */
+  .live-search-dropdown {
+    @apply absolute top-full left-0 right-0 mt-1.5 w-full max-h-96 overflow-y-auto rounded-md bg-popover border border-border shadow-xl z-50;
+  }
+  .live-search-item {
+    @apply flex items-center gap-3 p-2.5 hover:bg-accent transition-colors cursor-pointer;
+  }
+  .live-search-item-image {
+    @apply w-10 h-14 object-cover rounded-sm flex-shrink-0 bg-muted;
+  }
+  .live-search-item-details {
+    @apply flex-grow min-w-0;
+  }
+  .live-search-item-title {
+    @apply text-sm font-semibold text-foreground truncate;
+  }
+  .live-search-item-meta {
+    @apply text-xs text-muted-foreground truncate;
+  }
+  .live-search-loader {
+    @apply p-4 text-center text-muted-foreground;
+  }
+  .live-search-no-results {
+    @apply p-4 text-center text-muted-foreground;
+  }
+  .player-report-banner {
+    background-color: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+    border: 1px solid hsl(var(--destructive) / 0.3);
+    border-radius: var(--radius);
+  }
 }
 
 /* Player Page Report Banner */
