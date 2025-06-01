@@ -332,62 +332,75 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
   const docRef = doc(animesCollection, slug);
 
   const dataToSave: any = {
-    ...animeData,
     id: slug,
     updatedAt: serverTimestamp(),
-    title: animeData.title || null,
-    coverImage: animeData.coverImage || null,
-    year: typeof animeData.year === 'number' ? animeData.year : null,
-    genre: Array.isArray(animeData.genre) ? animeData.genre : [],
-    status: animeData.status || 'Unknown',
+
+    // Required or defaulted string fields
+    title: animeData.title || null, // Ensure title is not empty, fallback to null if so (should be caught by Zod)
+    coverImage: animeData.coverImage || null, // Ensure coverImage is not empty
     synopsis: animeData.synopsis || null,
     type: animeData.type || 'Unknown',
+    status: animeData.status || 'Unknown',
     sourceAdmin: animeData.sourceAdmin || 'manual',
+
+    // Number fields (handle NaN)
+    year: (typeof animeData.year === 'number' && !isNaN(animeData.year)) ? animeData.year : null,
+    
+    // Optional fields (convert undefined to null or default)
+    bannerImage: animeData.bannerImage || null,
+    averageRating: (typeof animeData.averageRating === 'number' && !isNaN(animeData.averageRating)) ? animeData.averageRating : null,
+    popularity: (typeof animeData.popularity === 'number' && !isNaN(animeData.popularity)) ? animeData.popularity : 0, // Default to 0 for popularity
+    isFeatured: animeData.isFeatured === undefined ? false : animeData.isFeatured, // Default to false
+    aniListId: (typeof animeData.aniListId === 'number' && !isNaN(animeData.aniListId)) ? animeData.aniListId : null,
+    trailerUrl: animeData.trailerUrl || null,
+    downloadPageUrl: animeData.downloadPageUrl || null,
+    season: animeData.season || null,
+    seasonYear: (typeof animeData.seasonYear === 'number' && !isNaN(animeData.seasonYear)) ? animeData.seasonYear : ((typeof animeData.year === 'number' && !isNaN(animeData.year)) ? animeData.year : null),
+    countryOfOrigin: animeData.countryOfOrigin || null,
+    source: animeData.source || null,
+    format: animeData.format || (animeData.type || 'Unknown'), // Default format to type
+    duration: (typeof animeData.duration === 'number' && !isNaN(animeData.duration)) ? animeData.duration : null, // Anime-level duration
+    airedFrom: animeData.airedFrom || null,
+    airedTo: animeData.airedTo || null,
+    
+    // Array fields (default to empty array)
+    genre: Array.isArray(animeData.genre) ? animeData.genre : [],
+    studios: Array.isArray(animeData.studios) ? animeData.studios : [],
+    characters: Array.isArray(animeData.characters) ? animeData.characters : [],
   };
 
-  // Ensure optional fields are null if undefined or empty string for relevant types
-  dataToSave.bannerImage = animeData.bannerImage || null;
-  dataToSave.averageRating = animeData.averageRating === undefined ? null : animeData.averageRating;
-  dataToSave.popularity = animeData.popularity === undefined ? 0 : animeData.popularity;
-  dataToSave.isFeatured = animeData.isFeatured === undefined ? false : animeData.isFeatured;
-  dataToSave.aniListId = animeData.aniListId || null;
-  dataToSave.trailerUrl = animeData.trailerUrl || null;
-  dataToSave.downloadPageUrl = animeData.downloadPageUrl || null;
-  dataToSave.season = animeData.season || null;
-  dataToSave.seasonYear = animeData.seasonYear || dataToSave.year;
-  dataToSave.countryOfOrigin = animeData.countryOfOrigin || null;
-  dataToSave.studios = animeData.studios || [];
-  dataToSave.source = animeData.source || null;
-  dataToSave.format = animeData.format || dataToSave.type;
-  dataToSave.duration = animeData.duration || null;
-  dataToSave.airedFrom = animeData.airedFrom || null;
-  dataToSave.airedTo = animeData.airedTo || null;
-  dataToSave.characters = animeData.characters || [];
-
-
+  // Process episodes
   dataToSave.episodes = (animeData.episodes || []).map((ep, index) => {
-    const episodeId = ep.id || `${slug}-s${ep.seasonNumber || 0}-e${ep.episodeNumber || index}-${Date.now()}`;
+    const episodeId = ep.id || `${slug}-s${(typeof ep.seasonNumber === 'number' && !isNaN(ep.seasonNumber) ? ep.seasonNumber : 0)}-e${(typeof ep.episodeNumber === 'number' && !isNaN(ep.episodeNumber) ? ep.episodeNumber : index)}-${Date.now()}`;
+    
+    const sources = (ep.sources || []).map((source, sourceIdx) => ({
+      id: source.id || `source-${episodeId}-${Date.now()}-${sourceIdx}`,
+      url: source.url || null, // Should be caught by Zod on form, but defensive
+      label: source.label || null, // Should be caught by Zod on form
+      type: source.type || 'mp4', // Default, Zod requires it
+      category: source.category || 'SUB', // Default, Zod requires it
+      quality: (source.quality === '' || source.quality === undefined) ? null : source.quality,
+    }));
+
     return {
       id: episodeId,
       title: ep.title || null,
-      episodeNumber: typeof ep.episodeNumber === 'number' ? ep.episodeNumber : null,
-      seasonNumber: typeof ep.seasonNumber === 'number' ? ep.seasonNumber : null,
-      thumbnail: ep.thumbnail === '' ? null : (ep.thumbnail || null),
+      episodeNumber: (typeof ep.episodeNumber === 'number' && !isNaN(ep.episodeNumber)) ? ep.episodeNumber : null,
+      seasonNumber: (typeof ep.seasonNumber === 'number' && !isNaN(ep.seasonNumber)) ? ep.seasonNumber : null,
+      thumbnail: (ep.thumbnail === '' || ep.thumbnail === undefined) ? null : ep.thumbnail,
       duration: ep.duration || null,
       overview: ep.overview || null,
       airDate: ep.airDate || null,
-      sources: (ep.sources || []).map((source, sourceIdx) => ({
-        id: source.id || `source-${episodeId}-${Date.now()}-${sourceIdx}`,
-        url: source.url || null,
-        label: source.label || null,
-        type: source.type || 'mp4',
-        category: source.category || 'SUB',
-        quality: source.quality || null,
-      })),
-      url: undefined, // Ensure old top-level URL is not saved
+      sources: sources.length > 0 ? sources : null, // Store null if no sources, or empty array is also fine for Firestore
+      // url: undefined, // Ensure old top-level URL is explicitly not saved
     };
   });
   dataToSave.episodesCount = dataToSave.episodes?.length || 0;
+  
+  // Remove top-level url field from episodes if present from old structure
+  if (dataToSave.episodes) {
+    dataToSave.episodes.forEach((ep: any) => delete ep.url);
+  }
 
 
   try {
@@ -395,7 +408,13 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
     if (docSnap.exists()) {
       console.warn(`Anime with slug "${slug}" already exists. Updating existing document.`);
       const existingData = docSnap.data();
-      const updatePayload = { ...existingData, ...dataToSave }; // Merge, new data overwrites existing
+      // Ensure serverTimestamps are not overwritten by potentially stale client data if merging
+      const updatePayload = { 
+        ...existingData, 
+        ...dataToSave, 
+        updatedAt: serverTimestamp(), // Always set/update this
+        createdAt: existingData.createdAt || serverTimestamp() // Preserve existing or set if new
+      };
       await updateDoc(docRef, updatePayload);
     } else {
       dataToSave.createdAt = serverTimestamp();
@@ -410,6 +429,7 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
     revalidatePath('/admin/manual-add');
     return slug;
   } catch (error) {
+    console.error("Error in addAnimeToFirestore for title:", animeData.title, "Payload being sent:", JSON.stringify(dataToSave, null, 2));
     throw handleFirestoreError(error, `addAnimeToFirestore (title: ${animeData.title})`);
   }
 }
@@ -419,95 +439,94 @@ export async function updateAnimeInFirestore(id: string, animeData: Partial<Omit
     throw new Error("Anime ID is required for update.");
   }
   const docRef = doc(animesCollection, id);
-  try {
-    const updatePayload: { [key: string]: any } = { updatedAt: serverTimestamp() };
+  const updatePayload: { [key: string]: any } = { updatedAt: serverTimestamp() };
 
-    // Helper to ensure value is null if undefined, or keeps existing value
-    const SanitizeValue = (value: any, defaultValue: any = null) => {
-        if (typeof value === 'string' && value === '') return null; // Treat empty strings as null for relevant fields
-        return value === undefined ? defaultValue : value;
-    };
-    
-    const NullifyIfUndefined = (value: any) => value === undefined ? null : value;
-
-    // Process top-level fields
-    (Object.keys(animeData) as Array<keyof typeof animeData>).forEach(key => {
-      const value = animeData[key];
-      if (key === 'episodes') {
-        if (Array.isArray(value)) {
-          updatePayload.episodes = value.map((ep: any, index: number) => {
-            const episodeId = ep.id || `${id}-s${ep.seasonNumber || 0}-e${ep.episodeNumber || index}-${Date.now()}`;
-            const cleanedSources = (ep.sources || []).map((source: any, sourceIdx: number) => ({
-              id: source.id || `source-${episodeId}-${Date.now()}-${sourceIdx}`,
-              url: SanitizeValue(source.url),
-              label: SanitizeValue(source.label),
-              type: source.type || 'mp4',
-              category: source.category || 'SUB',
-              quality: SanitizeValue(source.quality),
-            }));
-            return {
-              id: episodeId,
-              title: SanitizeValue(ep.title),
-              episodeNumber: typeof ep.episodeNumber === 'number' ? ep.episodeNumber : null,
-              seasonNumber: typeof ep.seasonNumber === 'number' ? ep.seasonNumber : null,
-              thumbnail: SanitizeValue(ep.thumbnail),
-              duration: SanitizeValue(ep.duration),
-              overview: SanitizeValue(ep.overview),
-              airDate: SanitizeValue(ep.airDate),
-              sources: cleanedSources.length > 0 ? cleanedSources : null,
-              url: undefined,
-            };
-          });
-          updatePayload.episodesCount = updatePayload.episodes?.length ?? NullifyIfUndefined(animeData.episodesCount) ?? 0;
-        } else if (value === undefined || value === null) {
-           updatePayload.episodes = null;
-           updatePayload.episodesCount = 0;
-        }
-      } else if (key === 'isFeatured') {
-        updatePayload.isFeatured = value === undefined ? false : value;
-      } else if (key === 'popularity') {
-        updatePayload.popularity = value === undefined ? 0 : value;
-      } else if (key === 'averageRating') {
-        updatePayload.averageRating = (value === undefined || value === '') ? null : value;
-      } else if (key === 'genre') {
-        updatePayload.genre = Array.isArray(value) ? value : [];
-      } else if (key === 'studios') {
-        updatePayload.studios = Array.isArray(value) ? value : [];
-      } else if (key === 'characters') {
-        updatePayload.characters = Array.isArray(value) ? value : [];
-      } else if (key === 'year') {
-        updatePayload.year = typeof value === 'number' ? value : null;
-      } else if (key === 'title' || key === 'coverImage' || key === 'synopsis' || key === 'type' || key === 'status') {
-         updatePayload[key] = value === undefined || value === '' ? null : value; // Ensure required strings are not empty, convert to null if so
-      } else if (value !== undefined) {
-        updatePayload[key] = value; // For other fields like aniListId, bannerImage, etc.
+  // Helper function to sanitize value for Firestore
+  const sanitizeForFirestore = (value: any, isNumericField: boolean = false, isBooleanField: boolean = false, isArrayField: boolean = false) => {
+    if (value === undefined) {
+      return null; // Default to null for undefined optional fields unless specific default needed
+    }
+    if (isNumericField) {
+      const num = Number(value); // Zod should have coerced, but be safe
+      return (typeof num === 'number' && !isNaN(num)) ? num : null;
+    }
+    if (isBooleanField) {
+      return typeof value === 'boolean' ? value : false; // Default booleans to false if not explicitly true/false
+    }
+    if (isArrayField) {
+      return Array.isArray(value) ? value : []; // Default arrays to empty array
+    }
+    if (typeof value === 'string' && value === '') {
+      // For specific string fields that should be null if empty (like URLs, optional text)
+      const nullableStringFields = ['bannerImage', 'trailerUrl', 'downloadPageUrl', 'thumbnail', 'overview', 'airDate', 'duration', 'quality', 'season', 'countryOfOrigin', 'source', 'format'];
+      const currentKey = Object.keys(animeData).find(k => animeData[k as keyof typeof animeData] === value); // This is a bit hacky to get current key
+      if (currentKey && nullableStringFields.includes(currentKey)) {
+        return null;
       }
-       // If value is undefined and not handled above, it's omitted, which is fine for updateDoc (won't update the field)
-       // But for consistency with Firestore, we convert to null for specific optional fields
-       else if (['bannerImage', 'trailerUrl', 'downloadPageUrl', 'aniListId', 'season', 'seasonYear', 'countryOfOrigin', 'source', 'format', 'duration', 'airedFrom', 'airedTo'].includes(key)) {
-           updatePayload[key] = null;
-       }
-    });
-    
-    // Final check: ensure no undefined values are directly in updatePayload
-    for (const key in updatePayload) {
-        if (updatePayload[key] === undefined) {
-            // This case should ideally be caught by the specific handling above,
-            // but as a safeguard, either delete or set to null.
-            // For safety, let's set to null if it's a field that can be nullable.
-             if (['bannerImage', 'trailerUrl', 'downloadPageUrl', 'aniListId', 'season', 'seasonYear', 'countryOfOrigin', 'source', 'format', 'duration', 'airedFrom', 'airedTo', 'episodes', 'episodesCount', 'averageRating', 'synopsis', 'title', 'coverImage', 'year', 'type', 'status'].includes(key) || key.endsWith('Url') || key.endsWith('Image')) {
-                updatePayload[key] = null;
-            } else {
-                // If it's a field that must exist (e.g. a required string that somehow became undefined)
-                // this is an issue, but Firestore update will fail anyway.
-                // Better to log it or handle based on field definition. For now, delete if truly unexpected.
-                console.warn(`Unexpected undefined value for key "${key}" in updateAnimeInFirestore, removing from payload.`);
-                delete updatePayload[key];
-            }
+    }
+    return value;
+  };
+  
+  (Object.keys(animeData) as Array<keyof typeof animeData>).forEach(key => {
+    const value = animeData[key];
+    if (key === 'episodes') {
+      if (Array.isArray(value)) {
+        updatePayload.episodes = value.map((ep: any, index: number) => {
+          const episodeId = ep.id || `${id}-s${sanitizeForFirestore(ep.seasonNumber, true) || 0}-e${sanitizeForFirestore(ep.episodeNumber, true) || index}-${Date.now()}`;
+          const sources = (ep.sources || []).map((source: any, sourceIdx: number) => ({
+            id: source.id || `source-${episodeId}-${Date.now()}-${sourceIdx}`,
+            url: sanitizeForFirestore(source.url),
+            label: sanitizeForFirestore(source.label),
+            type: source.type || 'mp4',
+            category: source.category || 'SUB',
+            quality: sanitizeForFirestore(source.quality),
+          }));
+          const cleanedEpisode = {
+            id: episodeId,
+            title: sanitizeForFirestore(ep.title),
+            episodeNumber: sanitizeForFirestore(ep.episodeNumber, true),
+            seasonNumber: sanitizeForFirestore(ep.seasonNumber, true),
+            thumbnail: sanitizeForFirestore(ep.thumbnail),
+            duration: sanitizeForFirestore(ep.duration),
+            overview: sanitizeForFirestore(ep.overview),
+            airDate: sanitizeForFirestore(ep.airDate),
+            sources: sources.length > 0 ? sources : null,
+          };
+          // delete (cleanedEpisode as any).url; // Ensure old top-level URL is removed
+          return cleanedEpisode;
+        });
+        updatePayload.episodesCount = updatePayload.episodes?.length ?? 0;
+      } else if (value === undefined || value === null) {
+         updatePayload.episodes = null;
+         updatePayload.episodesCount = 0;
+      }
+    } else {
+        let isNumeric = ['year', 'averageRating', 'popularity', 'aniListId', 'duration', 'seasonYear'].includes(key);
+        let isBoolean = ['isFeatured'].includes(key);
+        let isArray = ['genre', 'studios', 'characters'].includes(key);
+        const sanitized = sanitizeForFirestore(value, isNumeric, isBoolean, isArray);
+        
+        // Only add to payload if the original value was actually provided in animeData
+        // or if we're setting a specific default like isFeatured=false
+        if (animeData.hasOwnProperty(key) || (isBoolean && value === undefined)) {
+             updatePayload[key] = sanitized;
         }
     }
+  });
 
+  // Remove any top-level undefined properties from updatePayload (should be handled by sanitizeForFirestore now)
+  Object.keys(updatePayload).forEach(key => {
+    if (updatePayload[key] === undefined) {
+      // This should not happen if sanitizeForFirestore works correctly
+      console.warn(`updateAnimeInFirestore: field ${key} was undefined before updateDoc. Setting to null or default.`);
+       if (key === 'isFeatured') updatePayload[key] = false;
+       else if (key === 'popularity') updatePayload[key] = 0;
+       else if (Array.isArray(updatePayload[key])) updatePayload[key] = [];
+       else updatePayload[key] = null;
+    }
+  });
 
+  try {
     await updateDoc(docRef, updatePayload);
     revalidatePath(`/anime/${id}`);
     revalidatePath('/');
@@ -552,49 +571,45 @@ export async function updateAnimeEpisode(animeId: string, episodeId: string, epi
     }
     
     const currentEpisode = episodes[episodeIndex];
-    const updatedEpisodeData: Partial<Episode> = {};
+    const updatedEpisodeFields: Partial<Episode> = {};
 
-    // Clean and prepare fields from episodeData payload
+    // Sanitize and prepare fields from episodeData payload
     (Object.keys(episodeData) as Array<keyof Partial<Episode>>).forEach(key => {
         const value = episodeData[key];
-        if (key === 'sources') {
-            updatedEpisodeData.sources = (Array.isArray(value) ? value : []).map((source: any, idx: number) => ({
+        if (value === undefined) {
+            // For optional fields being explicitly "cleared" via undefined, set to null
+            if (['title', 'thumbnail', 'duration', 'overview', 'airDate', 'sources'].includes(key)) {
+                 updatedEpisodeFields[key as keyof Episode] = null as any;
+            }
+            // episodeNumber and seasonNumber shouldn't become null if just undefined in payload, keep existing
+        } else if (key === 'thumbnail' && value === '') {
+            updatedEpisodeFields.thumbnail = null;
+        } else if (key === 'sources') {
+            updatedEpisodeFields.sources = (Array.isArray(value) ? value : []).map((source: any, idx: number) => ({
                 id: source.id || `source-${animeId}-ep${episodeId}-${Date.now()}-${idx}`,
                 url: source.url || null,
                 label: source.label || null,
                 type: source.type || 'mp4',
                 category: source.category || 'SUB',
-                quality: source.quality || null,
+                quality: (source.quality === '' || source.quality === undefined) ? null : source.quality,
             }));
-             if (updatedEpisodeData.sources.length === 0) updatedEpisodeData.sources = null;
-        } else if (key === 'thumbnail' && value === '') {
-            updatedEpisodeData.thumbnail = null;
-        } else if (value === undefined) {
-            // Explicitly nullify common optional fields if they are passed as undefined
-            if (['title', 'thumbnail', 'duration', 'overview', 'airDate', 'url', 'sources'].includes(key)) {
-                 updatedEpisodeData[key as keyof Episode] = null as any;
-            }
-            // episodeNumber and seasonNumber are less likely to be undefined here if managed by forms, but handle defensively
-            else if (key === 'episodeNumber' || key === 'seasonNumber') {
-                updatedEpisodeData[key as keyof Episode] = currentEpisode[key as keyof Episode] ?? null; // keep existing or null
-            }
-        } else {
-            updatedEpisodeData[key as keyof Episode] = value;
+            if (updatedEpisodeFields.sources.length === 0) updatedEpisodeFields.sources = null;
+        } else if (key === 'episodeNumber' || key === 'seasonNumber') {
+            updatedEpisodeFields[key] = (typeof value === 'number' && !isNaN(value)) ? value : currentEpisode[key]; // Keep existing if NaN
+        }
+         else {
+            updatedEpisodeFields[key as keyof Episode] = value;
         }
     });
     
     episodes[episodeIndex] = {
       ...currentEpisode,
-      ...updatedEpisodeData,
-      url: undefined, // Always remove old top-level URL
+      ...updatedEpisodeFields,
     };
-
-    // Final check for undefined on the merged episode object
-     Object.keys(episodes[episodeIndex]).forEach(key => {
-        if (episodes[episodeIndex][key as keyof Episode] === undefined) {
-           episodes[episodeIndex][key as keyof Episode] = null as any;
-        }
-    });
+    // Ensure url is not present if sources is
+    if (episodes[episodeIndex].sources && episodes[episodeIndex].sources!.length > 0) {
+        delete episodes[episodeIndex].url;
+    }
 
 
     await updateDoc(animeRef, { episodes: episodes, updatedAt: serverTimestamp() });
@@ -610,7 +625,10 @@ export async function updateAnimeEpisode(animeId: string, episodeId: string, epi
 export async function updateAnimeIsFeatured(animeId: string, isFeatured: boolean): Promise<void> {
   const animeRef = doc(animesCollection, animeId);
   try {
-    await updateDoc(animeRef, { isFeatured: isFeatured, updatedAt: serverTimestamp() });
+    await updateDoc(animeRef, { 
+      isFeatured: typeof isFeatured === 'boolean' ? isFeatured : false, 
+      updatedAt: serverTimestamp() 
+    });
     revalidatePath(`/anime/${animeId}`);
     revalidatePath('/');
     revalidatePath('/browse');
