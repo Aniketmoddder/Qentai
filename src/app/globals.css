@@ -61,6 +61,11 @@
     --media-menu-button-hover-bg: hsl(var(--accent));
     --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
     --media-menu-button-focus-ring-color: hsl(var(--ring));
+    --media-slider-preview-bg: hsl(var(--popover));
+    --media-slider-track-bg: hsl(var(--muted));
+    --media-slider-track-fill-bg: hsl(var(--primary));
+    --media-button-hover-bg: hsl(var(--primary) / 0.15);
+    --media-button-text-color: hsl(var(--foreground));
   }
 
   html[data-theme="light-pale-purple"] {
@@ -94,6 +99,11 @@
     --media-menu-button-hover-bg: hsl(var(--accent));
     --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
     --media-menu-button-focus-ring-color: hsl(var(--ring));
+    --media-slider-preview-bg: hsl(var(--popover));
+    --media-slider-track-bg: hsl(var(--muted));
+    --media-slider-track-fill-bg: hsl(var(--primary));
+    --media-button-hover-bg: hsl(var(--primary) / 0.1);
+    --media-button-text-color: hsl(var(--foreground));
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -127,6 +137,11 @@
     --media-menu-button-hover-bg: hsl(var(--accent));
     --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
     --media-menu-button-focus-ring-color: hsl(var(--ring));
+    --media-slider-preview-bg: hsl(var(--popover));
+    --media-slider-track-bg: hsl(var(--muted));
+    --media-slider-track-fill-bg: hsl(var(--primary));
+    --media-button-hover-bg: hsl(var(--primary) / 0.15);
+    --media-button-text-color: hsl(var(--foreground));
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -160,6 +175,11 @@
     --media-menu-button-hover-bg: hsl(var(--accent));
     --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
     --media-menu-button-focus-ring-color: hsl(var(--ring));
+    --media-slider-preview-bg: hsl(var(--popover));
+    --media-slider-track-bg: hsl(var(--muted));
+    --media-slider-track-fill-bg: hsl(var(--primary));
+    --media-button-hover-bg: hsl(var(--primary) / 0.15);
+    --media-button-text-color: hsl(var(--foreground));
   }
 
   /* Global styles that apply to all themes */
@@ -282,3 +302,8 @@
   padding: 0.3rem 0.6rem; /* Tailwind px-2 py-1 approx */
 }
       
+/* Ensure Vidstack player takes available space in its container */
+media-player {
+  width: 100%;
+  height: 100%;
+}
