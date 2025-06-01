@@ -1,9 +1,10 @@
+
 'use client';
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter, usePathname } from 'next/navigation';
-import { Loader2, AlertCircle, GaugeCircle, UsersRound, DownloadCloud, LibraryBig, ListVideo, FilePlus2, Palette, Settings as SettingsIcon, Menu, Home } from 'lucide-react';
+import { Loader2, AlertCircle, GaugeCircle, UsersRound, DownloadCloud, LibraryBig, ListVideo, FilePlus2, Palette, Settings as SettingsIcon, Menu, Home, MessageSquareWarning } from 'lucide-react';
 import Container from '@/components/layout/container'; 
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ export const adminNavItems: AdminNavItem[] = [
   { name: 'Episode Editor', href: '/admin/episode-editor', icon: ListVideo, isAdminOrOwner: true },
   { name: 'TMDB Import', href: '/admin/tmdb-import', icon: DownloadCloud, isAdminOrOwner: true },
   { name: 'Manual Add', href: '/admin/manual-add', icon: FilePlus2, isAdminOrOwner: true },
+  { name: 'Reports', href: '/admin/reports', icon: MessageSquareWarning, isAdminOrOwner: true },
   { name: 'User Mgt.', href: '/admin/user-management', icon: UsersRound, isOwnerOnly: true },
   { name: 'Theme Settings', href: '/admin/theme-settings', icon: Palette, isOwnerOnly: true, isThemeSettings: true },
 ];

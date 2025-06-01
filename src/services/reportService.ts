@@ -6,10 +6,16 @@ import type { Report, ReportIssueType } from '@/types/report';
 import {
   collection,
   addDoc,
+  getDocs,
+  doc,
+  deleteDoc,
+  query,
+  orderBy,
   serverTimestamp,
+  Timestamp,
   FirestoreError,
 } from 'firebase/firestore';
-// import { revalidatePath } from 'next/cache'; // To potentially refresh admin report lists
+import { revalidatePath } from 'next/cache';
 
 const reportsCollection = collection(db, 'reports');
 
@@ -42,15 +48,44 @@ export async function addReportToFirestore(reportData: ReportInputData): Promise
   try {
     const docRef = await addDoc(reportsCollection, {
       ...reportData,
-      status: 'open',
+      status: 'open', // Default status
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
-    // Optionally revalidate an admin path if you create an admin reports page
-    // For now, admin panel updates for reports can be a future step.
-    // e.g., revalidatePath('/admin/reports-dashboard');
+    // Optionally revalidate an admin reports page if it exists
+    revalidatePath('/admin/reports');
     return docRef.id;
   } catch (error) {
     throw handleFirestoreError(error, `addReportToFirestore (animeId: ${reportData.animeId})`);
+  }
+}
+
+export async function getAllReports(): Promise<Report[]> {
+  try {
+    const q = query(reportsCollection, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      // Convert Timestamps to ISO strings for client-side compatibility if needed by components
+      // For this admin tab, we might format directly in the component
+      return {
+        id: docSnap.id,
+        ...data,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : data.createdAt,
+        updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate().toISOString() : data.updatedAt,
+      } as Report;
+    });
+  } catch (error) {
+    throw handleFirestoreError(error, 'getAllReports');
+  }
+}
+
+export async function deleteReport(reportId: string): Promise<void> {
+  const reportRef = doc(db, 'reports', reportId);
+  try {
+    await deleteDoc(reportRef);
+    revalidatePath('/admin/reports');
+  } catch (error) {
+    throw handleFirestoreError(error, `deleteReport (reportId: ${reportId})`);
   }
 }
