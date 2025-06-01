@@ -25,8 +25,8 @@ import { Textarea } from "@/components/ui/textarea";
 import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Vidstack Imports - Using namespace import as a workaround for MediaOutlet resolution
-import * as Vidstack from '@vidstack/react';
+// Vidstack Imports
+import { MediaPlayer, MediaOutlet, Poster } from '@vidstack/react';
 import type { MediaCanPlayDetail, MediaCanPlayEvent, MediaEndedEvent, PlayerSrc } from '@vidstack/react';
 import { DefaultAudioLayout, DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
 import '@vidstack/react/player/styles/default/theme.css';
@@ -47,7 +47,7 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const playerRef = useRef<Vidstack.MediaPlayer>(null);
+  const playerRef = useRef<MediaPlayer>(null); // Corrected ref type to MediaPlayer from Vidstack
 
   const fetchDetails = useCallback(async () => {
     if (!animeId) {
@@ -70,7 +70,6 @@ export default function PlayerPage() {
           if (foundEp && foundEp.sources && foundEp.sources.length > 0) {
             epToSet = foundEp;
           } else if (foundEp) {
-            // Episode exists but has no sources, might still set it to show "no sources" message
             epToSet = foundEp;
           }
         }
@@ -82,7 +81,6 @@ export default function PlayerPage() {
             setActiveSource(firstSource);
           } else {
             setActiveSource(null);
-             // setPlayerError("No video sources available for this episode."); // User will see this in player area
           }
 
           if (!epIdFromUrl && epToSet.id && epToSet.sources && epToSet.sources.length > 0) {
@@ -92,8 +90,6 @@ export default function PlayerPage() {
           setCurrentEpisode(null);
           setActiveSource(null);
           if (details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
-             // This might loop if first episode has no sources.
-             // router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
              setPlayerError("No episodes with playable sources available.");
           } else {
             setPlayerError("No episodes available for this anime.");
@@ -118,7 +114,7 @@ export default function PlayerPage() {
 
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
-      if (ep.id === currentEpisode?.id && activeSource) return; // Don't re-select if same and source exists
+      if (ep.id === currentEpisode?.id && activeSource) return; 
       setPlayerError(null);
       setCurrentEpisode(ep);
       const firstSource = ep.sources?.[0];
@@ -126,7 +122,6 @@ export default function PlayerPage() {
         setActiveSource(firstSource);
       } else {
         setActiveSource(null);
-        // setPlayerError("No video sources available for this episode.");
       }
       router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false });
     },
@@ -136,7 +131,6 @@ export default function PlayerPage() {
   const handleServerSelect = (source: VideoSource) => {
     setPlayerError(null); 
     setActiveSource(source);
-    // Vidstack player or iframe will update based on activeSource.type
   };
 
   const onCanPlay = (detail: MediaCanPlayDetail, nativeEvent: MediaCanPlayEvent) => {
@@ -144,7 +138,7 @@ export default function PlayerPage() {
     setPlayerError(null); 
   };
 
-  const onMediaError = (event: any) => {
+  const onMediaError = (event: any) => { // Type might be more specific if Vidstack provides it
     console.error("Vidstack Media Error:", event.detail);
     setPlayerError(`Error playing video: ${event.detail?.message || 'Could not load video.'}. Try another server or episode.`);
   };
@@ -217,8 +211,8 @@ export default function PlayerPage() {
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
               {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime ? (
-                <Vidstack.MediaPlayer
-                  key={activeSource.id} // Ensure player re-initializes on source change
+                <MediaPlayer
+                  key={activeSource.id} 
                   ref={playerRef}
                   title={displayAnime?.title || 'Anime Video'}
                   src={activeSource.url}
@@ -231,15 +225,15 @@ export default function PlayerPage() {
                   onError={onMediaError}
                   crossOrigin
                 >
-                  <Vidstack.MediaOutlet className="object-contain">
-                    <Vidstack.Poster className="absolute inset-0 block h-full w-full rounded-md object-cover opacity-100 transition-opacity data-[hidden]:opacity-0" />
-                  </Vidstack.MediaOutlet>
+                  <MediaOutlet className="object-contain">
+                    <Poster className="absolute inset-0 block h-full w-full rounded-md object-cover opacity-100 transition-opacity data-[hidden]:opacity-0" />
+                  </MediaOutlet>
                   <DefaultAudioLayout icons={defaultLayoutIcons} />
                   <DefaultVideoLayout icons={defaultLayoutIcons} />
-                </Vidstack.MediaPlayer>
+                </MediaPlayer>
               ) : activeSource && activeSource.type === 'embed' ? (
                  <iframe
-                    key={activeSource.id} // Ensure iframe re-renders on source change
+                    key={activeSource.id} 
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg"
