@@ -2,11 +2,11 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import type { Anime, Episode } from "@/types/anime";
+import type { Anime, Episode, VideoSource } from "@/types/anime";
 import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server, Clapperboard } from "lucide-react";
+import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -25,8 +25,7 @@ import { Textarea } from "@/components/ui/textarea";
 import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Vidstack Imports
-// Corrected: MediaOutlet is imported directly from @vidstack/react
+// Vidstack Imports - Sticking to documented imports. If this fails, the issue is likely environmental.
 import { MediaPlayer, MediaOutlet, Poster, type MediaCanPlayDetail, type MediaCanPlayEvent, type MediaEndedEvent, type PlayerSrc } from '@vidstack/react';
 import { DefaultAudioLayout, DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
 import '@vidstack/react/player/styles/default/theme.css';
@@ -43,14 +42,11 @@ export default function PlayerPage() {
 
   const [anime, setAnime] = useState<Anime | null>(null);
   const [currentEpisode, setCurrentEpisode] = useState<Episode | null>(null);
+  const [activeSource, setActiveSource] = useState<VideoSource | null>(null);
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
-  const [activeServerCategory, setActiveServerCategory] = useState<'SUB' | 'DUB' | null>(null);
-  const [activeServerUrl, setActiveServerUrl] = useState<string | PlayerSrc | null>(null);
-  const [activeServerType, setActiveServerType] = useState<'mp4' | 'm3u8' | 'embed' | null>(null);
-
+  
   const playerRef = useRef<MediaPlayer>(null);
-
 
   const fetchDetails = useCallback(async () => {
     if (!animeId) {
@@ -65,36 +61,33 @@ export default function PlayerPage() {
       const details = await getAnimeById(animeId);
       if (details) {
         setAnime(details);
-        const epId = searchParams.get("episode");
-        let epToSet = details.episodes?.[0];
-        if (epId) {
-          const foundEp = details.episodes?.find((e) => e.id === epId);
+        const epIdFromUrl = searchParams.get("episode");
+        let epToSet = details.episodes?.[0]; // Default to first episode
+
+        if (epIdFromUrl) {
+          const foundEp = details.episodes?.find((e) => e.id === epIdFromUrl);
           if (foundEp) epToSet = foundEp;
         }
         
         if (epToSet) {
           setCurrentEpisode(epToSet);
-          if (epToSet.url) {
-             setActiveServerUrl(epToSet.url);
-             if (epToSet.url.endsWith('.m3u8')) setActiveServerType('m3u8');
-             else if (epToSet.url.endsWith('.mp4')) setActiveServerType('mp4');
-             else setActiveServerType('embed'); 
+          // Select the first available source for the episode
+          const firstSource = epToSet.sources?.[0];
+          if (firstSource) {
+            setActiveSource(firstSource);
           } else {
-            setActiveServerUrl(null);
-            setActiveServerType(null);
-            // Display a message in the player if URL is missing
-            // setPlayerError("Video source is not available for this episode.");
+            setActiveSource(null);
+            // No explicit error here, player will show "no source" message
           }
 
-          if (!epId && details.episodes && details.episodes.length > 0 && details.episodes[0]) {
+          // If no epId in URL but episodes exist, redirect to the first one
+          if (!epIdFromUrl && details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
              router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
           }
         } else {
           setCurrentEpisode(null);
-          setActiveServerUrl(null);
-          setActiveServerType(null);
-          if (details.episodes && details.episodes.length > 0 && details.episodes[0]) {
-             // If no epId in URL, but episodes exist, redirect to first one.
+          setActiveSource(null);
+          if (details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
              router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
           } else {
             setPlayerError("No episodes available for this anime.");
@@ -119,54 +112,54 @@ export default function PlayerPage() {
 
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
-      if (ep.id === currentEpisode?.id ) return; // Avoid re-setting if same episode
-      setPlayerError(null); // Clear previous player errors
+      if (ep.id === currentEpisode?.id) return;
+      setPlayerError(null);
       setCurrentEpisode(ep);
-      if (ep.url) {
-        setActiveServerUrl(ep.url);
-        if (ep.url.endsWith('.m3u8')) setActiveServerType('m3u8');
-        else if (ep.url.endsWith('.mp4')) setActiveServerType('mp4');
-        else setActiveServerType('embed'); // Or any other logic for embed
+      const firstSource = ep.sources?.[0];
+      if (firstSource) {
+        setActiveSource(firstSource);
       } else {
-        setActiveServerUrl(null);
-        setActiveServerType(null);
-        // setPlayerError("Video source is not available for this episode.");
+        setActiveSource(null);
       }
-      // Update URL query param without full page reload
-      router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false }); 
+      router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false });
     },
     [router, animeId, currentEpisode?.id]
   );
 
+  const handleServerSelect = (source: VideoSource) => {
+    setPlayerError(null); // Clear previous errors on server switch
+    setActiveSource(source);
+    // Optionally, attempt to play if playerRef is available
+    // playerRef.current?.play(); 
+  };
+
   const onCanPlay = (detail: MediaCanPlayDetail, nativeEvent: MediaCanPlayEvent) => {
-    // This is called when the media can begin playback.
-    // You can hide loading indicators here.
     console.log("Media can play", detail);
-    setPlayerError(null); // Clear errors when media can play
+    setPlayerError(null); 
   };
 
   const onMediaError = (event: any) => {
-    // Handle media errors (e.g., source not found, decoding issues)
     console.error("Vidstack Media Error:", event.detail);
-    setPlayerError(`Error playing video: ${event.detail?.message || 'Unknown player error'}. Try another server if available.`);
+    setPlayerError(`Error playing video: ${event.detail?.message || 'Could not load video.'}. Try another server or episode.`);
   };
   
-  // Fallback/placeholder data structure for skeleton loading
   const placeholderEpisode = {
     id: 'placeholder-ep-1',
     title: 'Episode Title Placeholder',
     episodeNumber: 1,
     seasonNumber: 1,
     thumbnail: `https://placehold.co/320x180.png`,
-    overview: 'This is a placeholder overview for the episode. More details will be shown here once the actual data is loaded for this exciting adventure.',
-    duration: '24min'
+    overview: 'This is a placeholder overview for the episode.',
+    duration: '24min',
+    sources: [{id: 'placeholder-src-1', url: '', type: 'mp4', label: 'Default Server', category: 'SUB' } as VideoSource]
   };
   const placeholderEpisodes = Array(10).fill(null).map((_, i) => ({
     ...placeholderEpisode,
     id: `placeholder-ep-${i+1}`,
     episodeNumber: i + 1,
-    title: `Episode ${i + 1}: The Adventure Continues Placeholder`,
-    thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`
+    title: `Episode ${i + 1}: Placeholder`,
+    thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
+    sources: [{id: `placeholder-src-${i+1}`, url: '', type: 'mp4', label: `Server ${i+1}`, category: 'SUB'} as VideoSource]
   }));
 
   const displayEpisode = currentEpisode || (anime?.episodes?.[0]) || placeholderEpisode;
@@ -176,9 +169,9 @@ export default function PlayerPage() {
     coverImage: `https://placehold.co/200x300.png`,
     bannerImage: `https://placehold.co/1280x300.png`,
     year: 2024,
-    genre: ['Action', 'Adventure', 'Fantasy'],
+    genre: ['Action', 'Adventure'],
     status: 'Ongoing',
-    synopsis: 'This is a placeholder synopsis for the anime. It describes an epic journey filled with challenges, friendship, and thrilling battles. The full story will captivate you.',
+    synopsis: 'Placeholder synopsis.',
     type: 'TV',
     isFeatured: false,
     episodes: placeholderEpisodes,
@@ -195,7 +188,6 @@ export default function PlayerPage() {
     );
   }
   
-  // If anime fetch failed, but not during initial page load state handled above
   if (!anime && !pageIsLoading && playerError) { 
     return ( 
       <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-1px)] py-12 text-center">
@@ -208,64 +200,63 @@ export default function PlayerPage() {
       </Container>
     );
   }
+  
+  const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
+  const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
       <Container className="py-4 md:py-6 flex-grow w-full">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           
-          {/* Main Content Area (Player + Below Player Info) */}
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
-            {/* Video Player Area */}
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
-              {activeServerUrl && activeServerType !== 'embed' && anime ? (
+              {activeSource && activeSource.type !== 'embed' && anime ? (
                 <MediaPlayer
                   ref={playerRef}
                   title={displayAnime?.title || 'Anime Video'}
-                  src={activeServerUrl}
+                  src={activeSource.url}
                   poster={displayEpisode?.thumbnail || displayAnime?.coverImage || displayAnime?.bannerImage || `https://placehold.co/1280x720.png`}
                   aspectRatio="16/9"
                   playsInline
                   autoPlay
-                  className="w-full h-full rounded-lg overflow-hidden bg-black" // Ensure player takes full space
+                  className="w-full h-full rounded-lg overflow-hidden bg-black"
                   onCanPlay={onCanPlay}
                   onError={onMediaError}
-                  crossOrigin // Important for HLS streams from different origins
+                  crossOrigin
                 >
-                  <MediaOutlet className="object-contain"> {/* Ensures video isn't cropped */}
+                  <MediaOutlet className="object-contain">
                     <Poster className="absolute inset-0 block h-full w-full rounded-md object-cover opacity-100 transition-opacity data-[hidden]:opacity-0" />
                   </MediaOutlet>
                   <DefaultAudioLayout icons={defaultLayoutIcons} />
                   <DefaultVideoLayout icons={defaultLayoutIcons} />
                 </MediaPlayer>
-              ) : activeServerUrl && activeServerType === 'embed' ? (
+              ) : activeSource && activeSource.type === 'embed' ? (
                  <iframe
-                    src={activeServerUrl as string} // Assuming activeServerUrl is a string for embeds
+                    src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
               ) : (
-                   // Fallback content if no URL or if it's an embed (or other unhandled type)
                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-card pointer-events-none">
                       <PlayIconFallback className="w-24 h-24 opacity-30" />
                       <p className="mt-4 text-lg">
                           {pageIsLoading ? 'Loading player...' : 
-                           (!displayAnime.episodes || displayAnime.episodes.length === 0) ? 'No episodes available for this anime.' :
-                           !currentEpisode ? 'Select an episode to start watching.' :
-                           'Video source is not available for this episode.'}
+                           (!displayAnime.episodes || displayAnime.episodes.length === 0) ? 'No episodes available.' :
+                           !currentEpisode ? 'Select an episode.' :
+                           !activeSource ? 'No video source selected or available for this episode.' :
+                           'Select a server to start watching.'}
                       </p>
                   </div>
               )}
-               {/* Loading overlay specifically for player source change */}
-               {pageIsLoading && !activeServerUrl && ( // Show if page is loading and no active server URL yet (e.g. episode data still fetching)
+               {pageIsLoading && !activeSource && (
                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
                       <Loader2 className="w-10 h-10 animate-spin text-primary" />
                       <p className="text-sm text-primary-foreground mt-2">Loading Episode...</p>
                   </div>
               )}
-              {/* Player Error Display */}
               {playerError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center z-10">
                   <AlertTriangle className="w-10 h-10 text-destructive mb-2" />
@@ -275,19 +266,16 @@ export default function PlayerPage() {
               )}
             </div>
 
-            {/* Report Issue Banner */}
             <div className="player-report-banner p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
               <MessageSquareWarning className="w-5 h-5 flex-shrink-0"/>
-              <span>If the video is not working or is the wrong episode, please report it using the button above. (Reporting feature coming soon!)</span>
+              <span>If the video is not working or is the wrong episode, please report it. (Reporting feature coming soon!)</span>
             </div>
 
-            {/* Episode Info & Server Selection */}
             <div className="px-1 sm:px-0 space-y-3 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate font-orbitron">
                   EP {displayEpisode?.episodeNumber || '-'}: {displayEpisode?.title || 'Episode Title Not Available'}
                 </h1>
-                {/* Action Buttons */}
                 <div className="flex items-center space-x-1.5">
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Download (Coming Soon)"><Download size={16}/></Button>
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Report Issue (Coming Soon)"><AlertTriangle size={16}/></Button>
@@ -295,42 +283,57 @@ export default function PlayerPage() {
                 </div>
               </div>
               
-              {/* Server/Quality Selection Area */}
-              <div className="bg-card p-3 rounded-lg shadow">
-                <div className="flex flex-col gap-3">
-                    {/* SUB Servers */}
+              <Card className="p-3 sm:p-4 bg-card shadow-sm border-border/40">
+                <div className="space-y-3">
+                  {subServers.length > 0 && (
                     <div>
                         <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><Clapperboard size={16} className="mr-1.5"/> SUB Servers</h3>
                         <div className="flex flex-wrap gap-2">
-                            {/* Placeholder Buttons - replace with dynamic server list later */}
-                            <Button size="sm" variant="outline" className="text-xs">Server Alpha (SUB)</Button>
-                            <Button size="sm" variant="default" className="text-xs btn-primary-gradient">Server Beta (SUB) (Active)</Button>
-                            <Button size="sm" variant="outline" className="text-xs">Server Gamma (SUB)</Button>
+                            {subServers.map(source => (
+                                <Button 
+                                    key={source.id} 
+                                    size="sm" 
+                                    variant={activeSource?.id === source.id ? 'default' : 'outline'} 
+                                    className={cn("text-xs server-button", activeSource?.id === source.id && "btn-primary-gradient")}
+                                    onClick={() => handleServerSelect(source)}
+                                >
+                                    {source.label} {source.quality && <Badge variant="secondary" className="ml-1.5 text-[0.6rem] px-1 py-0">{source.quality}</Badge>}
+                                </Button>
+                            ))}
                         </div>
                     </div>
-                    {/* DUB Servers */}
+                  )}
+                   {dubServers.length > 0 && (
                     <div>
-                        <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><Server size={16} className="mr-1.5"/> DUB Servers</h3>
+                        <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><ServerIcon size={16} className="mr-1.5"/> DUB Servers</h3>
                          <div className="flex flex-wrap gap-2">
-                            {/* Placeholder Buttons */}
-                            <Button size="sm" variant="outline" className="text-xs">Server Delta (DUB)</Button>
-                            <Button size="sm" variant="outline" className="text-xs">Server Epsilon (DUB)</Button>
+                           {dubServers.map(source => (
+                                <Button 
+                                    key={source.id} 
+                                    size="sm" 
+                                    variant={activeSource?.id === source.id ? 'default' : 'outline'} 
+                                    className={cn("text-xs server-button", activeSource?.id === source.id && "btn-primary-gradient")}
+                                    onClick={() => handleServerSelect(source)}
+                                >
+                                    {source.label} {source.quality && <Badge variant="secondary" className="ml-1.5 text-[0.6rem] px-1 py-0">{source.quality}</Badge>}
+                                </Button>
+                            ))}
                         </div>
                     </div>
+                  )}
+                  {subServers.length === 0 && dubServers.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">No video sources available for this episode yet.</p>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-3">Server & quality selection coming soon! Choose wisely.</p>
-              </div>
+              </Card>
 
-              {/* Next Episode Air Date */}
               <div className="text-xs text-muted-foreground p-2 bg-card/50 rounded text-center sm:text-left">
-                Next episode air date will be shown here. (e.g., Episode { (displayEpisode?.episodeNumber || 0) + 1} will air on Sun, Jun 01, 2025...)
+                Next episode air date will be shown here.
               </div>
             </div>
           </div>
 
-          {/* Sidebar (Episode List, Anime Details, Comments, Recommendations) */}
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-            {/* Episode List Card */}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
                 <div className="flex justify-between items-center">
@@ -359,6 +362,7 @@ export default function PlayerPage() {
                           }`}
                           onClick={() => anime && anime.episodes && handleEpisodeSelect(anime.episodes[idx])}
                           title={`Ep ${ep.episodeNumber}: ${ep.title}`}
+                          disabled={!anime || !anime.episodes || anime.episodes.length === 0}
                       >
                           <div className="flex items-center w-full gap-2">
                               {ep.thumbnail ? <Image src={ep.thumbnail} alt="" width={64} height={36} className="rounded object-cover w-16 h-9 flex-shrink-0 bg-muted" data-ai-hint="episode thumbnail" />
@@ -376,7 +380,6 @@ export default function PlayerPage() {
               </CardContent>
             </Card>
 
-            {/* Anime Details Snippet Card */}
             {anime && (
               <Card className="shadow-lg border-border/40">
                 <CardHeader className="p-3 sm:p-4 pb-2">
@@ -390,11 +393,11 @@ export default function PlayerPage() {
                   <div className="flex gap-3 sm:gap-4 mb-3">
                       <div className="w-20 sm:w-24 flex-shrink-0">
                       {anime.coverImage ? (
-                        <Image 
-                            src={anime.coverImage} 
-                            alt={anime.title} 
-                            width={200} 
-                            height={300} 
+                        <Image
+                            src={anime.coverImage}
+                            alt={anime.title}
+                            width={200}
+                            height={300}
                             className="rounded-md object-cover aspect-[2/3] bg-muted"
                             data-ai-hint="anime poster"
                         />
@@ -424,8 +427,6 @@ export default function PlayerPage() {
               </Card>
             )}
 
-
-            {/* Comments Card - Placeholder */}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2">
                 <CardTitle className="text-md font-semibold text-primary flex items-center">
@@ -433,7 +434,6 @@ export default function PlayerPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
-                {/* Comment Input Area */}
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={displayAnime?.coverImage || `https://placehold.co/40x40.png`} alt="User" />
@@ -442,19 +442,15 @@ export default function PlayerPage() {
                     <Textarea placeholder="Add a comment... (Feature coming soon)" className="text-xs flex-grow bg-input" rows={1} disabled />
                     <Button size="sm" variant="ghost" disabled><Send size={16}/></Button>
                 </div>
-                {/* Sort Options */}
                 <div className="text-xs text-muted-foreground flex justify-end">
                     Sort by: <Button variant="link" size="xs" className="px-1 text-muted-foreground hover:text-primary" disabled>Newest</Button>
                 </div>
-                {/* Comment List Placeholder */}
                 <div className="space-y-2 pt-2 border-t border-border/30">
                     <p className="text-center text-muted-foreground text-sm py-3">Comments are coming soon!</p>
-                    {/* Placeholder for actual comments */}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Recommendations Card - Placeholder */}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2">
                  <CardTitle className="text-md font-semibold text-primary">You Might Also Like</CardTitle>
@@ -475,5 +471,3 @@ export default function PlayerPage() {
     </div>
   );
 }
-
-

@@ -66,6 +66,13 @@
     --media-slider-track-fill-bg: hsl(var(--primary));
     --media-button-hover-bg: hsl(var(--primary) / 0.15);
     --media-button-text-color: hsl(var(--foreground));
+    --media-font-family: var(--font-poppins), sans-serif;
+    --media-button-icon-size: 18px;
+    --media-time-font-size: 13px;
+    --media-menu-font-size: 13px;
+    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
+    --media-slider-thumb-width: 12px;
+    --media-slider-thumb-height: 12px;
   }
 
   html[data-theme="light-pale-purple"] {
@@ -104,6 +111,13 @@
     --media-slider-track-fill-bg: hsl(var(--primary));
     --media-button-hover-bg: hsl(var(--primary) / 0.1);
     --media-button-text-color: hsl(var(--foreground));
+    --media-font-family: var(--font-poppins), sans-serif;
+    --media-button-icon-size: 18px;
+    --media-time-font-size: 13px;
+    --media-menu-font-size: 13px;
+    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
+    --media-slider-thumb-width: 12px;
+    --media-slider-thumb-height: 12px;
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -142,6 +156,13 @@
     --media-slider-track-fill-bg: hsl(var(--primary));
     --media-button-hover-bg: hsl(var(--primary) / 0.15);
     --media-button-text-color: hsl(var(--foreground));
+    --media-font-family: var(--font-poppins), sans-serif;
+    --media-button-icon-size: 18px;
+    --media-time-font-size: 13px;
+    --media-menu-font-size: 13px;
+    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
+    --media-slider-thumb-width: 12px;
+    --media-slider-thumb-height: 12px;
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -180,6 +201,13 @@
     --media-slider-track-fill-bg: hsl(var(--primary));
     --media-button-hover-bg: hsl(var(--primary) / 0.15);
     --media-button-text-color: hsl(var(--foreground));
+    --media-font-family: var(--font-poppins), sans-serif;
+    --media-button-icon-size: 18px;
+    --media-time-font-size: 13px;
+    --media-menu-font-size: 13px;
+    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
+    --media-slider-thumb-width: 12px;
+    --media-slider-thumb-height: 12px;
   }
 
   /* Global styles that apply to all themes */
@@ -291,19 +319,53 @@
   border-color: hsl(var(--destructive) / 0.3);
 }
 
-/* Player Page Server Buttons (Example) */
-.server-button-group .badge {
-  font-size: 0.7rem;
-  padding: 0.1rem 0.4rem;
-  margin-bottom: 0.3rem;
+/* Player Page Server Buttons */
+.server-button-group .server-button {
+  /* Base styles for server buttons, can be adjusted */
+  @apply text-xs px-2.5 py-1.5 h-auto font-medium;
+  @apply border border-border/70 hover:border-primary hover:bg-primary/10;
+  @apply focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background;
 }
-.server-button-group .button {
-  font-size: 0.75rem; /* Tailwind text-xs */
-  padding: 0.3rem 0.6rem; /* Tailwind px-2 py-1 approx */
+
+.server-button-group .server-button[data-active="true"] {
+  /* Active server button styles */
+  @apply bg-primary text-primary-foreground hover:bg-primary/90 hover:border-primary;
 }
       
 /* Ensure Vidstack player takes available space in its container */
 media-player {
   width: 100%;
   height: 100%;
+  --media-font-family: var(--font-poppins), sans-serif;
+  --media-button-icon-size: 20px; /* Slightly larger icons */
+  --media-time-font-size: 14px; /* Larger time display */
+  --media-menu-font-size: 14px; /* Larger menu text */
+  --media-slider-height: 6px; /* Thicker slider */
+  --media-slider-preview-font-size: 13px;
+  --media-slider-chapter-title-font-size: 13px;
+  --media-slider-thumb-width: 14px; /* Larger thumb */
+  --media-slider-thumb-height: 14px;
+  --media-slider-thumb-color: hsl(var(--primary-foreground));
+  --media-slider-track-fill-border-radius: var(--media-slider-track-border-radius, 2px);
+}
+
+/* Ensure focus rings are visible on player controls */
+media-player [role="button"]:focus-visible,
+media-player [role="slider"]:focus-visible {
+  outline: 2px solid hsl(var(--media-focus-ring-color));
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px hsl(var(--media-focus-ring-color) / 0.3);
+}
+
+media-player media-menu-items {
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 12px hsl(var(--background) / 0.3);
+}
+media-player media-menu-button[aria-expanded="true"] > media-icon {
+  color: hsl(var(--media-brand));
+}
+media-player .vds-menu-item[data-focus] {
+  background-color: hsl(var(--media-menu-item-focus-bg, var(--accent)));
+  color: hsl(var(--media-menu-button-hover-text-color, var(--accent-foreground)));
 }

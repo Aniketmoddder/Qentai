@@ -1,4 +1,14 @@
+
 import type { Timestamp } from 'firebase/firestore';
+
+export interface VideoSource {
+  id: string; // Unique ID for the source, can be generated
+  url: string;
+  type: 'mp4' | 'm3u8' | 'embed';
+  label: string; // e.g., "Server 1 - Vidstream", "Dub - GoStream 720p"
+  category: 'SUB' | 'DUB';
+  quality?: string; // e.g., "720p", "1080p", "SD", "HD"
+}
 
 export interface VoiceActor {
   id?: number; // AniList voice actor ID
@@ -23,7 +33,7 @@ export interface CharacterNode { // From AniList structure
 export interface CharacterEdge { // From AniList structure
   node: CharacterNode;
   role?: 'MAIN' | 'SUPPORTING' | 'BACKGROUND'; // Role of the character in the media
-  voiceActors?: { 
+  voiceActors?: {
     id: number;
     name: {
       full: string | null;
@@ -34,21 +44,21 @@ export interface CharacterEdge { // From AniList structure
       large: string | null;
       medium?: string | null;
     } | null;
-    languageV2?: string; 
+    languageV2?: string;
   }[];
 }
 
 
 export interface Character {
-  id: number; 
+  id: number;
   name: string | null;
-  role?: 'MAIN' | 'SUPPORTING' | 'BACKGROUND' | string; 
-  image: string | null; 
-  voiceActors?: VoiceActor[]; 
+  role?: 'MAIN' | 'SUPPORTING' | 'BACKGROUND' | string;
+  image: string | null;
+  voiceActors?: VoiceActor[];
 }
 
 export interface Anime {
-  id: string; 
+  id: string;
   tmdbId?: string;
   aniListId?: number;
   title: string;
@@ -68,7 +78,7 @@ export interface Anime {
   characters?: Character[];
   createdAt?: string; // ISO string on client
   updatedAt?: string; // ISO string on client
-  
+
   // Fields enriched or primarily from AniList
   season?: 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL' | string | null; // AniList specific season, allow string for flexibility
   seasonYear?: number;
@@ -84,14 +94,15 @@ export interface Anime {
 }
 
 export interface Episode {
-  id: string; 
+  id: string;
   tmdbEpisodeId?: number;
   title: string;
   episodeNumber: number;
   seasonNumber: number;
   thumbnail?: string;
   duration?: string | number; // Can be string like "24min" or number of minutes
-  url?: string | null; // Ensure it can be null
+  url?: string | null; // DEPRECATED - use sources array instead
+  sources?: VideoSource[]; // New field for multiple video sources
   airDate?: string | null; // ISO date string (YYYY-MM-DD)
   overview?: string;
 }
