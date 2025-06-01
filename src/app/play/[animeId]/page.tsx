@@ -17,7 +17,7 @@ import Image from "next/image";
 import ReadMoreSynopsis from "@/components/anime/ReadMoreSynopsis";
 import AnimeInteractionControls from "@/components/anime/anime-interaction-controls";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -139,7 +139,7 @@ export default function PlayerPage() {
     console.error("Plyr Media Error:", event);
     const plyrPlayer = playerRef.current?.plyr;
     let errorMessage = "Could not load video. Try another server or episode.";
-    if (plyrPlayer?.source && plyrPlayer.source.includes('m3u8') && !Hls.isSupported()) {
+    if (plyrPlayer?.source && typeof plyrPlayer.source === 'string' && plyrPlayer.source.includes('m3u8') && typeof window !== 'undefined' && window.Hls && !window.Hls.isSupported()) {
       errorMessage = "HLS playback is not supported in your browser for this M3U8 stream.";
     } else if (event?.detail?.plyrError?.message) {
       errorMessage = `Player Error: ${event.detail.plyrError.message}`;
@@ -246,11 +246,32 @@ export default function PlayerPage() {
            if(hlsInstanceRef.current) {
             hlsInstanceRef.current.destroy();
           }
-          const hls = new Hls(plyrOptions.hls);
+          const hls = new Hls(plyrOptions.hls); // Pass HLS config from Plyr options
           hls.loadSource(activeSource.url);
           hls.attachMedia(playerRef.current.plyr.media as HTMLMediaElement);
           hlsInstanceRef.current = hls;
-          // playerRef.current.plyr.on('error', handlePlayerError); // Add Plyr specific error listener
+          
+          // Listen for HLS.js specific errors
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.error('HLS Network Error:', data);
+                  handlePlayerError('A network error occurred while loading the video (HLS).');
+                  // Optionally, try to recover by calling hls.startLoad() or hls.loadSource(newSource)
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.error('HLS Media Error:', data);
+                  handlePlayerError('A media error occurred (HLS).');
+                  // Optionally, try hls.recoverMediaError()
+                  break;
+                default:
+                  console.error('HLS Unhandled Error:', data);
+                  handlePlayerError('An unexpected error occurred with HLS playback.');
+                  break;
+              }
+            }
+          });
         }
       });
     } else if (hlsInstanceRef.current) {
@@ -274,14 +295,15 @@ export default function PlayerPage() {
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative plyr-container">
               {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime && plyrSource ? (
                 <Plyr
-                  key={activeSource.id} // Re-mount Plyr when source ID changes
+                  key={activeSource.id} 
                   ref={playerRef}
                   source={plyrSource}
                   options={plyrOptions}
-                  onLoadedData={() => setPlayerError(null)} // Clear error on successful load
-                  // Plyr's own error event might be different or might be on the media element
-                  // For now, using a general approach. Specific error handling for Plyr can be added.
-                  // onError={handlePlayerError} // This might not be a direct prop, check plyr-react docs for event handling
+                  onLoadedData={() => setPlayerError(null)}
+                  // Plyr error event handling is often attached directly to the media element or via its API
+                  // The current setup might not catch all Plyr errors directly on the component.
+                  // For robust error handling, you might need to access playerRef.current.plyr.on('error', ...)
+                  // This is a basic setup for now.
                 />
               ) : activeSource && activeSource.type === 'embed' ? (
                  <iframe
@@ -316,8 +338,6 @@ export default function PlayerPage() {
                   <p className="text-destructive-foreground text-sm">{playerError}</p>
                   <Button variant="outline" size="sm" className="mt-3" onClick={() => {
                     setPlayerError(null);
-                    // Optionally try to reload the current source or clear it
-                    // setActiveSource(null); // This might be too disruptive
                   }}>Dismiss</Button>
                 </div>
               )}
@@ -345,15 +365,13 @@ export default function PlayerPage() {
                   {subServers.length > 0 && (
                     <div>
                         <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><Clapperboard size={16} className="mr-1.5"/> SUB Servers</h3>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 server-button-group">
                             {subServers.map(source => (
                                 <Button 
                                     key={source.id} 
                                     size="sm" 
-                                    className={cn(
-                                      "text-xs server-button", 
-                                      activeSource?.id === source.id && "server-button-active btn-primary-gradient"
-                                    )}
+                                    className={cn("server-button")}
+                                    data-active={activeSource?.id === source.id}
                                     variant={activeSource?.id === source.id ? 'default' : 'outline'}
                                     onClick={() => handleServerSelect(source)}
                                 >
@@ -366,15 +384,13 @@ export default function PlayerPage() {
                    {dubServers.length > 0 && (
                     <div>
                         <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><ServerIcon size={16} className="mr-1.5"/> DUB Servers</h3>
-                         <div className="flex flex-wrap gap-2">
+                         <div className="flex flex-wrap gap-2 server-button-group">
                            {dubServers.map(source => (
                                 <Button 
                                     key={source.id} 
                                     size="sm" 
-                                    className={cn(
-                                      "text-xs server-button", 
-                                      activeSource?.id === source.id && "server-button-active btn-primary-gradient"
-                                    )}
+                                    className={cn("server-button")}
+                                    data-active={activeSource?.id === source.id}
                                     variant={activeSource?.id === source.id ? 'default' : 'outline'}
                                     onClick={() => handleServerSelect(source)}
                                 >
@@ -423,7 +439,7 @@ export default function PlayerPage() {
                           className={`w-full justify-start text-left h-auto py-2 px-2.5 text-xs ${
                           (currentEpisode?.id === ep.id && activeSource) ? 'bg-primary/20 text-primary font-semibold' : 'hover:bg-primary/10'
                           }`}
-                          onClick={() => anime && anime.episodes && handleEpisodeSelect(anime.episodes[idx])}
+                          onClick={() => anime && anime.episodes && anime.episodes[idx] && handleEpisodeSelect(anime.episodes[idx])}
                           title={`Ep ${ep.episodeNumber}: ${ep.title}`}
                           disabled={!anime || !anime.episodes || anime.episodes.length === 0 || !ep.sources || ep.sources.length === 0}
                       >
