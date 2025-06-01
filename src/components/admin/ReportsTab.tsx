@@ -106,32 +106,32 @@ export default function ReportsTab() {
         )}
 
         {!isLoading && !error && reports.length > 0 && (
-          <ScrollArea className="h-[calc(100vh-20rem)] lg:h-[calc(100vh-18rem)] border border-border/30 rounded-lg shadow-inner">
+          <ScrollArea className="h-[calc(100vh-24rem)] sm:h-[calc(100vh-22rem)] md:h-[calc(100vh-20rem)] lg:h-[calc(100vh-18rem)] border border-border/30 rounded-lg shadow-inner">
             <div className="space-y-4 p-3 sm:p-4">
               {reports.map(report => (
                 <Card key={report.id} className="bg-card/80 border-border/50 shadow-sm hover:shadow-md transition-shadow">
                   <CardHeader className="p-3 sm:p-4 pb-2">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
                         <div>
-                            <CardTitle className="text-base font-semibold text-foreground mb-0.5">
+                            <CardTitle className="text-base font-semibold text-foreground mb-0.5 break-words">
                                 Report ID: <span className="text-primary">{report.id.substring(0,8)}...</span>
                             </CardTitle>
                             <CardDescription className="text-xs">
                                 Reported: {formatReportTimestamp(report.createdAt as string)}
                             </CardDescription>
                         </div>
-                        <Badge variant={report.status === 'open' ? 'destructive' : report.status === 'resolved' ? 'default' : 'secondary'} className="capitalize text-xs h-fit mt-1 sm:mt-0">
+                        <Badge variant={report.status === 'open' ? 'destructive' : report.status === 'resolved' ? 'default' : 'secondary'} className="capitalize text-xs h-fit mt-1 sm:mt-0 self-start sm:self-auto">
                             {report.status}
                         </Badge>
                     </div>
                   </CardHeader>
                   <CardContent className="p-3 sm:p-4 pt-1 text-sm space-y-2">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                        <p><strong className="text-muted-foreground">User:</strong> {report.userEmail || report.userId || <span className="italic">Anonymous</span>}</p>
+                        <p className="break-words"><strong className="text-muted-foreground">User:</strong> {report.userEmail || report.userId || <span className="italic">Anonymous</span>}</p>
                         <p><strong className="text-muted-foreground">Type:</strong> <Badge variant="outline">{report.issueType}</Badge></p>
-                        <p className="md:col-span-2"><strong className="text-muted-foreground">Anime:</strong> {report.animeTitle || 'N/A'} (ID: {report.animeId})</p>
-                        <p><strong className="text-muted-foreground">Episode:</strong> {report.episodeTitle || 'N/A'} (ID: {report.episodeId || 'N/A'})</p>
-                        <p><strong className="text-muted-foreground">Source:</strong> {report.sourceLabel || 'N/A'}</p>
+                        <p className="md:col-span-2 break-words"><strong className="text-muted-foreground">Anime:</strong> {report.animeTitle || 'N/A'} (ID: {report.animeId})</p>
+                        <p className="break-words"><strong className="text-muted-foreground">Episode:</strong> {report.episodeTitle || 'N/A'} (ID: {report.episodeId || 'N/A'})</p>
+                        <p className="break-words"><strong className="text-muted-foreground">Source:</strong> {report.sourceLabel || 'N/A'}</p>
                     </div>
                      <TooltipProvider delayDuration={100}>
                         <Tooltip>
@@ -187,3 +187,4 @@ export default function ReportsTab() {
     </Card>
   );
 }
+
