@@ -27,7 +27,6 @@ import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import PlyrComponent from "plyr-react";
-import type PlyrReact from "plyr-react"; // Import type for PlyrReact.Plyr
 import type Plyr from "plyr";
 import "plyr/dist/plyr.css";
 import Hls from 'hls.js';
@@ -69,8 +68,10 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const plyrComponentRef = useRef<PlyrReact.Plyr | null>(null); // Ref to PlyrReact component instance
+  const plyrComponentRef = useRef<HTMLDivElement>(null); // Ref to the div wrapping PlyrComponent
+  const plyrInstanceRef = useRef<Plyr | null>(null); // Ref to the actual Plyr API instance
   const hlsInstanceRef = useRef<Hls | null>(null);
+  
   const [displayMode, setDisplayMode] = useState<'plyr' | 'iframe' | 'none'>('none');
 
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -114,6 +115,9 @@ export default function PlayerPage() {
         }
       },
     } as any, 
+    listeners: {
+      error: handlePlyrError, // Generic error listener
+    },
   }), [handlePlyrError]);
 
   const fetchDetails = useCallback(async () => {
@@ -147,11 +151,9 @@ export default function PlayerPage() {
           const firstSource = epToSet.sources?.[0];
           if (firstSource) {
             setActiveSource(firstSource);
-            // Display mode will be set by useEffect based on activeSource.type
           } else {
             setActiveSource(null);
             setPlayerError(epToSet.sources && epToSet.sources.length === 0 ? "No video sources available for this episode." : "Episode selected, but no source found.");
-            setDisplayMode('none');
           }
 
           if (!epIdFromUrl && epToSet.id && epToSet.sources && epToSet.sources.length > 0) {
@@ -160,7 +162,6 @@ export default function PlayerPage() {
         } else {
           setCurrentEpisode(null);
           setActiveSource(null);
-          setDisplayMode('none');
           if (details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
              setPlayerError("No episodes with playable sources available.");
           } else {
@@ -169,12 +170,10 @@ export default function PlayerPage() {
         }
       } else {
         setPlayerError("Anime not found.");
-        setDisplayMode('none');
       }
     } catch(e: any) {
       console.error("Failed to load anime details:", e);
       setPlayerError(`Failed to load anime details: ${e.message || "Unknown error"}`);
-      setDisplayMode('none');
     } finally {
       setPageIsLoading(false);
     }
@@ -195,7 +194,6 @@ export default function PlayerPage() {
       } else {
         setActiveSource(null);
         setPlayerError("No video sources available for this episode.");
-        setDisplayMode('none');
       }
       router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false });
     },
@@ -215,14 +213,14 @@ export default function PlayerPage() {
           hlsInstanceRef.current.destroy();
           hlsInstanceRef.current = null;
         }
-        if (plyrComponentRef.current?.plyr && plyrComponentRef.current.plyr.playing) {
-          plyrComponentRef.current.plyr.pause();
+        if (plyrInstanceRef.current?.playing) {
+          plyrInstanceRef.current.pause();
         }
         setDisplayMode('iframe');
       } else if (activeSource.type === 'mp4' || activeSource.type === 'm3u8') {
         setDisplayMode('plyr');
       } else {
-        setDisplayMode('none');
+        setDisplayMode('none'); // Unknown source type
       }
     } else { // No active source
       setDisplayMode('none');
@@ -230,9 +228,8 @@ export default function PlayerPage() {
         hlsInstanceRef.current.destroy();
         hlsInstanceRef.current = null;
       }
-      // If Plyr exists and was playing, pause it.
-      if (plyrComponentRef.current?.plyr && plyrComponentRef.current.plyr.playing) {
-          plyrComponentRef.current.plyr.pause();
+      if (plyrInstanceRef.current?.playing) {
+          plyrInstanceRef.current.pause();
       }
     }
   }, [activeSource]);
@@ -246,12 +243,12 @@ export default function PlayerPage() {
         poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
       };
     }
-    return undefined; // Important: Plyr source is undefined if not in 'plyr' mode or no valid source
+    return undefined;
   }, [displayMode, activeSource, anime, currentEpisode]);
 
   // Effect to manage HLS instance for Plyr when plyrSourceToPlay changes
   useEffect(() => {
-    const plyrPlayerAPI = plyrComponentRef.current?.plyr; // Access the actual Plyr API
+    const plyrPlayerAPI = plyrInstanceRef.current; 
 
     if (hlsInstanceRef.current) {
       hlsInstanceRef.current.destroy();
@@ -272,8 +269,6 @@ export default function PlayerPage() {
         handlePlyrError("HLS is not supported on this browser for M3U8 streams.");
       }
     }
-    // This effect's cleanup should destroy the HLS instance when plyrSourceToPlay becomes undefined (e.g., switching to iframe)
-    // or when a new plyrSourceToPlay causes a re-run.
     return () => {
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
@@ -286,9 +281,13 @@ export default function PlayerPage() {
   useEffect(() => {
     // Cleanup function for the main component
     return () => {
-      if (plyrComponentRef.current?.plyr) {
-        plyrComponentRef.current.plyr.destroy();
-        // plyrComponentRef.current = null; // Don't nullify the ref itself, only its content if library does it.
+      if (plyrInstanceRef.current) {
+        try {
+            plyrInstanceRef.current.destroy();
+        } catch(e) {
+            console.warn("Error destroying Plyr instance on component unmount:", e);
+        }
+        plyrInstanceRef.current = null;
       }
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
@@ -302,7 +301,7 @@ export default function PlayerPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot submit report: missing context.' });
       return;
     }
-    reportForm.formState.isSubmitting = true;
+    // reportForm.formState.isSubmitting is automatically true during this async function
     try {
       await addReportToFirestore({
         userId: authUser?.uid || null,
@@ -322,9 +321,8 @@ export default function PlayerPage() {
     } catch (error) {
       console.error('Failed to submit report:', error);
       toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not submit your report. Please try again.' });
-    } finally {
-       reportForm.formState.isSubmitting = false;
     }
+    // reportForm.formState.isSubmitting will automatically be set to false by React Hook Form
   };
 
   const issueTypes: { value: ReportIssueType; label: string }[] = [
@@ -378,6 +376,8 @@ export default function PlayerPage() {
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
   
+  const playerKey = activeSource ? `${activeSource.type}-${activeSource.id}-${activeSource.url}` : 'no-active-source';
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
       <Container className="py-4 md:py-6 flex-grow w-full">
@@ -386,18 +386,26 @@ export default function PlayerPage() {
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
               
-              <div style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                <PlyrComponent
-                  ref={plyrComponentRef} 
-                  source={plyrSourceToPlay} 
-                  options={plyrOptions}
-                  // No key here, source prop updates will be handled
-                />
+              <div ref={plyrComponentRef} style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                {displayMode === 'plyr' && plyrSourceToPlay && (
+                  <PlyrComponent
+                    key={playerKey} // Keyed to force remount on source change
+                    ref={(plyrReactInstance) => {
+                       if (plyrReactInstance && plyrReactInstance.plyr) {
+                         plyrInstanceRef.current = plyrReactInstance.plyr;
+                       } else {
+                         plyrInstanceRef.current = null;
+                       }
+                    }}
+                    source={plyrSourceToPlay} 
+                    options={plyrOptions}
+                  />
+                )}
               </div>
 
               {displayMode === 'iframe' && activeSource && activeSource.type === 'embed' && (
                  <iframe
-                    key={activeSource.url} // Keyed for iframe reload on URL change
+                    key={playerKey} // Keyed for iframe reload on URL change
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]"
@@ -710,6 +718,4 @@ export default function PlayerPage() {
     </div>
   );
 }
-    
-
     
