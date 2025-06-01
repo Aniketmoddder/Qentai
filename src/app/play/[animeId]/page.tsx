@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo, Suspense } from "react";
 import type { Anime, Episode, VideoSource } from "@/types/anime";
 import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
@@ -15,8 +15,8 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Image from "next/image";
-import ReadMoreSynopsis from "@/components/anime/ReadMoreSynopsis";
-import AnimeInteractionControls from "@/components/anime/anime-interaction-controls";
+import ReadMoreSynopsis from '@/components/anime/ReadMoreSynopsis';
+import AnimeInteractionControls from '@/components/anime/anime-interaction-controls';
 import { Dialog, DialogHeader as DialogHeaderPrimitive, DialogTitle as DialogTitlePrimitive, DialogDescription as DialogDescriptionPrimitive, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { DialogContent } from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
@@ -47,8 +47,8 @@ export default function PlayerPage() {
   const [playerError, setPlayerError] = useState<string | null>(null);
   
   const plyrInstanceRef = useRef<Plyr | null>(null);
+  const videoElementRef = useRef<HTMLVideoElement | null>(null); // For direct media element access if needed by HLS
   const hlsInstanceRef = useRef<Hls | null>(null);
-  const videoElementRef = useRef<HTMLVideoElement | null>(null);
 
 
   const handlePlyrError = (event: any) => {
@@ -63,7 +63,6 @@ export default function PlayerPage() {
     } else if (typeof event === 'string') {
       errorMessage = event;
     } else if (event?.type === 'error' && event?.data?.details) {
-      // HLS specific error
       errorMessage = `HLS Error: ${event.data.details}`;
     }
     setPlayerError(errorMessage);
@@ -73,11 +72,13 @@ export default function PlayerPage() {
     autoplay: true,
     debug: process.env.NODE_ENV === 'development',
     listeners: {
-      // Plyr's own error event might not catch all HLS errors directly
-      // We'll handle HLS errors in its own setup
+      error: handlePlyrError, // General player errors
     },
-    // Ensure controls are always visible, or customize as needed
-    // controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
+    hls: {
+      // Pass Hls constructor for Plyr to use
+      // @ts-ignore - Plyr types might not perfectly align with Hls constructor for this prop, but it works
+      Hls: Hls, 
+    },
   }), []);
 
   const fetchDetails = useCallback(async () => {
@@ -169,7 +170,7 @@ export default function PlayerPage() {
   // Effect to manage Plyr source and HLS instance
   useEffect(() => {
     const plyrPlayer = plyrInstanceRef.current?.plyr;
-    const mediaElement = plyrPlayer?.media as HTMLVideoElement | null;
+    const mediaElement = videoElementRef.current; // Using the ref directly
 
     // Destroy previous HLS instance if it exists
     if (hlsInstanceRef.current) {
@@ -178,47 +179,34 @@ export default function PlayerPage() {
     }
 
     if (plyrPlayer && activeSource && mediaElement) {
-      if (activeSource.type === 'mp4') {
-        plyrPlayer.source = {
-          type: 'video',
-          title: `${anime?.title || 'Video'} - ${currentEpisode?.title || 'Episode'}`,
-          sources: [{ src: activeSource.url, type: 'video/mp4' }],
-          poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
-        };
-      } else if (activeSource.type === 'm3u8') {
+      const newSourceConfig = {
+        type: 'video' as const,
+        title: `${anime?.title || 'Video'} - ${currentEpisode?.title || 'Episode'}`,
+        sources: [{ src: activeSource.url, type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4' }],
+        poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
+      };
+      
+      plyrPlayer.source = newSourceConfig;
+
+      if (activeSource.type === 'm3u8') {
         if (Hls.isSupported()) {
           const hls = new Hls();
           hls.loadSource(activeSource.url);
-          hls.attachMedia(mediaElement);
+          hls.attachMedia(mediaElement); // Attach HLS to the specific video element Plyr controls
           hlsInstanceRef.current = hls;
 
           hls.on(Hls.Events.ERROR, (event, data) => {
             if (data.fatal) {
               console.error('HLS Fatal Error:', data);
-              handlePlyrError({ type: 'error', data }); // Pass HLS error to handler
+              handlePlyrError({ type: 'error', data });
             }
           });
-          // Set Plyr source after HLS is attached
-           plyrPlayer.source = {
-            type: 'video',
-            title: `${anime?.title || 'Video'} - ${currentEpisode?.title || 'Episode'}`,
-            sources: [{ src: activeSource.url, type: 'application/x-mpegURL' }], // Keep this so Plyr knows it's HLS
-            poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
-          };
         } else if (mediaElement.canPlayType('application/vnd.apple.mpegurl')) {
-          // Native HLS support (e.g., Safari)
-          mediaElement.src = activeSource.url;
-           plyrPlayer.source = { // Still inform Plyr about the source for UI
-            type: 'video',
-            title: `${anime?.title || 'Video'} - ${currentEpisode?.title || 'Episode'}`,
-            sources: [{ src: activeSource.url, type: 'application/x-mpegURL' }],
-            poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
-          };
+          mediaElement.src = activeSource.url; // For native HLS support
         } else {
           handlePlyrError("HLS is not supported on this browser.");
         }
       }
-      // For embed, it's handled by conditional rendering of iframe, so Plyr's source doesn't need update here.
     }
     
     // Cleanup function for this effect
@@ -290,16 +278,15 @@ export default function PlayerPage() {
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
 
-  // Initial source for Plyr, will be updated by useEffect if activeSource changes
-  // This is mainly to provide an initial structure for Plyr if needed before useEffect runs
-  const initialPlyrSourceInfo: Plyr.SourceInfo | null = activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime
-  ? {
-      type: 'video',
-      title: `${displayAnime?.title || 'Video'} - ${displayEpisode?.title || 'Episode'}`,
-      sources: [ { src: activeSource.url, type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4' } ],
-      poster: displayEpisode?.thumbnail || displayAnime?.bannerImage || displayAnime?.coverImage || `https://placehold.co/1280x720.png`,
-    }
-  : null;
+  const initialPlyrSourceInfo: Plyr.SourceInfo | undefined = 
+    activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime
+    ? {
+        type: 'video',
+        title: `${displayAnime?.title || 'Video'} - ${displayEpisode?.title || 'Episode'}`,
+        sources: [ { src: activeSource.url, type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4' } ],
+        poster: displayEpisode?.thumbnail || displayAnime?.bannerImage || displayAnime?.coverImage || `https://placehold.co/1280x720.png`,
+      }
+    : undefined;
 
 
   return (
@@ -309,16 +296,27 @@ export default function PlayerPage() {
           
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative plyr-container">
-              {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime ? (
-                // Do not use key={activeSource.id} here anymore
+              {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime && initialPlyrSourceInfo ? (
                 <Plyr
-                  ref={plyrInstanceRef} 
-                  source={initialPlyrSourceInfo} // Provide an initial source structure
+                  ref={plyrInstanceRef}
+                  source={initialPlyrSourceInfo}
                   options={plyrOptions}
+                  // Crucial: provide the video element ref for HLS to attach to
+                  // @ts-ignore Plyr's types might not perfectly align with this direct ref usage, but it is needed
+                  // This 'media' prop for ref is specific to how some react-plyr wrappers expose the internal element
+                  // or we can let Plyr create its own and try to find it (less reliable)
+                  // For this to work, plyr-react's Plyr component needs to forward a ref to its <video> tag,
+                  // or we get the video element from plyrInstanceRef.current.plyr.media AFTER it mounts.
+                  // Let's use a dedicated ref for the video element that Plyr creates/manages.
+                  // This may not be needed if Plyr internal HLS works.
+                  // If HLS is managed by plyrInstanceRef.current.plyr.media internally (which is the goal of passing Hls to options)
+                  // then we don't need a separate videoElementRef here.
+                  // Let's assume plyr options take care of this and remove explicit videoElementRef from the <Plyr> component props.
+                  // Instead, in the useEffect, we'll get mediaElement from plyrInstanceRef.current.plyr.media
                 />
               ) : activeSource && activeSource.type === 'embed' ? (
                  <iframe
-                    key={activeSource.id} // Key can be useful for iframe to force reload on src change
+                    key={activeSource.id}
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg"
@@ -337,6 +335,10 @@ export default function PlayerPage() {
                       </p>
                   </div>
               )}
+              {/* Hidden video element for HLS.js if Plyr doesn't expose its own easily for direct attachment */}
+              {/* This is a common pattern if the React wrapper doesn't make it easy. */}
+              <video ref={videoElementRef} style={{ display: 'none' }}></video>
+
                {pageIsLoading && !activeSource && (
                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
                       <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -349,7 +351,6 @@ export default function PlayerPage() {
                   <p className="text-destructive-foreground text-sm">{playerError}</p>
                   <Button variant="outline" size="sm" className="mt-3" onClick={() => {
                     setPlayerError(null);
-                    // Optionally, try to reload current source or select a default
                     if (activeSource) handleServerSelect(activeSource);
                   }}>Dismiss</Button>
                 </div>
@@ -572,3 +573,4 @@ const PlayerPageAnimeInteractionControls = (props: { anime: Anime; className?: s
     <AnimeInteractionControls {...props} />
   </React.Suspense>
 );
+
