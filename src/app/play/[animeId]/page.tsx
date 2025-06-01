@@ -17,16 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Image from "next/image";
 import ReadMoreSynopsis from '@/components/anime/ReadMoreSynopsis';
 import AnimeInteractionControls from '@/components/anime/anime-interaction-controls';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogClose
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +27,7 @@ import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import PlyrComponent from "plyr-react";
+import type PlyrReact from "plyr-react"; // Import type for PlyrReact.Plyr
 import type Plyr from "plyr";
 import "plyr/dist/plyr.css";
 import Hls from 'hls.js';
@@ -77,7 +69,7 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const plyrInstanceRef = useRef<Plyr | null>(null);
+  const plyrComponentRef = useRef<PlyrReact.Plyr | null>(null); // Ref to PlyrReact component instance
   const hlsInstanceRef = useRef<Hls | null>(null);
   const [displayMode, setDisplayMode] = useState<'plyr' | 'iframe' | 'none'>('none');
 
@@ -155,6 +147,7 @@ export default function PlayerPage() {
           const firstSource = epToSet.sources?.[0];
           if (firstSource) {
             setActiveSource(firstSource);
+            // Display mode will be set by useEffect based on activeSource.type
           } else {
             setActiveSource(null);
             setPlayerError(epToSet.sources && epToSet.sources.length === 0 ? "No video sources available for this episode." : "Episode selected, but no source found.");
@@ -214,35 +207,32 @@ export default function PlayerPage() {
     setActiveSource(source);
   };
 
-  const playerKey = useMemo(() => {
-    if (!activeSource) return 'no-active-source';
-    return `${activeSource.type}-${activeSource.id}-${activeSource.url}`;
-  }, [activeSource]);
-
   // Effect to manage display mode and player states based on activeSource
   useEffect(() => {
-    const plyrPlayer = plyrInstanceRef.current;
-
     if (activeSource) {
       if (activeSource.type === 'embed') {
-        setDisplayMode('iframe');
         if (hlsInstanceRef.current) {
           hlsInstanceRef.current.destroy();
           hlsInstanceRef.current = null;
         }
-        if (plyrPlayer && plyrPlayer.playing) {
-          plyrPlayer.pause();
+        if (plyrComponentRef.current?.plyr && plyrComponentRef.current.plyr.playing) {
+          plyrComponentRef.current.plyr.pause();
         }
+        setDisplayMode('iframe');
       } else if (activeSource.type === 'mp4' || activeSource.type === 'm3u8') {
         setDisplayMode('plyr');
       } else {
-        setDisplayMode('none'); 
+        setDisplayMode('none');
       }
-    } else {
-      setDisplayMode('none'); 
+    } else { // No active source
+      setDisplayMode('none');
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
         hlsInstanceRef.current = null;
+      }
+      // If Plyr exists and was playing, pause it.
+      if (plyrComponentRef.current?.plyr && plyrComponentRef.current.plyr.playing) {
+          plyrComponentRef.current.plyr.pause();
       }
     }
   }, [activeSource]);
@@ -256,32 +246,34 @@ export default function PlayerPage() {
         poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
       };
     }
-    return undefined;
+    return undefined; // Important: Plyr source is undefined if not in 'plyr' mode or no valid source
   }, [displayMode, activeSource, anime, currentEpisode]);
 
   // Effect to manage HLS instance for Plyr when plyrSourceToPlay changes
   useEffect(() => {
-    const plyrPlayer = plyrInstanceRef.current;
+    const plyrPlayerAPI = plyrComponentRef.current?.plyr; // Access the actual Plyr API
 
     if (hlsInstanceRef.current) {
       hlsInstanceRef.current.destroy();
       hlsInstanceRef.current = null;
     }
 
-    if (plyrPlayer && plyrSourceToPlay && plyrSourceToPlay.sources[0].type === 'application/x-mpegURL') {
+    if (plyrPlayerAPI && plyrSourceToPlay && plyrSourceToPlay.sources[0].type === 'application/x-mpegURL') {
       if (Hls.isSupported()) {
         const hls = new Hls(plyrOptions.hls as Hls.Config);
         hls.loadSource(plyrSourceToPlay.sources[0].src);
-        if (plyrPlayer.media instanceof HTMLVideoElement) {
-          hls.attachMedia(plyrPlayer.media);
+        if (plyrPlayerAPI.media instanceof HTMLVideoElement) {
+          hls.attachMedia(plyrPlayerAPI.media);
         }
         hlsInstanceRef.current = hls;
-      } else if (plyrPlayer.media instanceof HTMLVideoElement && plyrPlayer.media.canPlayType('application/vnd.apple.mpegurl')) {
-        plyrPlayer.media.src = plyrSourceToPlay.sources[0].src;
+      } else if (plyrPlayerAPI.media instanceof HTMLVideoElement && plyrPlayerAPI.media.canPlayType('application/vnd.apple.mpegurl')) {
+        plyrPlayerAPI.media.src = plyrSourceToPlay.sources[0].src;
       } else {
         handlePlyrError("HLS is not supported on this browser for M3U8 streams.");
       }
     }
+    // This effect's cleanup should destroy the HLS instance when plyrSourceToPlay becomes undefined (e.g., switching to iframe)
+    // or when a new plyrSourceToPlay causes a re-run.
     return () => {
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
@@ -294,9 +286,9 @@ export default function PlayerPage() {
   useEffect(() => {
     // Cleanup function for the main component
     return () => {
-      if (plyrInstanceRef.current) {
-        plyrInstanceRef.current.destroy();
-        plyrInstanceRef.current = null;
+      if (plyrComponentRef.current?.plyr) {
+        plyrComponentRef.current.plyr.destroy();
+        // plyrComponentRef.current = null; // Don't nullify the ref itself, only its content if library does it.
       }
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
@@ -344,7 +336,6 @@ export default function PlayerPage() {
     { value: 'other', label: 'Other' },
   ];
 
-
   const placeholderEpisode = {
     id: 'placeholder-ep-1', title: 'Episode Title Placeholder', episodeNumber: 1, seasonNumber: 1,
     thumbnail: `https://placehold.co/320x180.png`, overview: 'This is a placeholder overview for the episode.',
@@ -387,34 +378,26 @@ export default function PlayerPage() {
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
   
-
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
       <Container className="py-4 md:py-6 flex-grow w-full">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
-            <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative plyr-container">
+            <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
               
               <div style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
                 <PlyrComponent
-                  key={playerKey}
-                  ref={(plyrReactInstance) => {
-                    if (plyrReactInstance) {
-                        plyrInstanceRef.current = plyrReactInstance.plyr;
-                    } else {
-                        // If component unmounts or ref is cleared, ensure we nullify our ref
-                        plyrInstanceRef.current = null; 
-                    }
-                  }}
-                  source={plyrSourceToPlay}
+                  ref={plyrComponentRef} 
+                  source={plyrSourceToPlay} 
                   options={plyrOptions}
+                  // No key here, source prop updates will be handled
                 />
               </div>
 
               {displayMode === 'iframe' && activeSource && activeSource.type === 'embed' && (
                  <iframe
-                    key={playerKey}
+                    key={activeSource.url} // Keyed for iframe reload on URL change
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]"
@@ -727,6 +710,6 @@ export default function PlayerPage() {
     </div>
   );
 }
-
+    
 
     
