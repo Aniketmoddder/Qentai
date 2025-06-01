@@ -25,12 +25,10 @@ import { Textarea } from "@/components/ui/textarea";
 import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Vidstack Imports
-import { MediaPlayer, MediaOutlet, Poster } from '@vidstack/react';
-import type { MediaCanPlayDetail, MediaCanPlayEvent, MediaEndedEvent, PlayerSrc } from '@vidstack/react';
-import { DefaultAudioLayout, DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
-import '@vidstack/react/player/styles/default/theme.css';
-import '@vidstack/react/player/styles/default/layouts/video.css';
+// Plyr Imports
+import Plyr from "plyr-react";
+import "plyr-react/dist/plyr.css";
+import type Hls from 'hls.js'; // Import Hls type for potential specific config
 
 
 export default function PlayerPage() {
@@ -47,7 +45,9 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const playerRef = useRef<MediaPlayer>(null); // Corrected ref type to MediaPlayer from Vidstack
+  const playerRef = useRef<Plyr | null>(null);
+  const hlsInstanceRef = useRef<Hls | null>(null);
+
 
   const fetchDetails = useCallback(async () => {
     if (!animeId) {
@@ -70,7 +70,7 @@ export default function PlayerPage() {
           if (foundEp && foundEp.sources && foundEp.sources.length > 0) {
             epToSet = foundEp;
           } else if (foundEp) {
-            epToSet = foundEp;
+            epToSet = foundEp; // Still set it, will show "no sources"
           }
         }
         
@@ -81,6 +81,7 @@ export default function PlayerPage() {
             setActiveSource(firstSource);
           } else {
             setActiveSource(null);
+            setPlayerError(epToSet.sources && epToSet.sources.length === 0 ? "No video sources available for this episode." : "Episode selected, but no source found.");
           }
 
           if (!epIdFromUrl && epToSet.id && epToSet.sources && epToSet.sources.length > 0) {
@@ -122,6 +123,7 @@ export default function PlayerPage() {
         setActiveSource(firstSource);
       } else {
         setActiveSource(null);
+        setPlayerError("No video sources available for this episode.");
       }
       router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false });
     },
@@ -133,14 +135,18 @@ export default function PlayerPage() {
     setActiveSource(source);
   };
 
-  const onCanPlay = (detail: MediaCanPlayDetail, nativeEvent: MediaCanPlayEvent) => {
-    console.log("Media can play", detail);
-    setPlayerError(null); 
-  };
-
-  const onMediaError = (event: any) => { // Type might be more specific if Vidstack provides it
-    console.error("Vidstack Media Error:", event.detail);
-    setPlayerError(`Error playing video: ${event.detail?.message || 'Could not load video.'}. Try another server or episode.`);
+  const handlePlayerError = (event: any) => {
+    console.error("Plyr Media Error:", event);
+    const plyrPlayer = playerRef.current?.plyr;
+    let errorMessage = "Could not load video. Try another server or episode.";
+    if (plyrPlayer?.source && plyrPlayer.source.includes('m3u8') && !Hls.isSupported()) {
+      errorMessage = "HLS playback is not supported in your browser for this M3U8 stream.";
+    } else if (event?.detail?.plyrError?.message) {
+      errorMessage = `Player Error: ${event.detail.plyrError.message}`;
+    } else if (typeof event === 'string') {
+      errorMessage = event;
+    }
+    setPlayerError(errorMessage);
   };
   
   const placeholderEpisode = {
@@ -203,34 +209,80 @@ export default function PlayerPage() {
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
 
+  const plyrSource: Plyr.SourceInfo | null = activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8')
+    ? {
+        type: 'video',
+        title: `${displayAnime?.title || 'Video'} - ${displayEpisode?.title || 'Episode'}`,
+        sources: [
+          {
+            src: activeSource.url,
+            type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4',
+          },
+        ],
+        poster: displayEpisode?.thumbnail || displayAnime?.bannerImage || displayAnime?.coverImage || `https://placehold.co/1280x720.png`,
+      }
+    : null;
+
+  const plyrOptions: Plyr.Options = {
+    // controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
+    // settings: ['captions', 'quality', 'speed', 'loop'],
+    autoplay: true,
+    // Add more Plyr options here as needed
+     // HLS.js specific configuration
+    hls: {
+      // You can pass HLS.js specific options here if needed
+      // For example:
+      // capLevelToPlayerSize: true,
+      // maxMaxBufferLength: 60,
+    },
+  };
+  
+  // Dynamically import Hls.js only on client-side
+  useEffect(() => {
+    if (activeSource?.type === 'm3u8' && typeof window !== 'undefined') {
+      import('hls.js').then(HlsModule => {
+        const Hls = HlsModule.default;
+        if (Hls.isSupported() && playerRef.current?.plyr) {
+           if(hlsInstanceRef.current) {
+            hlsInstanceRef.current.destroy();
+          }
+          const hls = new Hls(plyrOptions.hls);
+          hls.loadSource(activeSource.url);
+          hls.attachMedia(playerRef.current.plyr.media as HTMLMediaElement);
+          hlsInstanceRef.current = hls;
+          // playerRef.current.plyr.on('error', handlePlayerError); // Add Plyr specific error listener
+        }
+      });
+    } else if (hlsInstanceRef.current) {
+       hlsInstanceRef.current.destroy();
+       hlsInstanceRef.current = null;
+    }
+     return () => {
+      if (hlsInstanceRef.current) {
+        hlsInstanceRef.current.destroy();
+      }
+    };
+  }, [activeSource, plyrOptions.hls]);
+
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
       <Container className="py-4 md:py-6 flex-grow w-full">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
-            <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
-              {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime ? (
-                <MediaPlayer
-                  key={activeSource.id} 
+            <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative plyr-container">
+              {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime && plyrSource ? (
+                <Plyr
+                  key={activeSource.id} // Re-mount Plyr when source ID changes
                   ref={playerRef}
-                  title={displayAnime?.title || 'Anime Video'}
-                  src={activeSource.url}
-                  poster={displayEpisode?.thumbnail || displayAnime?.coverImage || displayAnime?.bannerImage || `https://placehold.co/1280x720.png`}
-                  aspectRatio="16/9"
-                  playsInline
-                  autoPlay
-                  className="w-full h-full rounded-lg overflow-hidden bg-black"
-                  onCanPlay={onCanPlay}
-                  onError={onMediaError}
-                  crossOrigin
-                >
-                  <MediaOutlet className="object-contain">
-                    <Poster className="absolute inset-0 block h-full w-full rounded-md object-cover opacity-100 transition-opacity data-[hidden]:opacity-0" />
-                  </MediaOutlet>
-                  <DefaultAudioLayout icons={defaultLayoutIcons} />
-                  <DefaultVideoLayout icons={defaultLayoutIcons} />
-                </MediaPlayer>
+                  source={plyrSource}
+                  options={plyrOptions}
+                  onLoadedData={() => setPlayerError(null)} // Clear error on successful load
+                  // Plyr's own error event might be different or might be on the media element
+                  // For now, using a general approach. Specific error handling for Plyr can be added.
+                  // onError={handlePlayerError} // This might not be a direct prop, check plyr-react docs for event handling
+                />
               ) : activeSource && activeSource.type === 'embed' ? (
                  <iframe
                     key={activeSource.id} 
@@ -262,7 +314,11 @@ export default function PlayerPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center z-10">
                   <AlertTriangle className="w-10 h-10 text-destructive mb-2" />
                   <p className="text-destructive-foreground text-sm">{playerError}</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setPlayerError(null)}>Dismiss</Button>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => {
+                    setPlayerError(null);
+                    // Optionally try to reload the current source or clear it
+                    // setActiveSource(null); // This might be too disruptive
+                  }}>Dismiss</Button>
                 </div>
               )}
             </div>
@@ -478,4 +534,3 @@ export default function PlayerPage() {
     </div>
   );
 }
-

@@ -51,28 +51,22 @@
     --foreground-raw-hsl: 220 15% 96%;
     --ranking-number-stroke-color-raw-hsl: 230 8% 20%; /* Muted Divider Gray for stroke */
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-    /* Vidstack Player Theme Variables */
-    --media-brand: hsl(var(--primary));
-    --media-focus-ring-color: hsl(var(--ring));
-    --media-tooltip-text-color: hsl(var(--popover-foreground));
-    --media-tooltip-bg: hsl(var(--popover));
-    --media-menu-text-color: hsl(var(--popover-foreground));
-    --media-menu-bg: hsl(var(--popover));
-    --media-menu-button-hover-bg: hsl(var(--accent));
-    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
-    --media-menu-button-focus-ring-color: hsl(var(--ring));
-    --media-slider-preview-bg: hsl(var(--popover));
-    --media-slider-track-bg: hsl(var(--muted));
-    --media-slider-track-fill-bg: hsl(var(--primary));
-    --media-button-hover-bg: hsl(var(--primary) / 0.15);
-    --media-button-text-color: hsl(var(--foreground));
-    --media-font-family: var(--font-poppins), sans-serif;
-    --media-button-icon-size: 18px;
-    --media-time-font-size: 13px;
-    --media-menu-font-size: 13px;
-    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
-    --media-slider-thumb-width: 12px;
-    --media-slider-thumb-height: 12px;
+    /* Plyr Player Theme Variables */
+    --plyr-color-main: hsl(var(--primary));
+    --plyr-color-focus: hsl(var(--ring));
+    --plyr-tooltip-background: hsl(var(--popover));
+    --plyr-tooltip-color: hsl(var(--popover-foreground));
+    --plyr-menu-background: hsl(var(--popover));
+    --plyr-menu-color: hsl(var(--popover-foreground));
+    --plyr-menu-item-hover-background: hsl(var(--accent));
+    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
+    --plyr-control-radius: var(--radius);
+    --plyr-font-family: var(--font-poppins), sans-serif;
+    --plyr-font-size-time: 13px;
+    --plyr-font-size-menu: 13px;
+    --plyr-control-icon-size: 18px;
+    --plyr-range-track-background: hsl(var(--muted) / 0.5);
+    --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="light-pale-purple"] {
@@ -96,28 +90,22 @@
     --foreground-raw-hsl: 222 47% 11%;
     --ranking-number-stroke-color-raw-hsl: 220 10% 45%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
-    /* Vidstack Player Theme Variables */
-    --media-brand: hsl(var(--primary));
-    --media-focus-ring-color: hsl(var(--ring));
-    --media-tooltip-text-color: hsl(var(--popover-foreground));
-    --media-tooltip-bg: hsl(var(--popover));
-    --media-menu-text-color: hsl(var(--popover-foreground));
-    --media-menu-bg: hsl(var(--popover));
-    --media-menu-button-hover-bg: hsl(var(--accent));
-    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
-    --media-menu-button-focus-ring-color: hsl(var(--ring));
-    --media-slider-preview-bg: hsl(var(--popover));
-    --media-slider-track-bg: hsl(var(--muted));
-    --media-slider-track-fill-bg: hsl(var(--primary));
-    --media-button-hover-bg: hsl(var(--primary) / 0.1);
-    --media-button-text-color: hsl(var(--foreground));
-    --media-font-family: var(--font-poppins), sans-serif;
-    --media-button-icon-size: 18px;
-    --media-time-font-size: 13px;
-    --media-menu-font-size: 13px;
-    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
-    --media-slider-thumb-width: 12px;
-    --media-slider-thumb-height: 12px;
+     /* Plyr Player Theme Variables */
+    --plyr-color-main: hsl(var(--primary));
+    --plyr-color-focus: hsl(var(--ring));
+    --plyr-tooltip-background: hsl(var(--popover));
+    --plyr-tooltip-color: hsl(var(--popover-foreground));
+    --plyr-menu-background: hsl(var(--popover));
+    --plyr-menu-color: hsl(var(--popover-foreground));
+    --plyr-menu-item-hover-background: hsl(var(--accent));
+    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
+    --plyr-control-radius: var(--radius);
+    --plyr-font-family: var(--font-poppins), sans-serif;
+    --plyr-font-size-time: 13px;
+    --plyr-font-size-menu: 13px;
+    --plyr-control-icon-size: 18px;
+    --plyr-range-track-background: hsl(var(--muted));
+    --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -141,28 +129,22 @@
     --foreground-raw-hsl: 287 100% 98%;
     --ranking-number-stroke-color-raw-hsl: 287 67% 18%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-    /* Vidstack Player Theme Variables */
-    --media-brand: hsl(var(--primary));
-    --media-focus-ring-color: hsl(var(--ring));
-    --media-tooltip-text-color: hsl(var(--popover-foreground));
-    --media-tooltip-bg: hsl(var(--popover));
-    --media-menu-text-color: hsl(var(--popover-foreground));
-    --media-menu-bg: hsl(var(--popover));
-    --media-menu-button-hover-bg: hsl(var(--accent));
-    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
-    --media-menu-button-focus-ring-color: hsl(var(--ring));
-    --media-slider-preview-bg: hsl(var(--popover));
-    --media-slider-track-bg: hsl(var(--muted));
-    --media-slider-track-fill-bg: hsl(var(--primary));
-    --media-button-hover-bg: hsl(var(--primary) / 0.15);
-    --media-button-text-color: hsl(var(--foreground));
-    --media-font-family: var(--font-poppins), sans-serif;
-    --media-button-icon-size: 18px;
-    --media-time-font-size: 13px;
-    --media-menu-font-size: 13px;
-    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
-    --media-slider-thumb-width: 12px;
-    --media-slider-thumb-height: 12px;
+     /* Plyr Player Theme Variables */
+    --plyr-color-main: hsl(var(--primary));
+    --plyr-color-focus: hsl(var(--ring));
+    --plyr-tooltip-background: hsl(var(--popover));
+    --plyr-tooltip-color: hsl(var(--popover-foreground));
+    --plyr-menu-background: hsl(var(--popover));
+    --plyr-menu-color: hsl(var(--popover-foreground));
+    --plyr-menu-item-hover-background: hsl(var(--accent));
+    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
+    --plyr-control-radius: var(--radius);
+    --plyr-font-family: var(--font-poppins), sans-serif;
+    --plyr-font-size-time: 13px;
+    --plyr-font-size-menu: 13px;
+    --plyr-control-icon-size: 18px;
+    --plyr-range-track-background: hsl(var(--muted) / 0.5);
+    --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -186,28 +168,22 @@
     --foreground-raw-hsl: 220 13% 91%;
     --ranking-number-stroke-color-raw-hsl: 231 25% 20%;
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-    /* Vidstack Player Theme Variables */
-    --media-brand: hsl(var(--primary));
-    --media-focus-ring-color: hsl(var(--ring));
-    --media-tooltip-text-color: hsl(var(--popover-foreground));
-    --media-tooltip-bg: hsl(var(--popover));
-    --media-menu-text-color: hsl(var(--popover-foreground));
-    --media-menu-bg: hsl(var(--popover));
-    --media-menu-button-hover-bg: hsl(var(--accent));
-    --media-menu-button-hover-text-color: hsl(var(--accent-foreground));
-    --media-menu-button-focus-ring-color: hsl(var(--ring));
-    --media-slider-preview-bg: hsl(var(--popover));
-    --media-slider-track-bg: hsl(var(--muted));
-    --media-slider-track-fill-bg: hsl(var(--primary));
-    --media-button-hover-bg: hsl(var(--primary) / 0.15);
-    --media-button-text-color: hsl(var(--foreground));
-    --media-font-family: var(--font-poppins), sans-serif;
-    --media-button-icon-size: 18px;
-    --media-time-font-size: 13px;
-    --media-menu-font-size: 13px;
-    --media-menu-item-focus-bg: hsl(var(--accent) / 0.8);
-    --media-slider-thumb-width: 12px;
-    --media-slider-thumb-height: 12px;
+    /* Plyr Player Theme Variables */
+    --plyr-color-main: hsl(var(--primary));
+    --plyr-color-focus: hsl(var(--ring));
+    --plyr-tooltip-background: hsl(var(--popover));
+    --plyr-tooltip-color: hsl(var(--popover-foreground));
+    --plyr-menu-background: hsl(var(--popover));
+    --plyr-menu-color: hsl(var(--popover-foreground));
+    --plyr-menu-item-hover-background: hsl(var(--accent));
+    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
+    --plyr-control-radius: var(--radius);
+    --plyr-font-family: var(--font-poppins), sans-serif;
+    --plyr-font-size-time: 13px;
+    --plyr-font-size-menu: 13px;
+    --plyr-control-icon-size: 18px;
+    --plyr-range-track-background: hsl(var(--muted) / 0.5);
+    --plyr-range-thumb-height: 12px;
   }
 
   /* Global styles that apply to all themes */
@@ -332,40 +308,92 @@
   @apply bg-primary text-primary-foreground hover:bg-primary/90 hover:border-primary;
 }
       
-/* Ensure Vidstack player takes available space in its container */
-media-player {
+/* Ensure Plyr player takes available space in its container */
+.plyr-container {
   width: 100%;
   height: 100%;
-  --media-font-family: var(--font-poppins), sans-serif;
-  --media-button-icon-size: 20px; /* Slightly larger icons */
-  --media-time-font-size: 14px; /* Larger time display */
-  --media-menu-font-size: 14px; /* Larger menu text */
-  --media-slider-height: 6px; /* Thicker slider */
-  --media-slider-preview-font-size: 13px;
-  --media-slider-chapter-title-font-size: 13px;
-  --media-slider-thumb-width: 14px; /* Larger thumb */
-  --media-slider-thumb-height: 14px;
-  --media-slider-thumb-color: hsl(var(--primary-foreground));
-  --media-slider-track-fill-border-radius: var(--media-slider-track-border-radius, 2px);
 }
 
-/* Ensure focus rings are visible on player controls */
-media-player [role="button"]:focus-visible,
-media-player [role="slider"]:focus-visible {
-  outline: 2px solid hsl(var(--media-focus-ring-color));
+.plyr--video {
+  height: 100%;
+  width: 100%;
+  border-radius: var(--radius); /* Consistent rounding with other elements */
+}
+
+.plyr__video-wrapper {
+  border-radius: inherit;
+}
+
+/* Plyr Theming (using CSS variables defined in :root or theme-specific blocks) */
+.plyr {
+  --plyr-color-main: hsl(var(--primary));
+  --plyr-color-focus: hsl(var(--ring)); /* Use ring for focus outline */
+
+  --plyr-video-background: #000000; /* Keep player background black for video contrast */
+  
+  /* Controls styling */
+  --plyr-control-radius: calc(var(--radius) - 2px);
+  --plyr-control-spacing: 10px;
+  --plyr-control-background: transparent;
+  --plyr-control-color: hsl(var(--foreground));
+  --plyr-control-color-hover: hsl(var(--primary));
+  --plyr-control-toggle-checked-background: hsl(var(--primary));
+  
+  /* Progress bar */
+  --plyr-range-track-background: hsl(var(--muted) / 0.5); /* Semi-transparent muted for track */
+  --plyr-range-fill-background: hsl(var(--primary));
+  --plyr-range-thumb-height: 12px;
+  --plyr-range-thumb-background: hsl(var(--primary-foreground));
+  --plyr-range-thumb-shadow: 0 1px 2px hsl(var(--background) / 0.4);
+  --plyr-range-thumb-active-shadow-color: hsl(var(--primary) / 0.5);
+
+  /* Tooltips */
+  --plyr-tooltip-background: hsl(var(--popover));
+  --plyr-tooltip-color: hsl(var(--popover-foreground));
+  --plyr-tooltip-radius: var(--radius);
+  --plyr-tooltip-arrow-size: 5px;
+  --plyr-tooltip-padding: 5px 8px;
+
+  /* Menus (Settings, Quality, etc.) */
+  --plyr-menu-background: hsl(var(--popover));
+  --plyr-menu-color: hsl(var(--popover-foreground));
+  --plyr-menu-radius: var(--radius);
+  --plyr-menu-shadow: 0 2px 10px hsl(var(--background) / 0.2);
+  --plyr-menu-item-radius: calc(var(--radius) - 2px);
+  --plyr-menu-item-arrow-color: hsl(var(--muted-foreground));
+  --plyr-menu-item-arrow-size: 5px;
+  --plyr-menu-button-color: hsl(var(--foreground));
+  --plyr-menu-button-color-hover: hsl(var(--primary));
+  --plyr-menu-item-hover-background: hsl(var(--accent)); /* Use accent for menu item hover */
+  --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
+
+  /* Fonts */
+  --plyr-font-family: var(--font-poppins), sans-serif;
+  --plyr-font-size-base: 14px;
+  --plyr-font-size-small: 12px;
+  --plyr-font-size-menu: 13px;
+  --plyr-font-size-time: 13px;
+  --plyr-font-weight-regular: 400;
+  --plyr-font-weight-bold: 600;
+
+  /* Icon sizes */
+  --plyr-control-icon-size: 18px;
+}
+
+/* Specific adjustments for better theme integration */
+.plyr--audio .plyr__controls {
+  background: hsl(var(--card));
+  border-top: 1px solid hsl(var(--border));
+  color: hsl(var(--card-foreground));
+}
+
+.plyr__menu__button[role="menuitemradio"][aria-checked="true"]::before {
+  background: hsl(var(--primary));
+}
+
+/* Ensure focus rings are visible on player controls and match the theme */
+.plyr :focus-visible {
+  outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px hsl(var(--media-focus-ring-color) / 0.3);
-}
-
-media-player media-menu-items {
-  border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 4px 12px hsl(var(--background) / 0.3);
-}
-media-player media-menu-button[aria-expanded="true"] > media-icon {
-  color: hsl(var(--media-brand));
-}
-media-player .vds-menu-item[data-focus] {
-  background-color: hsl(var(--media-menu-item-focus-bg, var(--accent)));
-  color: hsl(var(--media-menu-button-hover-text-color, var(--accent-foreground)));
+  box-shadow: 0 0 0 4px hsl(var(--ring) / 0.3);
 }
