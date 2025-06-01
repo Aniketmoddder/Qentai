@@ -68,7 +68,7 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const plyrComponentRef = useRef<HTMLDivElement>(null); // Ref to the div wrapping PlyrComponent
+  const plyrContainerRef = useRef<HTMLDivElement>(null); // Ref to the div wrapping PlyrComponent
   const plyrInstanceRef = useRef<Plyr | null>(null); // Ref to the actual Plyr API instance
   const hlsInstanceRef = useRef<Hls | null>(null);
   
@@ -104,20 +104,10 @@ export default function PlayerPage() {
   const plyrOptions = useMemo((): Plyr.Options => ({
     autoplay: true,
     debug: process.env.NODE_ENV === 'development',
-    hls: { 
-      Hls: Hls, 
-      onError: (event, data) => { 
-        if (data.fatal) {
-          console.error('HLS Fatal Error:', data);
-          handlePlyrError({ type: 'error', data });
-        } else {
-           console.warn('HLS Non-Fatal Error:', data);
-        }
-      },
-    } as any, 
     listeners: {
-      error: handlePlyrError, // Generic error listener
+      error: handlePlyrError, 
     },
+    // HLS config is now managed in the HLS setup useEffect
   }), [handlePlyrError]);
 
   const fetchDetails = useCallback(async () => {
@@ -209,11 +199,11 @@ export default function PlayerPage() {
   useEffect(() => {
     if (activeSource) {
       if (activeSource.type === 'embed') {
-        if (hlsInstanceRef.current) {
+        if (hlsInstanceRef.current) { // Destroy HLS first
           hlsInstanceRef.current.destroy();
           hlsInstanceRef.current = null;
         }
-        if (plyrInstanceRef.current?.playing) {
+        if (plyrInstanceRef.current?.playing) { // Then pause Plyr
           plyrInstanceRef.current.pause();
         }
         setDisplayMode('iframe');
@@ -224,12 +214,13 @@ export default function PlayerPage() {
       }
     } else { // No active source
       setDisplayMode('none');
+      // Ensure cleanup if no source
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
         hlsInstanceRef.current = null;
       }
       if (plyrInstanceRef.current?.playing) {
-          plyrInstanceRef.current.pause();
+        plyrInstanceRef.current.pause();
       }
     }
   }, [activeSource]);
@@ -243,39 +234,48 @@ export default function PlayerPage() {
         poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
       };
     }
-    return undefined;
+    return undefined; // Plyr source is undefined if not in 'plyr' mode or no valid source
   }, [displayMode, activeSource, anime, currentEpisode]);
 
   // Effect to manage HLS instance for Plyr when plyrSourceToPlay changes
   useEffect(() => {
-    const plyrPlayerAPI = plyrInstanceRef.current; 
+    const videoElement = plyrInstanceRef.current?.media;
 
+    // Cleanup previous HLS instance if it exists
     if (hlsInstanceRef.current) {
       hlsInstanceRef.current.destroy();
       hlsInstanceRef.current = null;
     }
 
-    if (plyrPlayerAPI && plyrSourceToPlay && plyrSourceToPlay.sources[0].type === 'application/x-mpegURL') {
+    if (plyrSourceToPlay && plyrSourceToPlay.sources[0].type === 'application/x-mpegURL' && videoElement) {
       if (Hls.isSupported()) {
-        const hls = new Hls(plyrOptions.hls as Hls.Config);
+        const hls = new Hls({
+            onError: (event, data) => {
+                if (data.fatal) {
+                    console.error('HLS Fatal Error:', data);
+                    handlePlyrError({ type: 'error', data }); // Use our centralized error handler
+                } else {
+                    console.warn('HLS Non-Fatal Error:', data);
+                }
+            }
+        });
         hls.loadSource(plyrSourceToPlay.sources[0].src);
-        if (plyrPlayerAPI.media instanceof HTMLVideoElement) {
-          hls.attachMedia(plyrPlayerAPI.media);
-        }
+        hls.attachMedia(videoElement as HTMLVideoElement);
         hlsInstanceRef.current = hls;
-      } else if (plyrPlayerAPI.media instanceof HTMLVideoElement && plyrPlayerAPI.media.canPlayType('application/vnd.apple.mpegurl')) {
-        plyrPlayerAPI.media.src = plyrSourceToPlay.sources[0].src;
+      } else if (videoElement instanceof HTMLVideoElement && videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+        videoElement.src = plyrSourceToPlay.sources[0].src;
       } else {
         handlePlyrError("HLS is not supported on this browser for M3U8 streams.");
       }
     }
+    // Cleanup function for this effect
     return () => {
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
         hlsInstanceRef.current = null;
       }
     };
-  }, [plyrSourceToPlay, plyrOptions, handlePlyrError]);
+  }, [plyrSourceToPlay, handlePlyrError]);
 
 
   useEffect(() => {
@@ -301,7 +301,6 @@ export default function PlayerPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot submit report: missing context.' });
       return;
     }
-    // reportForm.formState.isSubmitting is automatically true during this async function
     try {
       await addReportToFirestore({
         userId: authUser?.uid || null,
@@ -322,7 +321,6 @@ export default function PlayerPage() {
       console.error('Failed to submit report:', error);
       toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not submit your report. Please try again.' });
     }
-    // reportForm.formState.isSubmitting will automatically be set to false by React Hook Form
   };
 
   const issueTypes: { value: ReportIssueType; label: string }[] = [
@@ -376,7 +374,7 @@ export default function PlayerPage() {
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
   
-  const playerKey = activeSource ? `${activeSource.type}-${activeSource.id}-${activeSource.url}` : 'no-active-source';
+  const iframeKey = activeSource ? `iframe-${activeSource.id}-${activeSource.url}` : 'no-iframe-source';
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
@@ -386,29 +384,20 @@ export default function PlayerPage() {
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
               
-              <div ref={plyrComponentRef} style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                {displayMode === 'plyr' && plyrSourceToPlay && (
-                  <PlyrComponent
-                    key={playerKey} // Keyed to force remount on source change
-                    ref={(plyrReactInstance) => {
-                       if (plyrReactInstance && plyrReactInstance.plyr) {
-                         plyrInstanceRef.current = plyrReactInstance.plyr;
-                       } else {
-                         plyrInstanceRef.current = null;
-                       }
-                    }}
+              <div ref={plyrContainerRef} style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                <PlyrComponent
+                    ref={instance => plyrInstanceRef.current = instance} // Assign Plyr API instance directly
                     source={plyrSourceToPlay} 
                     options={plyrOptions}
-                  />
-                )}
+                />
               </div>
 
               {displayMode === 'iframe' && activeSource && activeSource.type === 'embed' && (
                  <iframe
-                    key={playerKey} // Keyed for iframe reload on URL change
+                    key={iframeKey} // Keyed for iframe reload on URL change
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
-                    className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]"
+                    className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]" // High z-index
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
@@ -718,4 +707,5 @@ export default function PlayerPage() {
     </div>
   );
 }
+
     
