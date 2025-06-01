@@ -6,6 +6,7 @@ import type { Anime, Episode, VideoSource } from "@/types/anime";
 import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"; // Added Card imports
 import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -16,7 +17,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Image from "next/image";
 import ReadMoreSynopsis from "@/components/anime/ReadMoreSynopsis";
 import AnimeInteractionControls from "@/components/anime/anime-interaction-controls";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogHeader as DialogHeaderPrimitive, DialogTitle as DialogTitlePrimitive, DialogDescription as DialogDescriptionPrimitive, DialogTrigger, DialogClose } from "@/components/ui/dialog"; // Renamed to avoid conflict if needed
+import { DialogContent } from "@/components/ui/dialog"; // Ensure DialogContent is imported correctly
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,7 +29,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Plyr Imports
 import Plyr from "plyr-react";
-import "plyr/dist/plyr.css"; // Changed CSS import path
+import "plyr/dist/plyr.css";
 import type Hls from 'hls.js'; // Import Hls type for potential specific config
 
 
@@ -47,6 +49,59 @@ export default function PlayerPage() {
   
   const playerRef = useRef<Plyr | null>(null);
   const hlsInstanceRef = useRef<Hls | null>(null);
+
+  const plyrOptions: Plyr.Options = useMemo(() => ({
+    autoplay: true,
+    hls: {
+      // capLevelToPlayerSize: true,
+      // maxMaxBufferLength: 60,
+    },
+  }), []);
+
+  // Dynamically import Hls.js only on client-side
+  useEffect(() => {
+    if (activeSource?.type === 'm3u8' && typeof window !== 'undefined') {
+      import('hls.js').then(HlsModule => {
+        const Hls = HlsModule.default;
+        if (Hls.isSupported() && playerRef.current?.plyr) {
+           if(hlsInstanceRef.current) {
+            hlsInstanceRef.current.destroy();
+          }
+          const hls = new Hls(plyrOptions.hls as any);
+          hls.loadSource(activeSource.url);
+          hls.attachMedia(playerRef.current.plyr.media as HTMLMediaElement);
+          hlsInstanceRef.current = hls;
+          
+          hls.on(Hls.Events.ERROR, (event, data) => {
+            if (data.fatal) {
+              switch (data.type) {
+                case Hls.ErrorTypes.NETWORK_ERROR:
+                  console.error('HLS Network Error:', data);
+                  handlePlayerError('A network error occurred while loading the video (HLS).');
+                  break;
+                case Hls.ErrorTypes.MEDIA_ERROR:
+                  console.error('HLS Media Error:', data);
+                  handlePlayerError('A media error occurred (HLS).');
+                  break;
+                default:
+                  console.error('HLS Unhandled Error:', data);
+                  handlePlayerError('An unexpected error occurred with HLS playback.');
+                  break;
+              }
+            }
+          });
+        }
+      });
+    } else if (hlsInstanceRef.current) {
+       hlsInstanceRef.current.destroy();
+       hlsInstanceRef.current = null;
+    }
+     return () => {
+      if (hlsInstanceRef.current) {
+        hlsInstanceRef.current.destroy();
+      }
+    };
+  }, [activeSource, plyrOptions.hls]);
 
 
   const fetchDetails = useCallback(async () => {
@@ -149,62 +204,6 @@ export default function PlayerPage() {
     setPlayerError(errorMessage);
   };
   
-  const plyrOptions: Plyr.Options = useMemo(() => ({
-    autoplay: true,
-    hls: {
-      // You can pass HLS.js specific options here if needed
-      // For example:
-      // capLevelToPlayerSize: true,
-      // maxMaxBufferLength: 60,
-    },
-  }), []); // Empty dependency array means these options are static
-
-  // Dynamically import Hls.js only on client-side
-  useEffect(() => {
-    if (activeSource?.type === 'm3u8' && typeof window !== 'undefined') {
-      import('hls.js').then(HlsModule => {
-        const Hls = HlsModule.default;
-        if (Hls.isSupported() && playerRef.current?.plyr) {
-           if(hlsInstanceRef.current) {
-            hlsInstanceRef.current.destroy();
-          }
-          const hls = new Hls(plyrOptions.hls as any); // Pass HLS config from Plyr options
-          hls.loadSource(activeSource.url);
-          hls.attachMedia(playerRef.current.plyr.media as HTMLMediaElement);
-          hlsInstanceRef.current = hls;
-          
-          hls.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-              switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  console.error('HLS Network Error:', data);
-                  handlePlayerError('A network error occurred while loading the video (HLS).');
-                  break;
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  console.error('HLS Media Error:', data);
-                  handlePlayerError('A media error occurred (HLS).');
-                  break;
-                default:
-                  console.error('HLS Unhandled Error:', data);
-                  handlePlayerError('An unexpected error occurred with HLS playback.');
-                  break;
-              }
-            }
-          });
-        }
-      });
-    } else if (hlsInstanceRef.current) {
-       hlsInstanceRef.current.destroy();
-       hlsInstanceRef.current = null;
-    }
-     return () => {
-      if (hlsInstanceRef.current) {
-        hlsInstanceRef.current.destroy();
-      }
-    };
-  }, [activeSource, plyrOptions.hls]);
-
-
   const placeholderEpisode = {
     id: 'placeholder-ep-1',
     title: 'Episode Title Placeholder',
@@ -265,7 +264,7 @@ export default function PlayerPage() {
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
 
-  const plyrSource: Plyr.SourceInfo | null = activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8')
+  const plyrSource: Plyr.SourceInfo | null = activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime
     ? {
         type: 'video',
         title: `${displayAnime?.title || 'Video'} - ${displayEpisode?.title || 'Episode'}`,
@@ -540,4 +539,3 @@ export default function PlayerPage() {
   );
 }
 
-    
