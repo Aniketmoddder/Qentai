@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { getAllReports, deleteReport } from '@/services/reportService';
 import type { Report } from '@/types/report';
 import { Button } from '@/components/ui/button';
-import { Loader2, AlertCircle, Trash2, ExternalLink, RefreshCw, MessageSquareWarning, UserCircle, Info } from 'lucide-react';
+import { Loader2, AlertCircle, Trash2, ExternalLink, RefreshCw, MessageSquareWarning } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -132,7 +132,6 @@ export default function ReportsTab() {
                         <p className="md:col-span-2"><strong className="text-muted-foreground">Anime:</strong> {report.animeTitle || 'N/A'} (ID: {report.animeId})</p>
                         <p><strong className="text-muted-foreground">Episode:</strong> {report.episodeTitle || 'N/A'} (ID: {report.episodeId || 'N/A'})</p>
                         <p><strong className="text-muted-foreground">Source:</strong> {report.sourceLabel || 'N/A'}</p>
-                    </p>
                     </div>
                      <TooltipProvider delayDuration={100}>
                         <Tooltip>
@@ -153,7 +152,6 @@ export default function ReportsTab() {
                         </p>
                     )}
                     <div className="pt-2 flex justify-end items-center gap-2">
-                       {/* Future actions like "Mark as Resolved" can go here */}
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="xs" className="text-xs h-7 px-2">
@@ -189,4 +187,3 @@ export default function ReportsTab() {
     </Card>
   );
 }
-
