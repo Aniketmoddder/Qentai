@@ -269,9 +269,20 @@ export async function getAnimeById(id: string): Promise<Anime | undefined> {
     animeData.episodes = (animeData.episodes || []).map((ep, index) => ({
       ...ep,
       id: ep.id || `${animeData.id}-s${ep.seasonNumber || 0}-e${ep.episodeNumber || index}-${Date.now()}`,
+      title: ep.title || null,
+      episodeNumber: typeof ep.episodeNumber === 'number' ? ep.episodeNumber : null,
+      seasonNumber: typeof ep.seasonNumber === 'number' ? ep.seasonNumber : null,
+      thumbnail: ep.thumbnail || null,
+      duration: ep.duration || null,
+      overview: ep.overview || null,
+      airDate: ep.airDate || null,
       sources: (ep.sources || []).map((source, sourceIdx) => ({
-        ...source,
-        id: source.id || `source-${Date.now()}-${sourceIdx}`
+        id: source.id || `source-${animeData.id}-ep${ep.id}-${Date.now()}-${sourceIdx}`,
+        url: source.url || null,
+        label: source.label || null,
+        type: source.type || 'mp4',
+        category: source.category || 'SUB',
+        quality: source.quality || null,
       }))
     }));
 
@@ -324,39 +335,59 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
     ...animeData,
     id: slug,
     updatedAt: serverTimestamp(),
+    title: animeData.title || null,
+    coverImage: animeData.coverImage || null,
+    year: typeof animeData.year === 'number' ? animeData.year : null,
+    genre: Array.isArray(animeData.genre) ? animeData.genre : [],
+    status: animeData.status || 'Unknown',
+    synopsis: animeData.synopsis || null,
+    type: animeData.type || 'Unknown',
+    sourceAdmin: animeData.sourceAdmin || 'manual',
   };
 
-  dataToSave.trailerUrl = animeData.trailerUrl || null;
+  // Ensure optional fields are null if undefined or empty string for relevant types
   dataToSave.bannerImage = animeData.bannerImage || null;
   dataToSave.averageRating = animeData.averageRating === undefined ? null : animeData.averageRating;
   dataToSave.popularity = animeData.popularity === undefined ? 0 : animeData.popularity;
   dataToSave.isFeatured = animeData.isFeatured === undefined ? false : animeData.isFeatured;
   dataToSave.aniListId = animeData.aniListId || null;
+  dataToSave.trailerUrl = animeData.trailerUrl || null;
   dataToSave.downloadPageUrl = animeData.downloadPageUrl || null;
-
-  dataToSave.episodes = (animeData.episodes || []).map((ep, index) => ({
-    ...ep,
-    id: ep.id || `${slug}-s${ep.seasonNumber || 0}-e${ep.episodeNumber || index}-${Date.now()}`,
-    sources: (ep.sources || []).map((source, sourceIdx) => ({
-        ...source,
-        id: source.id || `source-${slug}-ep${ep.episodeNumber || index}-${Date.now()}-${sourceIdx}`, // Ensure source ID generation
-        url: source.url || null,
-    })),
-    url: undefined, // Remove old top-level URL if sources exist
-    thumbnail: ep.thumbnail || null,
-  }));
-
   dataToSave.season = animeData.season || null;
-  dataToSave.seasonYear = animeData.seasonYear || (animeData.year || null);
+  dataToSave.seasonYear = animeData.seasonYear || dataToSave.year;
   dataToSave.countryOfOrigin = animeData.countryOfOrigin || null;
   dataToSave.studios = animeData.studios || [];
   dataToSave.source = animeData.source || null;
-  dataToSave.format = animeData.format || animeData.type || null;
+  dataToSave.format = animeData.format || dataToSave.type;
   dataToSave.duration = animeData.duration || null;
   dataToSave.airedFrom = animeData.airedFrom || null;
   dataToSave.airedTo = animeData.airedTo || null;
-  dataToSave.episodesCount = animeData.episodesCount || dataToSave.episodes?.length || 0;
   dataToSave.characters = animeData.characters || [];
+
+
+  dataToSave.episodes = (animeData.episodes || []).map((ep, index) => {
+    const episodeId = ep.id || `${slug}-s${ep.seasonNumber || 0}-e${ep.episodeNumber || index}-${Date.now()}`;
+    return {
+      id: episodeId,
+      title: ep.title || null,
+      episodeNumber: typeof ep.episodeNumber === 'number' ? ep.episodeNumber : null,
+      seasonNumber: typeof ep.seasonNumber === 'number' ? ep.seasonNumber : null,
+      thumbnail: ep.thumbnail === '' ? null : (ep.thumbnail || null),
+      duration: ep.duration || null,
+      overview: ep.overview || null,
+      airDate: ep.airDate || null,
+      sources: (ep.sources || []).map((source, sourceIdx) => ({
+        id: source.id || `source-${episodeId}-${Date.now()}-${sourceIdx}`,
+        url: source.url || null,
+        label: source.label || null,
+        type: source.type || 'mp4',
+        category: source.category || 'SUB',
+        quality: source.quality || null,
+      })),
+      url: undefined, // Ensure old top-level URL is not saved
+    };
+  });
+  dataToSave.episodesCount = dataToSave.episodes?.length || 0;
 
 
   try {
@@ -364,7 +395,7 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
     if (docSnap.exists()) {
       console.warn(`Anime with slug "${slug}" already exists. Updating existing document.`);
       const existingData = docSnap.data();
-      const updatePayload = { ...existingData, ...dataToSave };
+      const updatePayload = { ...existingData, ...dataToSave }; // Merge, new data overwrites existing
       await updateDoc(docRef, updatePayload);
     } else {
       dataToSave.createdAt = serverTimestamp();
@@ -389,50 +420,93 @@ export async function updateAnimeInFirestore(id: string, animeData: Partial<Omit
   }
   const docRef = doc(animesCollection, id);
   try {
-    const updatePayload: { [key: string]: any } = { ...animeData, updatedAt: serverTimestamp() };
+    const updatePayload: { [key: string]: any } = { updatedAt: serverTimestamp() };
 
-    if (animeData.hasOwnProperty('trailerUrl')) {
-      updatePayload.trailerUrl = animeData.trailerUrl || null;
-    }
-    if (animeData.hasOwnProperty('bannerImage')) {
-      updatePayload.bannerImage = animeData.bannerImage || null;
-    }
-    if (animeData.hasOwnProperty('aniListId')) {
-      updatePayload.aniListId = animeData.aniListId || null;
-    }
-    if (animeData.hasOwnProperty('downloadPageUrl')) {
-      updatePayload.downloadPageUrl = animeData.downloadPageUrl || null;
-    }
-    if (animeData.hasOwnProperty('averageRating') && animeData.averageRating === undefined) {
-      updatePayload.averageRating = null;
-    }
-     if (animeData.hasOwnProperty('popularity') && animeData.popularity === undefined) {
-       updatePayload.popularity = 0;
-    }
-     if (animeData.hasOwnProperty('isFeatured') && animeData.isFeatured === undefined) {
-       updatePayload.isFeatured = false;
-    }
+    // Helper to ensure value is null if undefined, or keeps existing value
+    const SanitizeValue = (value: any, defaultValue: any = null) => {
+        if (typeof value === 'string' && value === '') return null; // Treat empty strings as null for relevant fields
+        return value === undefined ? defaultValue : value;
+    };
+    
+    const NullifyIfUndefined = (value: any) => value === undefined ? null : value;
 
-    // Ensure episodes within updatePayload also handle source IDs correctly
-    if (updatePayload.episodes && Array.isArray(updatePayload.episodes)) {
-      updatePayload.episodes = updatePayload.episodes.map((ep: Episode, index: number) => ({
-        ...ep,
-        id: ep.id || `${id}-s${ep.seasonNumber || 0}-e${ep.episodeNumber || index}-${Date.now()}`,
-        sources: (ep.sources || []).map((source, sourceIdx) => ({
-          ...source,
-          id: source.id || `source-${id}-ep${ep.episodeNumber || index}-${Date.now()}-${sourceIdx}`
-        })),
-        url: undefined // Remove old top-level URL if sources exist
-      }));
-    }
-
-
-    Object.keys(updatePayload).forEach(key => {
-      if (updatePayload[key] === undefined &&
-          !['trailerUrl', 'bannerImage', 'aniListId', 'averageRating', 'popularity', 'isFeatured', 'downloadPageUrl', 'episodes'].includes(key)) {
-        delete updatePayload[key];
+    // Process top-level fields
+    (Object.keys(animeData) as Array<keyof typeof animeData>).forEach(key => {
+      const value = animeData[key];
+      if (key === 'episodes') {
+        if (Array.isArray(value)) {
+          updatePayload.episodes = value.map((ep: any, index: number) => {
+            const episodeId = ep.id || `${id}-s${ep.seasonNumber || 0}-e${ep.episodeNumber || index}-${Date.now()}`;
+            const cleanedSources = (ep.sources || []).map((source: any, sourceIdx: number) => ({
+              id: source.id || `source-${episodeId}-${Date.now()}-${sourceIdx}`,
+              url: SanitizeValue(source.url),
+              label: SanitizeValue(source.label),
+              type: source.type || 'mp4',
+              category: source.category || 'SUB',
+              quality: SanitizeValue(source.quality),
+            }));
+            return {
+              id: episodeId,
+              title: SanitizeValue(ep.title),
+              episodeNumber: typeof ep.episodeNumber === 'number' ? ep.episodeNumber : null,
+              seasonNumber: typeof ep.seasonNumber === 'number' ? ep.seasonNumber : null,
+              thumbnail: SanitizeValue(ep.thumbnail),
+              duration: SanitizeValue(ep.duration),
+              overview: SanitizeValue(ep.overview),
+              airDate: SanitizeValue(ep.airDate),
+              sources: cleanedSources.length > 0 ? cleanedSources : null,
+              url: undefined,
+            };
+          });
+          updatePayload.episodesCount = updatePayload.episodes?.length ?? NullifyIfUndefined(animeData.episodesCount) ?? 0;
+        } else if (value === undefined || value === null) {
+           updatePayload.episodes = null;
+           updatePayload.episodesCount = 0;
+        }
+      } else if (key === 'isFeatured') {
+        updatePayload.isFeatured = value === undefined ? false : value;
+      } else if (key === 'popularity') {
+        updatePayload.popularity = value === undefined ? 0 : value;
+      } else if (key === 'averageRating') {
+        updatePayload.averageRating = (value === undefined || value === '') ? null : value;
+      } else if (key === 'genre') {
+        updatePayload.genre = Array.isArray(value) ? value : [];
+      } else if (key === 'studios') {
+        updatePayload.studios = Array.isArray(value) ? value : [];
+      } else if (key === 'characters') {
+        updatePayload.characters = Array.isArray(value) ? value : [];
+      } else if (key === 'year') {
+        updatePayload.year = typeof value === 'number' ? value : null;
+      } else if (key === 'title' || key === 'coverImage' || key === 'synopsis' || key === 'type' || key === 'status') {
+         updatePayload[key] = value === undefined || value === '' ? null : value; // Ensure required strings are not empty, convert to null if so
+      } else if (value !== undefined) {
+        updatePayload[key] = value; // For other fields like aniListId, bannerImage, etc.
       }
+       // If value is undefined and not handled above, it's omitted, which is fine for updateDoc (won't update the field)
+       // But for consistency with Firestore, we convert to null for specific optional fields
+       else if (['bannerImage', 'trailerUrl', 'downloadPageUrl', 'aniListId', 'season', 'seasonYear', 'countryOfOrigin', 'source', 'format', 'duration', 'airedFrom', 'airedTo'].includes(key)) {
+           updatePayload[key] = null;
+       }
     });
+    
+    // Final check: ensure no undefined values are directly in updatePayload
+    for (const key in updatePayload) {
+        if (updatePayload[key] === undefined) {
+            // This case should ideally be caught by the specific handling above,
+            // but as a safeguard, either delete or set to null.
+            // For safety, let's set to null if it's a field that can be nullable.
+             if (['bannerImage', 'trailerUrl', 'downloadPageUrl', 'aniListId', 'season', 'seasonYear', 'countryOfOrigin', 'source', 'format', 'duration', 'airedFrom', 'airedTo', 'episodes', 'episodesCount', 'averageRating', 'synopsis', 'title', 'coverImage', 'year', 'type', 'status'].includes(key) || key.endsWith('Url') || key.endsWith('Image')) {
+                updatePayload[key] = null;
+            } else {
+                // If it's a field that must exist (e.g. a required string that somehow became undefined)
+                // this is an issue, but Firestore update will fail anyway.
+                // Better to log it or handle based on field definition. For now, delete if truly unexpected.
+                console.warn(`Unexpected undefined value for key "${key}" in updateAnimeInFirestore, removing from payload.`);
+                delete updatePayload[key];
+            }
+        }
+    }
+
 
     await updateDoc(docRef, updatePayload);
     revalidatePath(`/anime/${id}`);
@@ -441,6 +515,7 @@ export async function updateAnimeInFirestore(id: string, animeData: Partial<Omit
     revalidatePath('/admin/content-management');
     revalidatePath('/admin/episode-editor');
   } catch (error) {
+    console.error("Error in updateAnimeInFirestore for ID:", id, "Payload:", JSON.stringify(updatePayload, null, 2));
     throw handleFirestoreError(error, `updateAnimeInFirestore (id: ${id})`);
   }
 }
@@ -476,34 +551,50 @@ export async function updateAnimeEpisode(animeId: string, episodeId: string, epi
       throw new Error(`Episode with ID ${episodeId} not found in anime ${animeId}.`);
     }
     
-    // Ensure new source IDs are generated if not present in the payload
-    const updatedSources = (episodeData.sources || episodes[episodeIndex].sources || []).map((source, idx) => ({
-        ...source,
-        id: source.id || `source-${animeId}-ep${episodeId}-${Date.now()}-${idx}`,
-        url: source.url || null, // Ensure empty string becomes null for URL too
-    }));
+    const currentEpisode = episodes[episodeIndex];
+    const updatedEpisodeData: Partial<Episode> = {};
 
-    episodes[episodeIndex] = {
-      ...episodes[episodeIndex],
-      ...episodeData, // Apply all partial updates
-      sources: updatedSources, // Overwrite with new sources array (with generated IDs)
-      url: undefined, // Explicitly remove old top-level URL if sources are being managed
-      thumbnail: episodeData.thumbnail === '' ? null : (episodeData.thumbnail !== undefined ? episodeData.thumbnail : episodes[episodeIndex].thumbnail),
-    };
-    
-    // Remove undefined keys from episodeData before merging, except for sources
-    const cleanEpisodeData = { ...episodeData };
-    Object.keys(cleanEpisodeData).forEach(key => {
-        if (cleanEpisodeData[key as keyof Partial<Episode>] === undefined && key !== 'sources') {
-            delete cleanEpisodeData[key as keyof Partial<Episode>];
+    // Clean and prepare fields from episodeData payload
+    (Object.keys(episodeData) as Array<keyof Partial<Episode>>).forEach(key => {
+        const value = episodeData[key];
+        if (key === 'sources') {
+            updatedEpisodeData.sources = (Array.isArray(value) ? value : []).map((source: any, idx: number) => ({
+                id: source.id || `source-${animeId}-ep${episodeId}-${Date.now()}-${idx}`,
+                url: source.url || null,
+                label: source.label || null,
+                type: source.type || 'mp4',
+                category: source.category || 'SUB',
+                quality: source.quality || null,
+            }));
+             if (updatedEpisodeData.sources.length === 0) updatedEpisodeData.sources = null;
+        } else if (key === 'thumbnail' && value === '') {
+            updatedEpisodeData.thumbnail = null;
+        } else if (value === undefined) {
+            // Explicitly nullify common optional fields if they are passed as undefined
+            if (['title', 'thumbnail', 'duration', 'overview', 'airDate', 'url', 'sources'].includes(key)) {
+                 updatedEpisodeData[key as keyof Episode] = null as any;
+            }
+            // episodeNumber and seasonNumber are less likely to be undefined here if managed by forms, but handle defensively
+            else if (key === 'episodeNumber' || key === 'seasonNumber') {
+                updatedEpisodeData[key as keyof Episode] = currentEpisode[key as keyof Episode] ?? null; // keep existing or null
+            }
+        } else {
+            updatedEpisodeData[key as keyof Episode] = value;
         }
     });
-
+    
     episodes[episodeIndex] = {
-      ...episodes[episodeIndex],
-      ...cleanEpisodeData,
-      sources: updatedSources,
+      ...currentEpisode,
+      ...updatedEpisodeData,
+      url: undefined, // Always remove old top-level URL
     };
+
+    // Final check for undefined on the merged episode object
+     Object.keys(episodes[episodeIndex]).forEach(key => {
+        if (episodes[episodeIndex][key as keyof Episode] === undefined) {
+           episodes[episodeIndex][key as keyof Episode] = null as any;
+        }
+    });
 
 
     await updateDoc(animeRef, { episodes: episodes, updatedAt: serverTimestamp() });
@@ -511,6 +602,7 @@ export async function updateAnimeEpisode(animeId: string, episodeId: string, epi
     revalidatePath(`/play/${animeId}`);
     revalidatePath('/admin/episode-editor');
   } catch (error) {
+    console.error("Error in updateAnimeEpisode for animeId:", animeId, "episodeId:", episodeId, "Payload:", JSON.stringify(episodeData, null, 2));
     throw handleFirestoreError(error, `updateAnimeEpisode (animeId: ${animeId}, episodeId: ${episodeId})`);
   }
 }
@@ -582,40 +674,33 @@ export async function searchAnimes(searchTerm: string, count: number = 5): Promi
         orderBy('title'),
         startAt(searchTermCapitalized),
         endAt(searchTermCapitalized + '\uf8ff'),
-        limit(effectiveCount * 3) // Fetch a bit more to allow for client-side filtering if popularity is low
+        limit(effectiveCount * 3) 
     ];
     const titleQuery = query(animesCollection, ...titleQueryConstraints);
     const titleSnapshot = await getDocs(titleQuery);
     let results = titleSnapshot.docs.map(docSnap => convertAnimeTimestampsForClient(docSnap.data() as Anime));
 
-    // Client-side filter for stricter relevance if needed, and sort by popularity
     results = results.filter(anime =>
       anime.title.toLowerCase().includes(lowerSearchTerm)
-      // Optionally add genre search here if desired for live search, but it makes queries complex
-      // (anime.genre && anime.genre.some(g => g.toLowerCase().includes(lowerSearchTerm)))
     );
 
     results.sort((a, b) => {
         const aTitleLower = a.title.toLowerCase();
         const bTitleLower = b.title.toLowerCase();
 
-        // Prioritize exact matches if any
         const aIsDirectMatch = aTitleLower === lowerSearchTerm;
         const bIsDirectMatch = bTitleLower === lowerSearchTerm;
         if (aIsDirectMatch && !bIsDirectMatch) return -1;
         if (!aIsDirectMatch && bIsDirectMatch) return 1;
 
-        // Prioritize matches that start with the search term
         const aStartsWith = aTitleLower.startsWith(lowerSearchTerm);
         const bStartsWith = bTitleLower.startsWith(lowerSearchTerm);
         if (aStartsWith && !bStartsWith) return -1;
         if (!aStartsWith && bStartsWith) return 1;
 
-        // Then sort by popularity (descending)
         if ((b.popularity || 0) !== (a.popularity || 0)) {
             return (b.popularity || 0) - (a.popularity || 0);
         }
-        // Fallback to title sort
         return aTitleLower.localeCompare(bTitleLower);
     });
 
@@ -625,8 +710,6 @@ export async function searchAnimes(searchTerm: string, count: number = 5): Promi
     if (error instanceof FirestoreError && error.code === 'failed-precondition') {
         console.warn("Search by title prefix failed due to missing index. Attempting broader client-side search for:", searchTerm, error.message);
         try {
-            // Fallback: fetch more documents and filter client-side if indexing fails.
-            // This is less efficient but provides a fallback.
             const allAnimesForSearch = await getAllAnimes({ count: 200, filters: { sortBy: 'popularity', sortOrder: 'desc'} });
             let filtered = allAnimesForSearch.filter(anime =>
                 anime.title.toLowerCase().includes(lowerSearchTerm) ||
