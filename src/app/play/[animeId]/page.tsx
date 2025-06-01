@@ -6,7 +6,7 @@ import type { Anime, Episode, VideoSource } from "@/types/anime";
 import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // CardDescription removed as it was unused
 import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -18,7 +18,7 @@ import Image from "next/image";
 import ReadMoreSynopsis from '@/components/anime/ReadMoreSynopsis';
 import AnimeInteractionControls from '@/components/anime/anime-interaction-controls';
 import { Dialog, DialogHeader as DialogHeaderPrimitive, DialogTitle as DialogTitlePrimitive, DialogDescription as DialogDescriptionPrimitive, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { DialogContent } from "@/components/ui/dialog";
+import { DialogContent } from "@/components/ui/dialog"; // Keep if used, seems it is.
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,10 +27,11 @@ import { Textarea } from "@/components/ui/textarea";
 import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Plyr Imports
-import Plyr from "plyr-react";
+import PlyrComponent, { Plyr as PlyrReactInstance } from "plyr-react"; // Renamed import
 import "plyr/dist/plyr.css";
 import Hls from 'hls.js';
+import type Plyr from "plyr"; // Import Plyr type for options
+
 
 export default function PlayerPage() {
   const router = useRouter();
@@ -46,17 +47,17 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const plyrInstanceRef = useRef<Plyr | null>(null);
-  const videoElementRef = useRef<HTMLVideoElement | null>(null); // For direct media element access if needed by HLS
+  const plyrComponentRef = useRef<PlyrReactInstance | null>(null);
   const hlsInstanceRef = useRef<Hls | null>(null);
+  const [displayMode, setDisplayMode] = useState<'plyr' | 'iframe' | 'none'>('none'); // 'none' for initial or error state
 
 
-  const handlePlyrError = (event: any) => {
+  const handlePlyrError = useCallback((event: any) => {
     console.error("Plyr Player Error:", event);
     let errorMessage = "Could not load video. Try another server or episode.";
     
-    const plyrPlayer = plyrInstanceRef.current?.plyr;
-    if (plyrPlayer?.source && typeof plyrPlayer.source === 'string' && plyrPlayer.source.includes('m3u8') && typeof window !== 'undefined' && Hls && !Hls.isSupported()) {
+    const plyrPlayer = plyrComponentRef.current?.plyr;
+    if (activeSource?.type === 'm3u8' && typeof window !== 'undefined' && Hls && !Hls.isSupported()) {
       errorMessage = "HLS playback is not supported in your browser for this M3U8 stream.";
     } else if (event?.detail?.plyrError?.message) {
       errorMessage = `Player Error: ${event.detail.plyrError.message}`;
@@ -66,25 +67,32 @@ export default function PlayerPage() {
       errorMessage = `HLS Error: ${event.data.details}`;
     }
     setPlayerError(errorMessage);
-  };
+  }, [activeSource?.type]);
   
   const plyrOptions = useMemo((): Plyr.Options => ({
     autoplay: true,
     debug: process.env.NODE_ENV === 'development',
     listeners: {
-      error: handlePlyrError, // General player errors
+      error: handlePlyrError,
     },
-    hls: {
+    hls: { // Options for Plyr's HLS integration
       // Pass Hls constructor for Plyr to use
-      // @ts-ignore - Plyr types might not perfectly align with Hls constructor for this prop, but it works
+      // @ts-ignore - Plyr types might not perfectly align with Hls constructor for this prop
       Hls: Hls, 
-    },
-  }), []);
+      // You can pass HLS.js config options here if needed
+      // e.g., forceHLS: true,
+      // Refer to HLS.js documentation for available config options
+      // Example:
+      // capLevelToPlayerSize: true,
+      // maxMaxBufferLength: 30,
+    } as any, // Using 'as any' because Plyr types might not be fully up-to-date with all HLS.js config options
+  }), [handlePlyrError]);
 
   const fetchDetails = useCallback(async () => {
     if (!animeId) {
       setPlayerError("Anime ID is missing.");
       setPageIsLoading(false);
+      setDisplayMode('none');
       return;
     }
 
@@ -110,10 +118,12 @@ export default function PlayerPage() {
           setCurrentEpisode(epToSet);
           const firstSource = epToSet.sources?.[0];
           if (firstSource) {
-            setActiveSource(firstSource); 
+            setActiveSource(firstSource);
+            setDisplayMode(firstSource.type === 'embed' ? 'iframe' : 'plyr');
           } else {
             setActiveSource(null);
             setPlayerError(epToSet.sources && epToSet.sources.length === 0 ? "No video sources available for this episode." : "Episode selected, but no source found.");
+            setDisplayMode('none');
           }
 
           if (!epIdFromUrl && epToSet.id && epToSet.sources && epToSet.sources.length > 0) {
@@ -122,19 +132,21 @@ export default function PlayerPage() {
         } else {
           setCurrentEpisode(null);
           setActiveSource(null);
+          setDisplayMode('none');
           if (details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
              setPlayerError("No episodes with playable sources available.");
           } else {
             setPlayerError("No episodes available for this anime.");
           }
         }
-
       } else {
         setPlayerError("Anime not found.");
+        setDisplayMode('none');
       }
     } catch(e: any) {
       console.error("Failed to load anime details:", e);
       setPlayerError(`Failed to load anime details: ${e.message || "Unknown error"}`);
+      setDisplayMode('none');
     } finally {
       setPageIsLoading(false);
     }
@@ -144,7 +156,6 @@ export default function PlayerPage() {
     fetchDetails();
   }, [fetchDetails]);
 
-
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
       if (ep.id === currentEpisode?.id && activeSource) return; 
@@ -153,9 +164,11 @@ export default function PlayerPage() {
       const firstSource = ep.sources?.[0];
       if (firstSource) {
         setActiveSource(firstSource);
+        // setDisplayMode will be handled by the main useEffect watching activeSource
       } else {
         setActiveSource(null);
         setPlayerError("No video sources available for this episode.");
+        setDisplayMode('none');
       }
       router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false });
     },
@@ -165,58 +178,107 @@ export default function PlayerPage() {
   const handleServerSelect = (source: VideoSource) => {
     setPlayerError(null); 
     setActiveSource(source);
+    // setDisplayMode will be handled by the main useEffect watching activeSource
   };
-  
-  // Effect to manage Plyr source and HLS instance
+
+  // Effect to manage display mode and player states based on activeSource
   useEffect(() => {
-    const plyrPlayer = plyrInstanceRef.current?.plyr;
-    const mediaElement = videoElementRef.current; // Using the ref directly
+    const plyrPlayer = plyrComponentRef.current?.plyr;
+    const currentHls = hlsInstanceRef.current;
 
-    // Destroy previous HLS instance if it exists
-    if (hlsInstanceRef.current) {
-      hlsInstanceRef.current.destroy();
-      hlsInstanceRef.current = null;
+    if (activeSource) {
+      if (activeSource.type === 'embed') {
+        setDisplayMode('iframe');
+        if (currentHls) {
+          currentHls.destroy();
+          hlsInstanceRef.current = null;
+        }
+        if (plyrPlayer && plyrPlayer.playing) {
+          plyrPlayer.pause();
+        }
+        // If Plyr had a source, clear it to prevent any background activity
+        if (plyrPlayer && plyrPlayer.source) {
+            // plyrPlayer.source = null; // This might cause issues if Plyr doesn't expect null
+        }
+      } else if (activeSource.type === 'mp4' || activeSource.type === 'm3u8') {
+        setDisplayMode('plyr');
+        // HLS and source setting for Plyr will be handled by the next effect
+        // which depends on `plyrSourceForPlayer`
+      } else {
+        setDisplayMode('none'); // Unknown source type
+      }
+    } else {
+      setDisplayMode('none'); // No active source
+      if (currentHls) { // Clean up HLS if active source becomes null
+        currentHls.destroy();
+        hlsInstanceRef.current = null;
+      }
     }
+  }, [activeSource]);
 
-    if (plyrPlayer && activeSource && mediaElement) {
-      const newSourceConfig = {
+  const plyrSourceToPlay = useMemo(() => {
+    if (displayMode === 'plyr' && activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8')) {
+      return {
         type: 'video' as const,
         title: `${anime?.title || 'Video'} - ${currentEpisode?.title || 'Episode'}`,
         sources: [{ src: activeSource.url, type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4' }],
         poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
       };
-      
-      plyrPlayer.source = newSourceConfig;
+    }
+    return undefined; // Important: Plyr source is undefined if not in 'plyr' mode or no valid source
+  }, [displayMode, activeSource, anime, currentEpisode]);
 
-      if (activeSource.type === 'm3u8') {
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(activeSource.url);
-          hls.attachMedia(mediaElement); // Attach HLS to the specific video element Plyr controls
-          hlsInstanceRef.current = hls;
+  // Effect to manage HLS instance for Plyr when plyrSourceToPlay changes
+  useEffect(() => {
+    const plyrPlayer = plyrComponentRef.current?.plyr;
+    const currentHls = hlsInstanceRef.current;
 
-          hls.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-              console.error('HLS Fatal Error:', data);
-              handlePlyrError({ type: 'error', data });
-            }
-          });
-        } else if (mediaElement.canPlayType('application/vnd.apple.mpegurl')) {
-          mediaElement.src = activeSource.url; // For native HLS support
+    // Cleanup previous HLS instance if the source for Plyr changes or Plyr is no longer the active player
+    if (currentHls) {
+      currentHls.destroy();
+      hlsInstanceRef.current = null;
+    }
+
+    if (plyrPlayer && plyrSourceToPlay && plyrSourceToPlay.sources[0].type === 'application/x-mpegURL') {
+      if (Hls.isSupported()) {
+        const hls = new Hls(plyrOptions.hls as Hls.Config); // Pass HLS config from plyrOptions
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            console.error('HLS Fatal Error:', data);
+            handlePlyrError({ type: 'error', data }); // Use centralized error handler
+          }
+        });
+        hls.loadSource(plyrSourceToPlay.sources[0].src);
+        if (plyrPlayer.media instanceof HTMLVideoElement) {
+          hls.attachMedia(plyrPlayer.media);
         } else {
-          handlePlyrError("HLS is not supported on this browser.");
+          console.warn("Plyr media element is not HTMLVideoElement, HLS cannot attach.");
         }
+        hlsInstanceRef.current = hls;
+      } else if (plyrPlayer.media instanceof HTMLVideoElement && plyrPlayer.media.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (e.g., Safari)
+        plyrPlayer.media.src = plyrSourceToPlay.sources[0].src;
+      } else {
+        handlePlyrError("HLS is not supported on this browser for M3U8 streams.");
       }
     }
-    
-    // Cleanup function for this effect
+    // No explicit return cleanup here for HLS, as it's handled at the start of this effect
+    // or by the main component unmount effect.
+  }, [plyrSourceToPlay, plyrOptions, handlePlyrError]); // React to changes in the source Plyr should play
+
+  // Effect for main component unmount cleanup
+  useEffect(() => {
+    const plyrPlayerApi = plyrComponentRef.current?.plyr;
+    const hlsApi = hlsInstanceRef.current;
     return () => {
-      if (hlsInstanceRef.current) {
-        hlsInstanceRef.current.destroy();
-        hlsInstanceRef.current = null;
+      if (plyrPlayerApi) {
+        plyrPlayerApi.destroy();
+      }
+      if (hlsApi) {
+        hlsApi.destroy();
       }
     };
-  }, [activeSource, anime, currentEpisode]); // Rerun when activeSource or context for title/poster changes
+  }, []);
 
 
   const placeholderEpisode = {
@@ -277,18 +339,7 @@ export default function PlayerPage() {
 
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
-
-  const initialPlyrSourceInfo: Plyr.SourceInfo | undefined = 
-    activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime
-    ? {
-        type: 'video',
-        title: `${displayAnime?.title || 'Video'} - ${displayEpisode?.title || 'Episode'}`,
-        sources: [ { src: activeSource.url, type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4' } ],
-        poster: displayEpisode?.thumbnail || displayAnime?.bannerImage || displayAnime?.coverImage || `https://placehold.co/1280x720.png`,
-      }
-    : undefined;
-
-
+  
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
       <Container className="py-4 md:py-6 flex-grow w-full">
@@ -296,34 +347,32 @@ export default function PlayerPage() {
           
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative plyr-container">
-              {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime && initialPlyrSourceInfo ? (
-                <Plyr
-                  ref={plyrInstanceRef}
-                  source={initialPlyrSourceInfo}
+              
+              <div style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
+                {/* PlyrComponent is always in the DOM for its ref, but its source is dynamic.
+                    It will be effectively "empty" if plyrSourceToPlay is undefined.
+                    No key on PlyrComponent means it doesn't re-mount for mp4/m3u8 changes; source is updated.
+                */}
+                <PlyrComponent
+                  ref={plyrComponentRef}
+                  source={plyrSourceToPlay} // This will be undefined when displayMode is 'iframe'
                   options={plyrOptions}
-                  // Crucial: provide the video element ref for HLS to attach to
-                  // @ts-ignore Plyr's types might not perfectly align with this direct ref usage, but it is needed
-                  // This 'media' prop for ref is specific to how some react-plyr wrappers expose the internal element
-                  // or we can let Plyr create its own and try to find it (less reliable)
-                  // For this to work, plyr-react's Plyr component needs to forward a ref to its <video> tag,
-                  // or we get the video element from plyrInstanceRef.current.plyr.media AFTER it mounts.
-                  // Let's use a dedicated ref for the video element that Plyr creates/manages.
-                  // This may not be needed if Plyr internal HLS works.
-                  // If HLS is managed by plyrInstanceRef.current.plyr.media internally (which is the goal of passing Hls to options)
-                  // then we don't need a separate videoElementRef here.
-                  // Let's assume plyr options take care of this and remove explicit videoElementRef from the <Plyr> component props.
-                  // Instead, in the useEffect, we'll get mediaElement from plyrInstanceRef.current.plyr.media
                 />
-              ) : activeSource && activeSource.type === 'embed' ? (
+              </div>
+
+              {displayMode === 'iframe' && activeSource && activeSource.type === 'embed' && (
                  <iframe
-                    key={activeSource.id}
+                    key={activeSource.url} // Re-key iframe by URL to force reload on change
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
-                    className="w-full h-full border-0 rounded-lg"
+                    className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]" // Positioned to overlay
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
-              ) : (
+              )}
+              
+              {/* Placeholder for when no player is active */}
+              {displayMode === 'none' && !pageIsLoading && !playerError && (
                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-card pointer-events-none">
                       <PlayIconFallback className="w-24 h-24 opacity-30" />
                       <p className="mt-4 text-lg">
@@ -335,23 +384,20 @@ export default function PlayerPage() {
                       </p>
                   </div>
               )}
-              {/* Hidden video element for HLS.js if Plyr doesn't expose its own easily for direct attachment */}
-              {/* This is a common pattern if the React wrapper doesn't make it easy. */}
-              <video ref={videoElementRef} style={{ display: 'none' }}></video>
 
-               {pageIsLoading && !activeSource && (
+               {pageIsLoading && !activeSource && ( // Initial loading overlay
                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
                       <Loader2 className="w-10 h-10 animate-spin text-primary" />
                       <p className="text-sm text-primary-foreground mt-2">Loading Episode...</p>
                   </div>
               )}
-              {playerError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center z-10">
+              {playerError && ( // Error overlay
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center z-30">
                   <AlertTriangle className="w-10 h-10 text-destructive mb-2" />
                   <p className="text-destructive-foreground text-sm">{playerError}</p>
                   <Button variant="outline" size="sm" className="mt-3" onClick={() => {
                     setPlayerError(null);
-                    if (activeSource) handleServerSelect(activeSource);
+                    if (activeSource) handleServerSelect(activeSource); // Attempt to re-select current server
                   }}>Dismiss</Button>
                 </div>
               )}
@@ -568,9 +614,10 @@ export default function PlayerPage() {
 }
 
 // Suspense wrapper for AnimeInteractionControls on the player page as it might fetch user data
-const PlayerPageAnimeInteractionControls = (props: { anime: Anime; className?: string }) => (
-  <React.Suspense fallback={<div className="flex gap-3"><Skeleton className="h-10 w-32 rounded-md" /><Skeleton className="h-10 w-32 rounded-md" /></div>}>
-    <AnimeInteractionControls {...props} />
-  </React.Suspense>
-);
-
+// This component is unused here but kept from previous version for reference if needed elsewhere.
+// const PlayerPageAnimeInteractionControls = (props: { anime: Anime; className?: string }) => (
+//   <React.Suspense fallback={<div className="flex gap-3"><Skeleton className="h-10 w-32 rounded-md" /><Skeleton className="h-10 w-32 rounded-md" /></div>}>
+//     <AnimeInteractionControls {...props} />
+//   </React.Suspense>
+// );
+    
