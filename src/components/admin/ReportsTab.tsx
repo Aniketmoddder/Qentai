@@ -151,10 +151,10 @@ export default function ReportsTab() {
                         </Link>
                         </p>
                     )}
-                    <div className="pt-2 flex justify-end items-center gap-2">
+                    <div className="pt-2 flex flex-col items-center sm:flex-row sm:justify-end sm:items-center gap-2">
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="xs" className="text-xs h-7 px-2 w-full sm:w-auto">
+                            <Button variant="destructive" size="xs" className="text-xs h-7 px-3 w-full max-w-full sm:w-auto">
                                 <Trash2 className="mr-1 h-3 w-3" /> Delete
                             </Button>
                         </AlertDialogTrigger>
