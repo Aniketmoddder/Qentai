@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Plyr Imports
 import Plyr from "plyr-react";
-import "plyr-react/dist/plyr.css";
+import 'plyr/dist/plyr.css'; // Changed CSS import path
 import type Hls from 'hls.js'; // Import Hls type for potential specific config
 
 
@@ -550,3 +550,4 @@ export default function PlayerPage() {
     </div>
   );
 }
+
