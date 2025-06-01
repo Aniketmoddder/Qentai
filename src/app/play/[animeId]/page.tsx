@@ -6,7 +6,7 @@ import type { Anime, Episode, VideoSource } from "@/types/anime";
 import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"; // CardDescription removed as it was unused
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -18,7 +18,7 @@ import Image from "next/image";
 import ReadMoreSynopsis from '@/components/anime/ReadMoreSynopsis';
 import AnimeInteractionControls from '@/components/anime/anime-interaction-controls';
 import { Dialog, DialogHeader as DialogHeaderPrimitive, DialogTitle as DialogTitlePrimitive, DialogDescription as DialogDescriptionPrimitive, DialogTrigger, DialogClose } from "@/components/ui/dialog";
-import { DialogContent } from "@/components/ui/dialog"; // Keep if used, seems it is.
+import { DialogContent } from "@/components/ui/dialog";
 import { cn } from '@/lib/utils';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,11 +27,33 @@ import { Textarea } from "@/components/ui/textarea";
 import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-import PlyrComponent, { Plyr as PlyrReactInstance } from "plyr-react"; // Renamed import
+import PlyrComponent from "plyr-react";
+import type Plyr from "plyr";
 import "plyr/dist/plyr.css";
 import Hls from 'hls.js';
-import type Plyr from "plyr"; // Import Plyr type for options
 
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/hooks/use-auth';
+import type { ReportIssueType } from '@/types/report';
+import { addReportToFirestore } from '@/services/reportService';
+
+
+const reportFormSchema = z.object({
+  issueType: z.enum([
+    'video-not-playing',
+    'wrong-video-episode',
+    'audio-issue',
+    'subtitle-issue',
+    'buffering-lagging',
+    'other',
+  ], { required_error: "Please select an issue type." }),
+  description: z.string().min(10, "Please provide a detailed description (min 10 characters).").max(500, "Description is too long (max 500 characters)."),
+});
+type ReportFormValues = z.infer<typeof reportFormSchema>;
 
 export default function PlayerPage() {
   const router = useRouter();
@@ -47,16 +69,25 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const plyrComponentRef = useRef<PlyrReactInstance | null>(null);
+  const plyrInstanceRef = useRef<Plyr | null>(null); // For the Plyr API instance
   const hlsInstanceRef = useRef<Hls | null>(null);
-  const [displayMode, setDisplayMode] = useState<'plyr' | 'iframe' | 'none'>('none'); // 'none' for initial or error state
+  const [displayMode, setDisplayMode] = useState<'plyr' | 'iframe' | 'none'>('none');
 
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const { user: authUser } = useAuth();
+
+  const reportForm = useForm<ReportFormValues>({
+    resolver: zodResolver(reportFormSchema),
+    defaultValues: {
+      issueType: 'video-not-playing',
+      description: '',
+    },
+  });
 
   const handlePlyrError = useCallback((event: any) => {
     console.error("Plyr Player Error:", event);
     let errorMessage = "Could not load video. Try another server or episode.";
     
-    const plyrPlayer = plyrComponentRef.current?.plyr;
     if (activeSource?.type === 'm3u8' && typeof window !== 'undefined' && Hls && !Hls.isSupported()) {
       errorMessage = "HLS playback is not supported in your browser for this M3U8 stream.";
     } else if (event?.detail?.plyrError?.message) {
@@ -73,19 +104,20 @@ export default function PlayerPage() {
     autoplay: true,
     debug: process.env.NODE_ENV === 'development',
     listeners: {
-      error: handlePlyrError,
+      // error: handlePlyrError, // HLS errors will be handled by HLS instance directly
     },
-    hls: { // Options for Plyr's HLS integration
-      // Pass Hls constructor for Plyr to use
-      // @ts-ignore - Plyr types might not perfectly align with Hls constructor for this prop
+    hls: { 
       Hls: Hls, 
-      // You can pass HLS.js config options here if needed
-      // e.g., forceHLS: true,
-      // Refer to HLS.js documentation for available config options
-      // Example:
-      // capLevelToPlayerSize: true,
-      // maxMaxBufferLength: 30,
-    } as any, // Using 'as any' because Plyr types might not be fully up-to-date with all HLS.js config options
+      // @ts-ignore
+      onError: (event, data) => { // Specific HLS error handling
+        if (data.fatal) {
+          console.error('HLS Fatal Error:', data);
+          handlePlyrError({ type: 'error', data });
+        } else {
+           console.warn('HLS Non-Fatal Error:', data);
+        }
+      },
+    } as any, 
   }), [handlePlyrError]);
 
   const fetchDetails = useCallback(async () => {
@@ -119,7 +151,7 @@ export default function PlayerPage() {
           const firstSource = epToSet.sources?.[0];
           if (firstSource) {
             setActiveSource(firstSource);
-            setDisplayMode(firstSource.type === 'embed' ? 'iframe' : 'plyr');
+            // displayMode set by useEffect on activeSource
           } else {
             setActiveSource(null);
             setPlayerError(epToSet.sources && epToSet.sources.length === 0 ? "No video sources available for this episode." : "Episode selected, but no source found.");
@@ -164,7 +196,6 @@ export default function PlayerPage() {
       const firstSource = ep.sources?.[0];
       if (firstSource) {
         setActiveSource(firstSource);
-        // setDisplayMode will be handled by the main useEffect watching activeSource
       } else {
         setActiveSource(null);
         setPlayerError("No video sources available for this episode.");
@@ -178,13 +209,12 @@ export default function PlayerPage() {
   const handleServerSelect = (source: VideoSource) => {
     setPlayerError(null); 
     setActiveSource(source);
-    // setDisplayMode will be handled by the main useEffect watching activeSource
   };
 
   // Effect to manage display mode and player states based on activeSource
   useEffect(() => {
-    const plyrPlayer = plyrComponentRef.current?.plyr;
     const currentHls = hlsInstanceRef.current;
+    const plyrPlayer = plyrInstanceRef.current;
 
     if (activeSource) {
       if (activeSource.type === 'embed') {
@@ -196,20 +226,17 @@ export default function PlayerPage() {
         if (plyrPlayer && plyrPlayer.playing) {
           plyrPlayer.pause();
         }
-        // If Plyr had a source, clear it to prevent any background activity
-        if (plyrPlayer && plyrPlayer.source) {
-            // plyrPlayer.source = null; // This might cause issues if Plyr doesn't expect null
-        }
+        // Important: Do NOT set plyrPlayer.source to null here if displayMode is just hiding it.
+        // Plyr's source will be managed by `plyrSourceToPlay` which becomes undefined.
       } else if (activeSource.type === 'mp4' || activeSource.type === 'm3u8') {
         setDisplayMode('plyr');
         // HLS and source setting for Plyr will be handled by the next effect
-        // which depends on `plyrSourceForPlayer`
       } else {
-        setDisplayMode('none'); // Unknown source type
+        setDisplayMode('none'); 
       }
     } else {
-      setDisplayMode('none'); // No active source
-      if (currentHls) { // Clean up HLS if active source becomes null
+      setDisplayMode('none'); 
+      if (currentHls) {
         currentHls.destroy();
         hlsInstanceRef.current = null;
       }
@@ -225,78 +252,101 @@ export default function PlayerPage() {
         poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
       };
     }
-    return undefined; // Important: Plyr source is undefined if not in 'plyr' mode or no valid source
+    return undefined;
   }, [displayMode, activeSource, anime, currentEpisode]);
 
   // Effect to manage HLS instance for Plyr when plyrSourceToPlay changes
   useEffect(() => {
-    const plyrPlayer = plyrComponentRef.current?.plyr;
-    const currentHls = hlsInstanceRef.current;
+    const plyrPlayer = plyrInstanceRef.current;
 
-    // Cleanup previous HLS instance if the source for Plyr changes or Plyr is no longer the active player
-    if (currentHls) {
-      currentHls.destroy();
+    if (hlsInstanceRef.current) {
+      hlsInstanceRef.current.destroy();
       hlsInstanceRef.current = null;
     }
 
     if (plyrPlayer && plyrSourceToPlay && plyrSourceToPlay.sources[0].type === 'application/x-mpegURL') {
       if (Hls.isSupported()) {
-        const hls = new Hls(plyrOptions.hls as Hls.Config); // Pass HLS config from plyrOptions
-        hls.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) {
-            console.error('HLS Fatal Error:', data);
-            handlePlyrError({ type: 'error', data }); // Use centralized error handler
-          }
-        });
+        const hls = new Hls(plyrOptions.hls as Hls.Config);
+        // HLS errors are now passed to plyrOptions.hls.onError
         hls.loadSource(plyrSourceToPlay.sources[0].src);
         if (plyrPlayer.media instanceof HTMLVideoElement) {
           hls.attachMedia(plyrPlayer.media);
-        } else {
-          console.warn("Plyr media element is not HTMLVideoElement, HLS cannot attach.");
         }
         hlsInstanceRef.current = hls;
       } else if (plyrPlayer.media instanceof HTMLVideoElement && plyrPlayer.media.canPlayType('application/vnd.apple.mpegurl')) {
-        // Native HLS support (e.g., Safari)
         plyrPlayer.media.src = plyrSourceToPlay.sources[0].src;
       } else {
         handlePlyrError("HLS is not supported on this browser for M3U8 streams.");
       }
     }
-    // No explicit return cleanup here for HLS, as it's handled at the start of this effect
-    // or by the main component unmount effect.
-  }, [plyrSourceToPlay, plyrOptions, handlePlyrError]); // React to changes in the source Plyr should play
+    return () => {
+      if (hlsInstanceRef.current) {
+        hlsInstanceRef.current.destroy();
+        hlsInstanceRef.current = null;
+      }
+    };
+  }, [plyrSourceToPlay, plyrOptions, handlePlyrError]);
 
   // Effect for main component unmount cleanup
   useEffect(() => {
-    const plyrPlayerApi = plyrComponentRef.current?.plyr;
-    const hlsApi = hlsInstanceRef.current;
     return () => {
-      if (plyrPlayerApi) {
-        plyrPlayerApi.destroy();
+      if (plyrInstanceRef.current) {
+        plyrInstanceRef.current.destroy();
       }
-      if (hlsApi) {
-        hlsApi.destroy();
+      if (hlsInstanceRef.current) {
+        hlsInstanceRef.current.destroy();
       }
     };
   }, []);
 
+  const handleReportSubmit = async (values: ReportFormValues) => {
+    if (!anime || !currentEpisode || !activeSource) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot submit report: missing context.' });
+      return;
+    }
+    reportForm.formState.isSubmitting = true;
+    try {
+      await addReportToFirestore({
+        userId: authUser?.uid || null,
+        userEmail: authUser?.email || null,
+        animeId: anime.id,
+        animeTitle: anime.title,
+        episodeId: currentEpisode.id,
+        episodeTitle: currentEpisode.title,
+        sourceUrl: activeSource.url,
+        sourceLabel: activeSource.label,
+        issueType: values.issueType,
+        description: values.description,
+      });
+      toast({ title: 'Report Submitted', description: 'Thank you for your feedback!' });
+      setIsReportDialogOpen(false);
+      reportForm.reset();
+    } catch (error) {
+      console.error('Failed to submit report:', error);
+      toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not submit your report. Please try again.' });
+    } finally {
+       reportForm.formState.isSubmitting = false;
+    }
+  };
+
+  const issueTypes: { value: ReportIssueType; label: string }[] = [
+    { value: 'video-not-playing', label: 'Video Not Playing' },
+    { value: 'wrong-video-episode', label: 'Wrong Video / Episode' },
+    { value: 'audio-issue', label: 'Audio Issue' },
+    { value: 'subtitle-issue', label: 'Subtitle Issue' },
+    { value: 'buffering-lagging', label: 'Buffering / Lagging' },
+    { value: 'other', label: 'Other' },
+  ];
+
 
   const placeholderEpisode = {
-    id: 'placeholder-ep-1',
-    title: 'Episode Title Placeholder',
-    episodeNumber: 1,
-    seasonNumber: 1,
-    thumbnail: `https://placehold.co/320x180.png`,
-    overview: 'This is a placeholder overview for the episode.',
-    duration: '24min',
-    sources: [{id: 'placeholder-src-1', url: '', type: 'mp4', label: 'Default Server', category: 'SUB' } as VideoSource]
+    id: 'placeholder-ep-1', title: 'Episode Title Placeholder', episodeNumber: 1, seasonNumber: 1,
+    thumbnail: `https://placehold.co/320x180.png`, overview: 'This is a placeholder overview for the episode.',
+    duration: '24min', sources: [{id: 'placeholder-src-1', url: '', type: 'mp4', label: 'Default Server', category: 'SUB' } as VideoSource]
   };
   const placeholderEpisodes = Array(10).fill(null).map((_, i) => ({
-    ...placeholderEpisode,
-    id: `placeholder-ep-${i+1}`,
-    episodeNumber: i + 1,
-    title: `Episode ${i + 1}: Placeholder`,
-    thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
+    ...placeholderEpisode, id: `placeholder-ep-${i+1}`, episodeNumber: i + 1,
+    title: `Episode ${i + 1}: Placeholder`, thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
   }));
 
   if (pageIsLoading && !anime) {
@@ -323,23 +373,16 @@ export default function PlayerPage() {
   
   const displayEpisode = currentEpisode || (anime?.episodes?.find(ep => ep.sources && ep.sources.length > 0)) || (anime?.episodes?.[0]) || placeholderEpisode;
   const displayAnime = anime || {
-    id: 'placeholder-anime',
-    title: 'Anime Title Placeholder',
-    coverImage: `https://placehold.co/200x300.png`,
-    bannerImage: `https://placehold.co/1280x300.png`,
-    year: 2024,
-    genre: ['Action', 'Adventure'],
-    status: 'Ongoing',
-    synopsis: 'Placeholder synopsis.',
-    type: 'TV',
-    isFeatured: false,
-    episodes: placeholderEpisodes,
-    averageRating: 7.5,
+    id: 'placeholder-anime', title: 'Anime Title Placeholder', coverImage: `https://placehold.co/200x300.png`,
+    bannerImage: `https://placehold.co/1280x300.png`, year: 2024, genre: ['Action', 'Adventure'],
+    status: 'Ongoing', synopsis: 'Placeholder synopsis.', type: 'TV', isFeatured: false, episodes: placeholderEpisodes, averageRating: 7.5,
   } as Anime;
 
   const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
   const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
   
+  const playerKey = activeSource ? `${activeSource.type}-${activeSource.id}-${activeSource.url}` : 'no-active-source';
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
       <Container className="py-4 md:py-6 flex-grow w-full">
@@ -349,29 +392,31 @@ export default function PlayerPage() {
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative plyr-container">
               
               <div style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
-                {/* PlyrComponent is always in the DOM for its ref, but its source is dynamic.
-                    It will be effectively "empty" if plyrSourceToPlay is undefined.
-                    No key on PlyrComponent means it doesn't re-mount for mp4/m3u8 changes; source is updated.
-                */}
                 <PlyrComponent
-                  ref={plyrComponentRef}
-                  source={plyrSourceToPlay} // This will be undefined when displayMode is 'iframe'
+                  key={playerKey} // Keyed for full remount on source type or fundamental change
+                  ref={(plyrReactInstance) => {
+                    if (plyrReactInstance) {
+                        plyrInstanceRef.current = plyrReactInstance.plyr;
+                    } else {
+                        plyrInstanceRef.current = null; // Clear ref if component unmounts
+                    }
+                  }}
+                  source={plyrSourceToPlay}
                   options={plyrOptions}
                 />
               </div>
 
               {displayMode === 'iframe' && activeSource && activeSource.type === 'embed' && (
                  <iframe
-                    key={activeSource.url} // Re-key iframe by URL to force reload on change
+                    key={playerKey} // Keyed for full remount
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
-                    className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]" // Positioned to overlay
+                    className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
               )}
               
-              {/* Placeholder for when no player is active */}
               {displayMode === 'none' && !pageIsLoading && !playerError && (
                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-card pointer-events-none">
                       <PlayIconFallback className="w-24 h-24 opacity-30" />
@@ -385,19 +430,19 @@ export default function PlayerPage() {
                   </div>
               )}
 
-               {pageIsLoading && !activeSource && ( // Initial loading overlay
+               {pageIsLoading && !activeSource && (
                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
                       <Loader2 className="w-10 h-10 animate-spin text-primary" />
                       <p className="text-sm text-primary-foreground mt-2">Loading Episode...</p>
                   </div>
               )}
-              {playerError && ( // Error overlay
+              {playerError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center z-30">
                   <AlertTriangle className="w-10 h-10 text-destructive mb-2" />
                   <p className="text-destructive-foreground text-sm">{playerError}</p>
                   <Button variant="outline" size="sm" className="mt-3" onClick={() => {
                     setPlayerError(null);
-                    if (activeSource) handleServerSelect(activeSource); // Attempt to re-select current server
+                    if (activeSource) handleServerSelect(activeSource);
                   }}>Dismiss</Button>
                 </div>
               )}
@@ -405,7 +450,7 @@ export default function PlayerPage() {
 
             <div className="player-report-banner p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
               <MessageSquareWarning className="w-5 h-5 flex-shrink-0"/>
-              <span>If the video is not working or is the wrong episode, please report it. (Reporting feature coming soon!)</span>
+              <span>If the video is not working or is the wrong episode, please report it using the button below.</span>
             </div>
 
             <div className="px-1 sm:px-0 space-y-3 mb-6">
@@ -415,7 +460,71 @@ export default function PlayerPage() {
                 </h1>
                 <div className="flex items-center space-x-1.5">
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Download (Coming Soon)"><Download size={16}/></Button>
-                  <Button variant="outline" size="icon" className="w-8 h-8" title="Report Issue (Coming Soon)"><AlertTriangle size={16}/></Button>
+                  
+                  <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="icon" className="w-8 h-8" title="Report Issue">
+                        <AlertTriangle size={16}/>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[480px] bg-card border-border">
+                      <DialogHeader>
+                        <DialogTitlePrimitive className="text-primary">Report an Issue</DialogTitlePrimitive>
+                        <DialogDescriptionPrimitive className="text-muted-foreground pt-1 text-xs">
+                          Anime: {anime?.title} - Ep: {currentEpisode?.episodeNumber} ({currentEpisode?.title})
+                          <br />
+                          Source: {activeSource?.label} ({activeSource?.url})
+                        </DialogDescriptionPrimitive>
+                      </DialogHeader>
+                      <Form {...reportForm}>
+                        <form onSubmit={reportForm.handleSubmit(handleReportSubmit)} className="space-y-4 pt-2">
+                          <FormField
+                            control={reportForm.control}
+                            name="issueType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Issue Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="bg-input border-border/70 focus:border-primary">
+                                      <SelectValue placeholder="Select an issue type" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {issueTypes.map(type => (
+                                      <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={reportForm.control}
+                            name="description"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Description</FormLabel>
+                                <FormControl>
+                                  <Textarea placeholder="Please describe the issue in detail..." {...field} className="bg-input border-border/70 focus:border-primary min-h-[80px]" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <DialogFooter className="pt-2">
+                            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                            <Button type="submit" disabled={reportForm.formState.isSubmitting} className="btn-primary-gradient">
+                              {reportForm.formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Submit Report
+                            </Button>
+                          </DialogFooter>
+                        </form>
+                      </Form>
+                    </DialogContent>
+                  </Dialog>
+
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Autoplay Settings (Coming Soon)"><Settings2 size={16}/></Button>
                 </div>
               </div>
@@ -612,12 +721,3 @@ export default function PlayerPage() {
     </div>
   );
 }
-
-// Suspense wrapper for AnimeInteractionControls on the player page as it might fetch user data
-// This component is unused here but kept from previous version for reference if needed elsewhere.
-// const PlayerPageAnimeInteractionControls = (props: { anime: Anime; className?: string }) => (
-//   <React.Suspense fallback={<div className="flex gap-3"><Skeleton className="h-10 w-32 rounded-md" /><Skeleton className="h-10 w-32 rounded-md" /></div>}>
-//     <AnimeInteractionControls {...props} />
-//   </React.Suspense>
-// );
-    
