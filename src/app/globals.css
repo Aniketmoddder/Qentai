@@ -27,14 +27,14 @@
     --secondary-foreground: 230 20% 7%; /* Darker for contrast on secondary */
     --muted: 230 10% 15%;  /* #1F2029 - Darker Muted */
     --muted-foreground: 220 10% 60%; /* Lighter Muted Text */
-    --accent: 337 88% 70%; /* #F472B6 - Modern Candy Pink */
-    --accent-foreground: 230 20% 7%; /* Dark text for pink accent */
+    --accent: 188 82% 57%; /* #22D3EE - Aqua Glow (NEW ACCENT) */
+    --accent-foreground: 230 20% 7%; /* Dark text for new accent */
     --destructive: 0 75% 58%; /* #E11D48 */
     --destructive-foreground: 0 0% 98%;
     --border: 230 8% 20%; /* #2A2E3B - Muted Divider Gray */
     --input: 230 10% 9%; /* #101015 - Slightly darker input */
     --ring: 200 90% 65%; /* #38BDF8 with slightly more pop for rings */
-    --highlight: 188 82% 57%; /* #22D3EE - Aqua Glow */
+    --highlight: 337 88% 70%; /* #F472B6 - Modern Candy Pink (Original accent becomes highlight) */
     --surface: 230 12% 11%; /* #1E1B2E - Deep UI Card Color (used for card-like surfaces) */
     --text-heading: hsl(var(--foreground));
     --text-body: 220 12% 88%; /* #D9DCE1 - Slightly softer than pure foreground for body */
@@ -44,12 +44,12 @@
     /* Raw HSL for GSAP & Gradients */
     --primary-raw-hsl: 262 89% 66%;
     --secondary-raw-hsl: 200 90% 60%;
-    --accent-raw-hsl: 337 88% 70%;
-    --highlight-raw-hsl: 188 82% 57%;
+    --accent-raw-hsl: 188 82% 57%; /* UPDATED */
+    --highlight-raw-hsl: 337 88% 70%; /* UPDATED */
     --border-raw-hsl: 230 8% 20%;
     --background-raw-hsl: 230 10% 6%;
     --foreground-raw-hsl: 220 15% 96%;
-    --ranking-number-stroke-color-raw-hsl: 230 8% 20%; /* Muted Divider Gray for stroke */
+    --ranking-number-stroke-color-raw-hsl: 230 8% 20%; 
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
     /* Plyr Player Theme Variables */
     --plyr-color-main: hsl(var(--primary));
@@ -74,17 +74,19 @@
     --primary: 250 66% 62%; --primary-foreground: 0 0% 100%;
     --secondary: 173 78% 40%; --secondary-foreground: 0 0% 100%;
     --muted: 220 14% 93%; --muted-foreground: 220 10% 45%;
-    --accent: 270 85% 77%; --accent-foreground: 222 47% 11%;
+    --accent: 173 70% 50%; /* #29B9A3 - Vibrant Teal (NEW ACCENT) */
+    --accent-foreground: 0 0% 100%; /* White text for new accent */
     --destructive: 0 84% 60%; --destructive-foreground: 0 0% 100%;
     --border: 220 13% 91%; --input: 0 0% 100%; --ring: 250 66% 67%;
-    --highlight: 262 84% 72%; --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
-    --chart-1: 250 66% 62%; --chart-2: 173 78% 40%; --chart-3: 270 85% 77%; --chart-4: 262 84% 72%; --chart-5: 220 10% 65%;
+    --highlight: 270 85% 77%; /* Original accent #C084FC becomes highlight */
+    --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
+    --chart-1: 250 66% 62%; --chart-2: 173 78% 40%; --chart-3: 173 70% 50%; --chart-4: 270 85% 77%; --chart-5: 220 10% 65%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.1); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
     /* Raw HSL */
     --primary-raw-hsl: 250 66% 62%;
     --secondary-raw-hsl: 173 78% 40%;
-    --accent-raw-hsl: 270 85% 77%;
-    --highlight-raw-hsl: 262 84% 72%;
+    --accent-raw-hsl: 173 70% 50%; /* UPDATED */
+    --highlight-raw-hsl: 270 85% 77%; /* UPDATED */
     --border-raw-hsl: 220 13% 91%;
     --background-raw-hsl: 220 60% 98%;
     --foreground-raw-hsl: 222 47% 11%;
@@ -113,17 +115,19 @@
     --primary: 327 82% 60%; --primary-foreground: 287 100% 98%;
     --secondary: 352 96% 71%; --secondary-foreground: 287 50% 8%;
     --muted: 287 60% 11%; --muted-foreground: 287 30% 60%;
-    --accent: 337 88% 70%; --accent-foreground: 287 50% 8%;
+    --accent: 170 80% 55%; /* #33D6A9 - Bright Aqua/Teal (NEW ACCENT) */
+    --accent-foreground: 287 50% 8%; /* Dark text for new accent */
     --destructive: 0 70% 55%; --destructive-foreground: 0 0% 98%;
     --border: 287 67% 18%; --input: 287 67% 11%; --ring: 327 82% 65%;
-    --highlight: 291 92% 72%; --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
-    --chart-1: 327 82% 60%; --chart-2: 352 96% 71%; --chart-3: 337 88% 70%; --chart-4: 291 92% 72%; --chart-5: 287 30% 60%;
+    --highlight: 337 88% 70%; /* Original accent #F472B6 becomes highlight */
+    --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
+    --chart-1: 327 82% 60%; --chart-2: 352 96% 71%; --chart-3: 170 80% 55%; --chart-4: 337 88% 70%; --chart-5: 287 30% 60%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.2); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
     /* Raw HSL */
     --primary-raw-hsl: 327 82% 60%;
     --secondary-raw-hsl: 352 96% 71%;
-    --accent-raw-hsl: 337 88% 70%;
-    --highlight-raw-hsl: 291 92% 72%;
+    --accent-raw-hsl: 170 80% 55%; /* UPDATED */
+    --highlight-raw-hsl: 337 88% 70%; /* UPDATED */
     --border-raw-hsl: 287 67% 18%;
     --background-raw-hsl: 287 50% 8%;
     --foreground-raw-hsl: 287 100% 98%;
@@ -152,17 +156,19 @@
     --primary: 180 100% 50%; --primary-foreground: 231 25% 8%;
     --secondary: 300 100% 50%; --secondary-foreground: 231 25% 8%;
     --muted: 231 25% 10%; --muted-foreground: 220 10% 55%;
-    --accent: 157 100% 50%; --accent-foreground: 231 25% 8%;
+    --accent: 70 100% 50%; /* #D4FF00 - Acid Yellow/Lime (NEW ACCENT) */
+    --accent-foreground: 231 25% 8%; /* Dark text for new accent */
     --destructive: 0 100% 60%; --destructive-foreground: 0 0% 98%;
     --border: 231 25% 20%; --input: 231 25% 10%; --ring: 180 100% 55%;
-    --highlight: 250 66% 62%; --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.5rem;
-    --chart-1: 180 100% 50%; --chart-2: 300 100% 50%; --chart-3: 157 100% 50%; --chart-4: 250 66% 62%; --chart-5: 220 10% 70%;
+    --highlight: 157 100% 50%; /* Original accent #34D399 becomes highlight */
+    --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.5rem;
+    --chart-1: 180 100% 50%; --chart-2: 300 100% 50%; --chart-3: 70 100% 50%; --chart-4: 157 100% 50%; --chart-5: 220 10% 70%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.25); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
     /* Raw HSL */
     --primary-raw-hsl: 180 100% 50%;
     --secondary-raw-hsl: 300 100% 50%;
-    --accent-raw-hsl: 157 100% 50%;
-    --highlight-raw-hsl: 250 66% 62%;
+    --accent-raw-hsl: 70 100% 50%; /* UPDATED */
+    --highlight-raw-hsl: 157 100% 50%; /* UPDATED */
     --border-raw-hsl: 231 25% 20%;
     --background-raw-hsl: 231 25% 8%;
     --foreground-raw-hsl: 220 13% 91%;
@@ -397,3 +403,5 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 4px hsl(var(--ring) / 0.3);
 }
+
+    

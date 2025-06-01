@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 
 const videoSourceSchema = z.object({
   id: z.string().optional(),
@@ -31,6 +32,7 @@ const videoSourceSchema = z.object({
 });
 type VideoSourceFormData = z.infer<typeof videoSourceSchema>;
 
+// Episode schema is not directly used for a form here, but for type validation internally
 const episodeSchema = z.object({
   id: z.string(),
   title: z.string().min(1, "Episode title is required."),
@@ -47,14 +49,15 @@ type EpisodeFormData = z.infer<typeof episodeSchema>;
 export default function EpisodeEditorTab() {
   const [allAnimes, setAllAnimes] = useState<Anime[]>([]);
   const [selectedAnime, setSelectedAnime] = useState<Anime | null>(null);
-  const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null);
+  // selectedEpisodeForDialog is used to pass context to the source dialog
+  const [selectedEpisodeForDialog, setSelectedEpisodeForDialog] = useState<Episode | null>(null);
   
   const [isLoadingAnimes, setIsLoadingAnimes] = useState(true);
-  const [isUpdatingEpisode, setIsUpdatingEpisode] = useState(false);
+  const [isUpdatingEpisode, setIsUpdatingEpisode] = useState(false); // General busy state for any episode update
   const [error, setError] = useState<string | null>(null);
   
   const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
-  const [editingSource, setEditingSource] = useState<VideoSource | null>(null);
+  const [editingSource, setEditingSource] = useState<VideoSource | null>(null); // The source being edited, or null if adding
   const [sourceDialogKey, setSourceDialogKey] = useState(Date.now()); // To reset dialog form
 
   const { toast } = useToast();
@@ -87,19 +90,19 @@ export default function EpisodeEditorTab() {
     setError(null);
     const anime = allAnimes.find(a => a.id === animeId);
     setSelectedAnime(anime || null);
-    setSelectedEpisode(null); // Reset selected episode when anime changes
+    setSelectedEpisodeForDialog(null); 
   };
 
   const openAddSourceDialog = (episode: Episode) => {
-    setSelectedEpisode(episode);
+    setSelectedEpisodeForDialog(episode);
     setEditingSource(null);
     sourceForm.reset({ url: '', label: '', type: 'mp4', category: 'SUB', quality: '' });
-    setSourceDialogKey(Date.now()); // Reset form by changing key
+    setSourceDialogKey(Date.now()); 
     setIsSourceDialogOpen(true);
   };
 
   const openEditSourceDialog = (episode: Episode, source: VideoSource) => {
-    setSelectedEpisode(episode);
+    setSelectedEpisodeForDialog(episode);
     setEditingSource(source);
     sourceForm.reset(source);
     setSourceDialogKey(Date.now());
@@ -107,32 +110,31 @@ export default function EpisodeEditorTab() {
   };
 
   const handleSourceFormSubmit = async (data: VideoSourceFormData) => {
-    if (!selectedAnime || !selectedEpisode) return;
+    if (!selectedAnime || !selectedEpisodeForDialog) return;
     setIsUpdatingEpisode(true);
 
     let updatedSources: VideoSource[];
-    if (editingSource) { // Editing existing source
-      updatedSources = (selectedEpisode.sources || []).map(s => s.id === editingSource.id ? { ...s, ...data } : s);
-    } else { // Adding new source
+    if (editingSource) { 
+      updatedSources = (selectedEpisodeForDialog.sources || []).map(s => s.id === editingSource.id ? { ...s, ...data, id: s.id } : s);
+    } else { 
       const newSource: VideoSource = { ...data, id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` };
-      updatedSources = [...(selectedEpisode.sources || []), newSource];
+      updatedSources = [...(selectedEpisodeForDialog.sources || []), newSource];
     }
 
     try {
-      await updateAnimeEpisode(selectedAnime.id, selectedEpisode.id, { sources: updatedSources });
-      toast({ title: 'Episode Sources Updated', description: `Sources for Ep ${selectedEpisode.episodeNumber} of ${selectedAnime.title} saved.` });
+      await updateAnimeEpisode(selectedAnime.id, selectedEpisodeForDialog.id, { sources: updatedSources });
+      toast({ title: 'Episode Sources Updated', description: `Sources for Ep ${selectedEpisodeForDialog.episodeNumber} of ${selectedAnime.title} saved.` });
       
-      // Refresh local state
       setSelectedAnime(prevAnime => {
         if (!prevAnime) return null;
         return {
           ...prevAnime,
           episodes: (prevAnime.episodes || []).map(ep => 
-            ep.id === selectedEpisode.id ? { ...ep, sources: updatedSources } : ep
+            ep.id === selectedEpisodeForDialog.id ? { ...ep, sources: updatedSources } : ep
           )
         };
       });
-       setSelectedEpisode(prevEp => prevEp ? { ...prevEp, sources: updatedSources } : null);
+       setSelectedEpisodeForDialog(prevEp => prevEp ? { ...prevEp, sources: updatedSources } : null);
 
       setIsSourceDialogOpen(false);
     } catch (err) {
@@ -160,7 +162,10 @@ export default function EpisodeEditorTab() {
           )
         };
       });
-       setSelectedEpisode(prevEp => prevEp ? { ...prevEp, sources: updatedSources } : null);
+       // Update the selectedEpisodeForDialog if it's the one being modified
+      if (selectedEpisodeForDialog && selectedEpisodeForDialog.id === episode.id) {
+        setSelectedEpisodeForDialog({ ...selectedEpisodeForDialog, sources: updatedSources });
+      }
     } catch (err) {
       console.error('Failed to delete source:', err);
       toast({ variant: 'destructive', title: 'Delete Error', description: 'Failed to delete source.' });
@@ -169,6 +174,31 @@ export default function EpisodeEditorTab() {
     }
   };
   
+  const handleEpisodeDetailsUpdate = async (episodeId: string, details: Partial<Pick<Episode, 'title' | 'overview' | 'duration' | 'thumbnail'>>) => {
+    if (!selectedAnime) return;
+    setIsUpdatingEpisode(true);
+    try {
+      await updateAnimeEpisode(selectedAnime.id, episodeId, details);
+      toast({ title: 'Episode Details Updated', description: `Details for episode saved.` });
+      
+      setSelectedAnime(prevAnime => {
+        if (!prevAnime) return null;
+        return {
+          ...prevAnime,
+          episodes: (prevAnime.episodes || []).map(e => 
+            e.id === episodeId ? { ...e, ...details } : e
+          )
+        };
+      });
+    } catch (err) {
+      console.error("Error updating episode details:", err);
+      toast({ variant: 'destructive', title: 'Update Error', description: 'Failed to update episode details.' });
+    } finally {
+      setIsUpdatingEpisode(false);
+    }
+  };
+
+
   const sortedEpisodes = React.useMemo(() => {
     return (selectedAnime?.episodes || []).slice().sort((a, b) => {
         if ((a.seasonNumber || 0) !== (b.seasonNumber || 0)) {
@@ -234,29 +264,7 @@ export default function EpisodeEditorTab() {
                       onEditSource={(source) => openEditSourceDialog(episode, source)}
                       onDeleteSource={(sourceId) => handleDeleteSource(episode, sourceId)}
                       isUpdating={isUpdatingEpisode}
-                      onUpdateEpisodeDetails={async (epId, details) => {
-                        if (!selectedAnime) return;
-                        setIsUpdatingEpisode(true);
-                        try {
-                            await updateAnimeEpisode(selectedAnime.id, epId, details);
-                            toast({ title: 'Episode Details Updated', description: `Details for Ep ${episode.episodeNumber} of ${selectedAnime.title} saved.` });
-                            // Refresh local state for selectedAnime
-                            setSelectedAnime(prevAnime => {
-                                if (!prevAnime) return null;
-                                return {
-                                ...prevAnime,
-                                episodes: (prevAnime.episodes || []).map(e => 
-                                    e.id === epId ? { ...e, ...details } : e
-                                )
-                                };
-                            });
-                        } catch (err) {
-                            console.error("Error updating episode details:", err);
-                            toast({ variant: 'destructive', title: 'Update Error', description: 'Failed to update episode details.' });
-                        } finally {
-                            setIsUpdatingEpisode(false);
-                        }
-                      }}
+                      onUpdateEpisodeDetails={handleEpisodeDetailsUpdate}
                     />
                   ))}
                 </div>
@@ -287,7 +295,7 @@ export default function EpisodeEditorTab() {
                 <Button type="button" variant="outline">Cancel</Button>
               </DialogClose>
               <Button type="submit" disabled={isUpdatingEpisode} className="btn-primary-gradient">
-                {isUpdatingEpisode ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isUpdatingEpisode && selectedEpisodeForDialog?.id === (editingSource ? editingSource.id : undefined) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 {editingSource ? 'Save Changes' : 'Add Source'}
               </Button>
             </DialogFooter>
@@ -305,7 +313,7 @@ interface EpisodeCardProps {
   onAddSource: () => void;
   onEditSource: (source: VideoSource) => void;
   onDeleteSource: (sourceId: string) => void;
-  isUpdating: boolean;
+  isUpdating: boolean; // General updating state from parent
   onUpdateEpisodeDetails: (episodeId: string, details: Partial<Pick<Episode, 'title' | 'overview' | 'duration' | 'thumbnail'>>) => Promise<void>;
 }
 
@@ -315,6 +323,8 @@ function EpisodeCard({ episode, selectedAnimeType, onAddSource, onEditSource, on
   const [localDuration, setLocalDuration] = useState(episode.duration || '');
   const [localThumbnail, setLocalThumbnail] = useState(episode.thumbnail || '');
   const [hasChanges, setHasChanges] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+
 
   useEffect(() => {
     setLocalTitle(episode.title);
@@ -326,14 +336,16 @@ function EpisodeCard({ episode, selectedAnimeType, onAddSource, onEditSource, on
 
   const handleDetailChange = () => setHasChanges(true);
 
-  const handleSaveDetails = () => {
-    onUpdateEpisodeDetails(episode.id, {
+  const handleSaveDetails = async () => {
+    setIsSavingDetails(true);
+    await onUpdateEpisodeDetails(episode.id, {
       title: localTitle,
       overview: localOverview,
       duration: localDuration,
       thumbnail: localThumbnail,
     });
     setHasChanges(false);
+    setIsSavingDetails(false);
   };
 
 
@@ -342,7 +354,9 @@ function EpisodeCard({ episode, selectedAnimeType, onAddSource, onEditSource, on
       <CardHeader className="p-3 sm:p-4 pb-2">
         <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
             <div className="flex-grow">
-                <Label htmlFor={`ep-title-${episode.id}`} className="text-xs text-muted-foreground">S{episode.seasonNumber || 1} Ep{episode.episodeNumber || 1} Title</Label>
+                <Label htmlFor={`ep-title-${episode.id}`} className="text-xs text-muted-foreground">
+                  S{episode.seasonNumber || 1} Ep{episode.episodeNumber || (selectedAnimeType === 'Movie' ? 1 : (episode.episodeNumber || 'N/A'))} Title
+                </Label>
                 <Input 
                     id={`ep-title-${episode.id}`} 
                     value={localTitle} 
@@ -352,31 +366,33 @@ function EpisodeCard({ episode, selectedAnimeType, onAddSource, onEditSource, on
                     disabled={selectedAnimeType === 'Movie'}
                 />
             </div>
-          <Button onClick={onAddSource} size="sm" variant="outline" className="mt-2 sm:mt-0 text-xs hover:bg-primary/10 hover:border-primary self-start sm:self-center">
+          <Button onClick={onAddSource} size="sm" variant="outline" className="mt-2 sm:mt-0 text-xs hover:bg-primary/10 hover:border-primary self-start sm:self-center whitespace-nowrap">
             <PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Source
           </Button>
         </div>
       </CardHeader>
       <CardContent className="p-3 sm:p-4 pt-2 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor={`ep-overview-${episode.id}`} className="text-xs text-muted-foreground">Overview (Optional)</Label>
-            <Input id={`ep-overview-${episode.id}`} value={localOverview} onChange={(e) => { setLocalOverview(e.target.value); handleDetailChange(); }} className="h-9 text-sm bg-input" placeholder="Short summary..." disabled={selectedAnimeType === 'Movie'} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-                <Label htmlFor={`ep-duration-${episode.id}`} className="text-xs text-muted-foreground">Duration</Label>
-                <Input id={`ep-duration-${episode.id}`} value={localDuration} onChange={(e) => { setLocalDuration(e.target.value); handleDetailChange(); }} className="h-9 text-sm bg-input" placeholder="e.g., 24min" />
+        { selectedAnimeType !== 'Movie' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <Label htmlFor={`ep-overview-${episode.id}`} className="text-xs text-muted-foreground">Overview (Optional)</Label>
+                    <Textarea id={`ep-overview-${episode.id}`} value={localOverview} onChange={(e) => { setLocalOverview(e.target.value); handleDetailChange(); }} className="text-sm bg-input min-h-[40px] py-1.5" placeholder="Short summary..." rows={2}/>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div>
+                        <Label htmlFor={`ep-duration-${episode.id}`} className="text-xs text-muted-foreground">Duration</Label>
+                        <Input id={`ep-duration-${episode.id}`} value={localDuration} onChange={(e) => { setLocalDuration(e.target.value); handleDetailChange(); }} className="h-9 text-sm bg-input" placeholder="e.g., 24min" />
+                    </div>
+                    <div>
+                        <Label htmlFor={`ep-thumb-${episode.id}`} className="text-xs text-muted-foreground">Thumbnail URL</Label>
+                        <Input id={`ep-thumb-${episode.id}`} value={localThumbnail} onChange={(e) => { setLocalThumbnail(e.target.value); handleDetailChange(); }} type="url" className="h-9 text-sm bg-input" placeholder="https://..." />
+                    </div>
+                </div>
             </div>
-            <div>
-                <Label htmlFor={`ep-thumb-${episode.id}`} className="text-xs text-muted-foreground">Thumbnail URL</Label>
-                <Input id={`ep-thumb-${episode.id}`} value={localThumbnail} onChange={(e) => { setLocalThumbnail(e.target.value); handleDetailChange(); }} type="url" className="h-9 text-sm bg-input" placeholder="https://..." />
-            </div>
-          </div>
-        </div>
-         {hasChanges && (
-            <Button onClick={handleSaveDetails} size="sm" className="text-xs py-1.5 h-auto btn-primary-gradient" disabled={isUpdating}>
-                {isUpdating ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Save className="mr-1.5 h-3 w-3" />}
+        )}
+         {(hasChanges && selectedAnimeType !== 'Movie') && (
+            <Button onClick={handleSaveDetails} size="sm" className="text-xs py-1.5 h-auto btn-primary-gradient" disabled={isSavingDetails || isUpdating}>
+                {isSavingDetails ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <Save className="mr-1.5 h-3 w-3" />}
                 Save Details
             </Button>
         )}
@@ -387,17 +403,17 @@ function EpisodeCard({ episode, selectedAnimeType, onAddSource, onEditSource, on
         {(episode.sources && episode.sources.length > 0) ? (
           <div className="space-y-2.5">
             {episode.sources.map(source => (
-              <div key={source.id} className="flex items-center justify-between p-2.5 rounded-md bg-muted/40 border border-border/40 shadow-sm hover:border-primary/30 transition-colors">
-                <div className="flex-grow min-w-0 space-y-0.5">
+              <div key={source.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2.5 rounded-md bg-muted/40 border border-border/40 shadow-sm hover:border-primary/30 transition-colors">
+                <div className="flex-grow min-w-0 space-y-0.5 mb-2 sm:mb-0">
                   <p className="text-sm font-medium text-foreground truncate" title={source.label}>{source.label}</p>
-                  <p className="text-xs text-muted-foreground truncate" title={source.url}>{source.url}</p>
-                  <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-xs text-muted-foreground break-all" title={source.url}>{source.url}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap pt-1">
                     <Badge variant="secondary" className="text-[0.65rem] px-1.5 py-0.5">{source.type.toUpperCase()}</Badge>
                     <Badge variant={source.category === 'DUB' ? 'default' : 'outline'} className={`text-[0.65rem] px-1.5 py-0.5 ${source.category === 'DUB' ? 'bg-sky-500/20 text-sky-600 border-sky-500/30' : ''}`}>{source.category}</Badge>
                     {source.quality && <Badge variant="outline" className="text-[0.65rem] px-1.5 py-0.5">{source.quality}</Badge>}
                   </div>
                 </div>
-                <div className="flex-shrink-0 flex items-center gap-1.5 ml-2">
+                <div className="flex-shrink-0 flex items-center gap-1.5 ml-0 sm:ml-2 self-start sm:self-center">
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onEditSource(source)} disabled={isUpdating}>
                     <Edit3 size={14} /> <span className="sr-only">Edit</span>
                   </Button>
@@ -447,8 +463,8 @@ function FormFieldItem({ name, label, placeholder, form, type = "text" }: FormFi
   const { register, formState: { errors } } = form;
   return (
     <div className="space-y-1">
-      <Label htmlFor={name} className="text-sm font-medium">{label}</Label>
-      <Input id={name} type={type} placeholder={placeholder} {...register(name)} className="bg-input h-9 text-sm focus:border-primary" />
+      <Label htmlFor={`dialog-src-${name}`} className="text-sm font-medium">{label}</Label>
+      <Input id={`dialog-src-${name}`} type={type} placeholder={placeholder} {...register(name)} className="bg-input h-9 text-sm focus:border-primary" />
       {errors[name] && <p className="text-xs text-destructive mt-0.5">{(errors[name] as any).message}</p>}
     </div>
   );
@@ -465,13 +481,13 @@ function FormSelectItemField({ name, label, items, form, placeholder }: FormSele
   const { control, formState: { errors } } = form;
   return (
     <div className="space-y-1">
-      <Label htmlFor={name} className="text-sm font-medium">{label}</Label>
+      <Label htmlFor={`dialog-src-${name}`} className="text-sm font-medium">{label}</Label>
       <Controller
         name={name}
         control={control}
         render={({ field }) => (
           <Select onValueChange={field.onChange} value={String(field.value)} defaultValue={String(field.value)}>
-            <SelectTrigger id={name} className="bg-input h-9 text-sm focus:border-primary">
+            <SelectTrigger id={`dialog-src-${name}`} className="bg-input h-9 text-sm focus:border-primary">
               <SelectValue placeholder={placeholder || `Select ${label.toLowerCase()}`} />
             </SelectTrigger>
             <SelectContent>
@@ -486,6 +502,5 @@ function FormSelectItemField({ name, label, items, form, placeholder }: FormSele
     </div>
   );
 }
-
 
     

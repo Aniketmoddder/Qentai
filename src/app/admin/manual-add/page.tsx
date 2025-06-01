@@ -18,7 +18,7 @@ import { Loader2, PlusCircle, Trash2, Save, CloudUpload, Youtube, Wand, Link as 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { slugify } from '@/lib/stringUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger as AlertDialogTriggerPrimitive } from "@/components/ui/alert-dialog"; // Renamed Trigger to avoid conflict
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger as AlertDialogTriggerPrimitive } from "@/components/ui/alert-dialog"; 
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 
@@ -40,7 +40,7 @@ const episodeSchema = z.object({
   thumbnail: z.string().url('Must be a valid URL for thumbnail').optional().or(z.literal('')),
   duration: z.string().optional(),
   overview: z.string().optional(),
-  sources: z.array(videoSourceSchema).optional().default([]), // Default to empty array for new episodes
+  sources: z.array(videoSourceSchema).optional().default([]), 
 });
 
 const animeSchema = z.object({
@@ -70,10 +70,9 @@ export default function ManualAddTab() {
   const [availableGenres, setAvailableGenres] = useState<string[]>(INITIAL_GENRES);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
-  // State for managing source dialog
   const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState<number | null>(null);
-  const [editingSource, setEditingSource] = useState<{ source: VideoSource; sourceIndex: number } | null>(null);
+  const [editingSourceInfo, setEditingSourceInfo] = useState<{ episodeIndex: number; sourceIndex: number; source: VideoSourceFormData } | null>(null);
   const [sourceDialogKey, setSourceDialogKey] = useState(Date.now());
 
   const form = useForm<AnimeFormData>({
@@ -88,9 +87,6 @@ export default function ManualAddTab() {
     control: form.control, name: "episodes"
   });
   
-  // useFieldArray for sources within each episode
-  // This needs to be handled dynamically for each episode in the EpisodeItem component
-
   const watchType = form.watch("type");
   const watchTitle = form.watch("title");
 
@@ -115,17 +111,19 @@ export default function ManualAddTab() {
   useEffect(() => {
     const animeTitleSlug = slugify(watchTitle || 'movie');
     if (watchType === 'Movie') {
-        replaceEpisodes([{
-            id: `${animeTitleSlug}-s1e1-${Date.now()}`.toLowerCase(), title: "Full Movie", episodeNumber: 1, seasonNumber: 1,
-            sources: [], thumbnail: '', duration: '', overview: ''
-        }]);
+        if (episodeFields.length === 0 || (episodeFields.length > 0 && episodeFields[0].title !== "Full Movie")) {
+             replaceEpisodes([{
+                id: `${animeTitleSlug}-s1e1-${Date.now()}`.toLowerCase(), title: "Full Movie", episodeNumber: 1, seasonNumber: 1,
+                sources: [], thumbnail: '', duration: '', overview: ''
+            }]);
+        }
     } else {
         if (episodeFields.length === 1 && episodeFields[0].title === "Full Movie") {
             replaceEpisodes([]);
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [watchType, watchTitle, replaceEpisodes]);
+  }, [watchType, watchTitle, replaceEpisodes]); // Removed episodeFields from dependency array to avoid loop on RHF update
 
   const handleGenreChange = (genre: string) => {
     const newSelectedGenres = selectedGenres.includes(genre) ? selectedGenres.filter(g => g !== genre) : [...selectedGenres, genre];
@@ -140,16 +138,16 @@ export default function ManualAddTab() {
         ...data,
         aniListId: data.aniListId || undefined,
         episodes: (data.episodes || []).map((ep, index) => {
-            const animeTitleSlug = slugify(data.title);
+            const animeTitleSlug = slugify(data.title || `item-${index}`);
             return {
                 ...ep,
                 id: ep.id || `${animeTitleSlug}-s${ep.seasonNumber || 1}e${ep.episodeNumber || (index + 1)}-${Date.now()}`.toLowerCase(),
                 sources: (ep.sources || []).map((source, sourceIdx) => ({
                     ...source,
                     id: source.id || `source-${animeTitleSlug}-ep${ep.episodeNumber || index}-${Date.now()}-${sourceIdx}`,
-                    url: source.url || null, // Ensure empty string becomes null
+                    url: source.url || '', 
                 })),
-                url: undefined, // Remove old top-level URL
+                url: undefined, 
             };
         }),
         trailerUrl: data.trailerUrl || undefined,
@@ -170,47 +168,49 @@ export default function ManualAddTab() {
     }
   };
 
-  // Source Dialog Management
-  const sourceForm = useForm<VideoSourceFormData>({
+  const sourceFormMethods = useForm<VideoSourceFormData>({
     resolver: zodResolver(videoSourceSchema),
     defaultValues: { url: '', label: '', type: 'mp4', category: 'SUB', quality: '' },
   });
 
   const openAddSourceDialog = (epIndex: number) => {
     setCurrentEpisodeIndex(epIndex);
-    setEditingSource(null);
-    sourceForm.reset({ url: '', label: '', type: 'mp4', category: 'SUB', quality: '' });
+    setEditingSourceInfo(null);
+    sourceFormMethods.reset({ url: '', label: '', type: 'mp4', category: 'SUB', quality: '' });
     setSourceDialogKey(Date.now());
     setIsSourceDialogOpen(true);
   };
 
-  const openEditSourceDialog = (epIndex: number, source: VideoSource, sourceIdx: number) => {
+  const openEditSourceDialog = (epIndex: number, source: VideoSourceFormData, sourceIdx: number) => {
     setCurrentEpisodeIndex(epIndex);
-    setEditingSource({ source, sourceIndex: sourceIdx });
-    sourceForm.reset(source);
+    setEditingSourceInfo({ episodeIndex: epIndex, sourceIndex: sourceIdx, source: source });
+    sourceFormMethods.reset(source);
     setSourceDialogKey(Date.now());
     setIsSourceDialogOpen(true);
   };
 
   const handleSourceFormSubmit = (data: VideoSourceFormData) => {
     if (currentEpisodeIndex === null) return;
-    const currentEp = episodeFields[currentEpisodeIndex];
-    let updatedSources: VideoSource[];
+    
+    const currentEp = form.getValues(`episodes.${currentEpisodeIndex}`);
+    let updatedSources: VideoSourceFormData[];
 
-    if (editingSource) { // Editing
+    if (editingSourceInfo && editingSourceInfo.episodeIndex === currentEpisodeIndex) { // Editing
       updatedSources = (currentEp.sources || []).map((s, idx) =>
-        idx === editingSource.sourceIndex ? { ...s, ...data, id: s.id } : s // Preserve ID on edit
+        idx === editingSourceInfo.sourceIndex ? { ...s, ...data, id: s.id || `source-${Date.now()}` } : s 
       );
     } else { // Adding
-      const newSource: VideoSource = { ...data, id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` };
+      const newSource: VideoSourceFormData = { ...data, id: `source-${Date.now()}-${Math.random().toString(36).substr(2, 5)}` };
       updatedSources = [...(currentEp.sources || []), newSource];
     }
     updateEpisodeField(currentEpisodeIndex, { ...currentEp, sources: updatedSources });
     setIsSourceDialogOpen(false);
+    setEditingSourceInfo(null);
+    setCurrentEpisodeIndex(null);
   };
 
   const handleDeleteSource = (epIndex: number, sourceIndex: number) => {
-    const currentEp = episodeFields[epIndex];
+    const currentEp = form.getValues(`episodes.${epIndex}`);
     const updatedSources = (currentEp.sources || []).filter((_, idx) => idx !== sourceIndex);
     updateEpisodeField(epIndex, { ...currentEp, sources: updatedSources });
   };
@@ -269,9 +269,10 @@ export default function ManualAddTab() {
             <CardContent className="p-0">
               {episodeFields.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No episodes added yet.</p>}
               <ScrollArea className={episodeFields.length > 0 ? "max-h-[500px] space-y-3 pr-2 -mr-2" : "space-y-3"}>
-                {episodeFields.map((episode, epIndex) => (
+                {episodeFields.map((episodeItem, epIndex) => ( // episodeItem is from useFieldArray, episode is the data
                   <EpisodeItem
-                    key={episode.id}
+                    key={episodeItem.id}
+                    episodeData={form.getValues(`episodes.${epIndex}`)} // Pass actual episode data
                     episodeIndex={epIndex}
                     form={form}
                     removeEpisode={removeEpisode}
@@ -296,44 +297,45 @@ export default function ManualAddTab() {
     <Dialog open={isSourceDialogOpen} onOpenChange={setIsSourceDialogOpen}>
         <DialogContent key={sourceDialogKey} className="sm:max-w-[550px] bg-card border-border shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-primary">{editingSource ? 'Edit Source' : 'Add New Source'}</DialogTitle>
+            <DialogTitle className="text-primary">{editingSourceInfo ? 'Edit Source' : 'Add New Source'}</DialogTitle>
             <DialogDescription>Provide details for the video source. Ensure URL is correct and accessible.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={sourceForm.handleSubmit(handleSourceFormSubmit)} className="space-y-4 py-2">
-            <DialogFormFieldItem name="label" label="Label / Server Name" placeholder="e.g., Server A - FastStream, VidPlay SUB" form={sourceForm} />
-            <DialogFormFieldItem name="url" label="Video URL (.mp4, .m3u8, or embed link)" placeholder="https://example.com/video.mp4" form={sourceForm} />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <DialogFormSelectItemField name="type" label="Type" items={['mp4', 'm3u8', 'embed']} form={sourceForm} placeholder="Select source type"/>
-                <DialogFormSelectItemField name="category" label="Category" items={['SUB', 'DUB']} form={sourceForm} placeholder="Select category"/>
-            </div>
-            <DialogFormFieldItem name="quality" label="Quality (Optional)" placeholder="e.g., 720p, 1080p, HD" form={sourceForm} />
-            <DialogFooter className="pt-4">
-              <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-              <Button type="submit" className="btn-primary-gradient">
-                <Save className="mr-2 h-4 w-4" /> {editingSource ? 'Save Changes' : 'Add Source'}
-              </Button>
-            </DialogFooter>
-          </form>
+          <Form {...sourceFormMethods}>
+            <form onSubmit={sourceFormMethods.handleSubmit(handleSourceFormSubmit)} className="space-y-4 py-2">
+                <DialogFormFieldItem name="label" label="Label / Server Name" placeholder="e.g., Server A - FastStream, VidPlay SUB" form={sourceFormMethods} />
+                <DialogFormFieldItem name="url" label="Video URL (.mp4, .m3u8, or embed link)" placeholder="https://example.com/video.mp4" form={sourceFormMethods} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <DialogFormSelectItemField name="type" label="Type" items={['mp4', 'm3u8', 'embed']} form={sourceFormMethods} placeholder="Select source type"/>
+                    <DialogFormSelectItemField name="category" label="Category" items={['SUB', 'DUB']} form={sourceFormMethods} placeholder="Select category"/>
+                </div>
+                <DialogFormFieldItem name="quality" label="Quality (Optional)" placeholder="e.g., 720p, 1080p, HD" form={sourceFormMethods} />
+                <DialogFooter className="pt-4">
+                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
+                <Button type="submit" className="btn-primary-gradient">
+                    <Save className="mr-2 h-4 w-4" /> {editingSourceInfo ? 'Save Changes' : 'Add Source'}
+                </Button>
+                </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </>
   );
 }
 
-// Episode Item for Manual Add Tab
 interface EpisodeItemProps {
+  episodeData: Episode; 
   episodeIndex: number;
   form: ReturnType<typeof useForm<AnimeFormData>>;
   removeEpisode: (index: number) => void;
   openAddSourceDialog: (epIndex: number) => void;
-  openEditSourceDialog: (epIndex: number, source: VideoSource, sourceIdx: number) => void;
+  openEditSourceDialog: (epIndex: number, source: VideoSourceFormData, sourceIdx: number) => void;
   handleDeleteSource: (epIndex: number, sourceIndex: number) => void;
   isMovie: boolean;
 }
 
-function EpisodeItem({ episodeIndex, form, removeEpisode, openAddSourceDialog, openEditSourceDialog, handleDeleteSource, isMovie }: EpisodeItemProps) {
-  const episode = form.watch(`episodes.${episodeIndex}`);
-  const sources = episode?.sources || [];
+function EpisodeItem({ episodeData, episodeIndex, form, removeEpisode, openAddSourceDialog, openEditSourceDialog, handleDeleteSource, isMovie }: EpisodeItemProps) {
+  const sources = episodeData?.sources || [];
   
   return (
     <Card className="p-3 border rounded-md bg-card/50 space-y-2.5 relative mt-2 first:mt-0 shadow-sm">
@@ -359,16 +361,30 @@ function EpisodeItem({ episodeIndex, form, removeEpisode, openAddSourceDialog, o
         </>
       )}
 
-      {isMovie && sources.length > 0 && ( // For movie, only show first source editing if exists
+      {isMovie && sources.length > 0 && ( 
         <>
-          <FormFieldItem name={`episodes.${episodeIndex}.sources.0.url`} label="Movie Video URL" placeholder="https://example.com/movie.mp4" form={form} fieldIndex={episodeIndex}/>
-          <FormFieldItem name={`episodes.${episodeIndex}.sources.0.thumbnail`} label="Movie Thumbnail URL (Optional)" placeholder="https://example.com/movie_thumb.jpg" form={form} fieldIndex={episodeIndex}/>
-          <FormFieldItem name={`episodes.${episodeIndex}.sources.0.duration`} label="Movie Duration (e.g., 1h 30min)" placeholder="e.g., 1h 30min" form={form} fieldIndex={episodeIndex}/>
+          {/* For movie, source editing is handled via dialog. Here we can display the first source if it exists */}
+          <div className="text-sm text-muted-foreground">Main Movie Source:</div>
+           <div className="flex items-center justify-between p-1.5 rounded-md bg-muted/30 border border-border/30 text-xs">
+             <div className="flex-grow min-w-0">
+               <p className="font-medium text-foreground/90 truncate" title={sources[0].label}>{sources[0].label}</p>
+                <div className="flex items-center gap-1">
+                    <Badge variant="secondary" className="text-[0.6rem] px-1 py-0">{sources[0].type.toUpperCase()}</Badge>
+                    <Badge variant={sources[0].category === 'DUB' ? 'default' : 'outline'} className={`text-[0.6rem] px-1 py-0 ${sources[0].category === 'DUB' ? 'bg-sky-500/15 text-sky-600 border-sky-500/20' : ''}`}>{sources[0].category}</Badge>
+                    {sources[0].quality && <Badge variant="outline" className="text-[0.6rem] px-1 py-0">{sources[0].quality}</Badge>}
+                </div>
+             </div>
+             <div className="flex-shrink-0 flex items-center gap-0.5 ml-1">
+                <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => openEditSourceDialog(episodeIndex, sources[0] as VideoSourceFormData, 0)}>
+                    <Edit3 size={12} />
+                </Button>
+             </div>
+           </div>
         </>
       )}
-      {isMovie && sources.length === 0 && ( // For movie, if no sources, add a default one
+      {isMovie && ( 
           <Button type="button" onClick={() => openAddSourceDialog(episodeIndex)} size="sm" variant="outline" className="w-full mt-2">
-            <PlusCircle className="mr-1.5 h-4 w-4" /> Add Movie Source
+            <PlusCircle className="mr-1.5 h-4 w-4" /> {sources.length > 0 ? 'Edit Movie Source' : 'Add Movie Source'}
           </Button>
       )}
 
@@ -389,37 +405,35 @@ function EpisodeItem({ episodeIndex, form, removeEpisode, openAddSourceDialog, o
                 <div key={source.id || sourceIndex} className="flex items-center justify-between p-1.5 rounded-md bg-muted/30 border border-border/30 text-xs">
                     <div className="flex-grow min-w-0">
                     <p className="font-medium text-foreground/90 truncate" title={source.label}>{source.label}</p>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-wrap">
                         <Badge variant="secondary" className="text-[0.6rem] px-1 py-0">{source.type.toUpperCase()}</Badge>
                         <Badge variant={source.category === 'DUB' ? 'default' : 'outline'} className={`text-[0.6rem] px-1 py-0 ${source.category === 'DUB' ? 'bg-sky-500/15 text-sky-600 border-sky-500/20' : ''}`}>{source.category}</Badge>
                         {source.quality && <Badge variant="outline" className="text-[0.6rem] px-1 py-0">{source.quality}</Badge>}
                     </div>
                     </div>
                     <div className="flex-shrink-0 flex items-center gap-0.5 ml-1">
-                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => openEditSourceDialog(episodeIndex, source, sourceIndex)}>
+                    <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => openEditSourceDialog(episodeIndex, source as VideoSourceFormData, sourceIndex)}>
                         <Edit3 size={12} />
                     </Button>
-                    <AlertDialogPrimitive>
-                        <AlertDialogTriggerPrimitive asChild>
-                            <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10">
-                                <Trash2 size={12} />
-                            </Button>
-                        </AlertDialogTriggerPrimitive>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Source?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                Are you sure you want to delete &quot;{source.label}&quot;?
-                            </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDeleteSource(episodeIndex, sourceIndex)} className="bg-destructive hover:bg-destructive/90">
-                                Delete
-                            </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialogPrimitive>
+                    <AlertDialogTriggerPrimitive asChild>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10">
+                            <Trash2 size={12} />
+                        </Button>
+                    </AlertDialogTriggerPrimitive>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Source?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete &quot;{source.label}&quot;?
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteSource(episodeIndex, sourceIndex)} className="bg-destructive hover:bg-destructive/90">
+                            Delete
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
                     </div>
                 </div>
                 ))}
@@ -434,7 +448,6 @@ function EpisodeItem({ episodeIndex, form, removeEpisode, openAddSourceDialog, o
 }
 
 
-// FormFieldItem for main anime form
 interface FormFieldItemPropsExtended {
   name: any;
   label: string;
@@ -442,24 +455,25 @@ interface FormFieldItemPropsExtended {
   type?: string;
   form: ReturnType<typeof useForm<AnimeFormData>>;
   isTextarea?: boolean;
-  fieldIndex?: number; // For episode fields
+  fieldIndex?: number; 
   Icon?: React.ElementType;
 }
 
 function FormFieldItem({ name, label, placeholder, type = "text", form, isTextarea = false, fieldIndex, Icon }: FormFieldItemPropsExtended) {
   const { register, formState: { errors } } = form;
   let error;
-  if (name.startsWith('episodes.')) {
-      const parts = name.split('.');
-      const epIndex = parseInt(parts[1]);
-      const fieldName = parts[2] as keyof Episode;
-      if (errors.episodes && errors.episodes[epIndex] && errors.episodes[epIndex]?.[fieldName]) {
-          error = errors.episodes[epIndex]?.[fieldName];
-      }
+
+  const fieldNameParts = name.split('.');
+  if (fieldNameParts[0] === 'episodes' && fieldNameParts.length > 2 && fieldIndex !== undefined) {
+    const epIndex = parseInt(fieldNameParts[1]);
+    const fieldName = fieldNameParts[2] as keyof Episode;
+    if (errors.episodes && errors.episodes[epIndex] && errors.episodes[epIndex]?.[fieldName]) {
+        error = errors.episodes[epIndex]?.[fieldName];
+    }
   } else {
       error = errors[name as keyof AnimeFormData];
   }
-  const inputId = fieldIndex !== undefined ? `episodes.${fieldIndex}.${name.split('.').pop()}` : name;
+  const inputId = fieldIndex !== undefined ? `episodes.${fieldIndex}.${fieldNameParts.pop()}` : name;
 
   return (
     <div className="space-y-1">
@@ -476,7 +490,6 @@ function FormFieldItem({ name, label, placeholder, type = "text", form, isTextar
   );
 }
 
-// FormSelectItem for main anime form
 interface FormSelectItemPropsExtended {
   name: keyof AnimeFormData;
   label: string;
@@ -507,7 +520,6 @@ function FormSelectItem({ name, label, items, form }: FormSelectItemPropsExtende
   );
 }
 
-// Reusable Form Field Components for the Source Dialog
 interface DialogFormFieldItemProps {
   name: keyof VideoSourceFormData;
   label: string;
