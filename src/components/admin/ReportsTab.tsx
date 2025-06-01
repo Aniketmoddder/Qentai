@@ -136,7 +136,7 @@ export default function ReportsTab() {
                      <TooltipProvider delayDuration={100}>
                         <Tooltip>
                             <TooltipTrigger asChild>
-                                <p className="line-clamp-2"><strong className="text-muted-foreground">Description:</strong> {report.description}</p>
+                                <p className="line-clamp-2 break-words"><strong className="text-muted-foreground">Description:</strong> {report.description}</p>
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs bg-popover text-popover-foreground p-2 border rounded-md shadow-lg" side="bottom" align="start">
                                 <p className="text-xs whitespace-pre-wrap">{report.description}</p>
@@ -154,7 +154,7 @@ export default function ReportsTab() {
                     <div className="pt-2 flex justify-end items-center gap-2">
                        <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="xs" className="text-xs h-7 px-2">
+                            <Button variant="destructive" size="xs" className="text-xs h-7 px-2 w-full sm:w-auto">
                                 <Trash2 className="mr-1 h-3 w-3" /> Delete
                             </Button>
                         </AlertDialogTrigger>
