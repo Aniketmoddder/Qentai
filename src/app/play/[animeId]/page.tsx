@@ -25,8 +25,9 @@ import { Textarea } from "@/components/ui/textarea";
 import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// Vidstack Imports - Sticking to documented imports. If this fails, the issue is likely environmental.
-import { MediaPlayer, MediaOutlet, Poster, type MediaCanPlayDetail, type MediaCanPlayEvent, type MediaEndedEvent, type PlayerSrc } from '@vidstack/react';
+// Vidstack Imports - Using namespace import as a workaround for MediaOutlet resolution
+import * as Vidstack from '@vidstack/react';
+import type { MediaCanPlayDetail, MediaCanPlayEvent, MediaEndedEvent, PlayerSrc } from '@vidstack/react';
 import { DefaultAudioLayout, DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
@@ -46,7 +47,7 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const playerRef = useRef<MediaPlayer>(null);
+  const playerRef = useRef<Vidstack.MediaPlayer>(null);
 
   const fetchDetails = useCallback(async () => {
     if (!animeId) {
@@ -62,33 +63,38 @@ export default function PlayerPage() {
       if (details) {
         setAnime(details);
         const epIdFromUrl = searchParams.get("episode");
-        let epToSet = details.episodes?.[0]; // Default to first episode
+        let epToSet = details.episodes?.find(ep => ep.sources && ep.sources.length > 0) || details.episodes?.[0]; 
 
         if (epIdFromUrl) {
           const foundEp = details.episodes?.find((e) => e.id === epIdFromUrl);
-          if (foundEp) epToSet = foundEp;
+          if (foundEp && foundEp.sources && foundEp.sources.length > 0) {
+            epToSet = foundEp;
+          } else if (foundEp) {
+            // Episode exists but has no sources, might still set it to show "no sources" message
+            epToSet = foundEp;
+          }
         }
         
         if (epToSet) {
           setCurrentEpisode(epToSet);
-          // Select the first available source for the episode
           const firstSource = epToSet.sources?.[0];
           if (firstSource) {
             setActiveSource(firstSource);
           } else {
             setActiveSource(null);
-            // No explicit error here, player will show "no source" message
+             // setPlayerError("No video sources available for this episode."); // User will see this in player area
           }
 
-          // If no epId in URL but episodes exist, redirect to the first one
-          if (!epIdFromUrl && details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
-             router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
+          if (!epIdFromUrl && epToSet.id && epToSet.sources && epToSet.sources.length > 0) {
+             router.replace(`/play/${animeId}?episode=${epToSet.id}`, { scroll: false });
           }
         } else {
           setCurrentEpisode(null);
           setActiveSource(null);
           if (details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
-             router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
+             // This might loop if first episode has no sources.
+             // router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
+             setPlayerError("No episodes with playable sources available.");
           } else {
             setPlayerError("No episodes available for this anime.");
           }
@@ -112,7 +118,7 @@ export default function PlayerPage() {
 
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
-      if (ep.id === currentEpisode?.id) return;
+      if (ep.id === currentEpisode?.id && activeSource) return; // Don't re-select if same and source exists
       setPlayerError(null);
       setCurrentEpisode(ep);
       const firstSource = ep.sources?.[0];
@@ -120,17 +126,17 @@ export default function PlayerPage() {
         setActiveSource(firstSource);
       } else {
         setActiveSource(null);
+        // setPlayerError("No video sources available for this episode.");
       }
       router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false });
     },
-    [router, animeId, currentEpisode?.id]
+    [router, animeId, currentEpisode?.id, activeSource]
   );
 
   const handleServerSelect = (source: VideoSource) => {
-    setPlayerError(null); // Clear previous errors on server switch
+    setPlayerError(null); 
     setActiveSource(source);
-    // Optionally, attempt to play if playerRef is available
-    // playerRef.current?.play(); 
+    // Vidstack player or iframe will update based on activeSource.type
   };
 
   const onCanPlay = (detail: MediaCanPlayDetail, nativeEvent: MediaCanPlayEvent) => {
@@ -159,10 +165,9 @@ export default function PlayerPage() {
     episodeNumber: i + 1,
     title: `Episode ${i + 1}: Placeholder`,
     thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
-    sources: [{id: `placeholder-src-${i+1}`, url: '', type: 'mp4', label: `Server ${i+1}`, category: 'SUB'} as VideoSource]
   }));
 
-  const displayEpisode = currentEpisode || (anime?.episodes?.[0]) || placeholderEpisode;
+  const displayEpisode = currentEpisode || (anime?.episodes?.find(ep => ep.sources && ep.sources.length > 0)) || (anime?.episodes?.[0]) || placeholderEpisode;
   const displayAnime = anime || {
     id: 'placeholder-anime',
     title: 'Anime Title Placeholder',
@@ -211,8 +216,9 @@ export default function PlayerPage() {
           
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
-              {activeSource && activeSource.type !== 'embed' && anime ? (
-                <MediaPlayer
+              {activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8') && anime ? (
+                <Vidstack.MediaPlayer
+                  key={activeSource.id} // Ensure player re-initializes on source change
                   ref={playerRef}
                   title={displayAnime?.title || 'Anime Video'}
                   src={activeSource.url}
@@ -225,14 +231,15 @@ export default function PlayerPage() {
                   onError={onMediaError}
                   crossOrigin
                 >
-                  <MediaOutlet className="object-contain">
-                    <Poster className="absolute inset-0 block h-full w-full rounded-md object-cover opacity-100 transition-opacity data-[hidden]:opacity-0" />
-                  </MediaOutlet>
+                  <Vidstack.MediaOutlet className="object-contain">
+                    <Vidstack.Poster className="absolute inset-0 block h-full w-full rounded-md object-cover opacity-100 transition-opacity data-[hidden]:opacity-0" />
+                  </Vidstack.MediaOutlet>
                   <DefaultAudioLayout icons={defaultLayoutIcons} />
                   <DefaultVideoLayout icons={defaultLayoutIcons} />
-                </MediaPlayer>
+                </Vidstack.MediaPlayer>
               ) : activeSource && activeSource.type === 'embed' ? (
                  <iframe
+                    key={activeSource.id} // Ensure iframe re-renders on source change
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg"
@@ -245,9 +252,9 @@ export default function PlayerPage() {
                       <p className="mt-4 text-lg">
                           {pageIsLoading ? 'Loading player...' : 
                            (!displayAnime.episodes || displayAnime.episodes.length === 0) ? 'No episodes available.' :
-                           !currentEpisode ? 'Select an episode.' :
+                           !currentEpisode ? 'Select an episode to play.' :
                            !activeSource ? 'No video source selected or available for this episode.' :
-                           'Select a server to start watching.'}
+                           'Player ready. Select a server.'}
                       </p>
                   </div>
               )}
@@ -293,8 +300,11 @@ export default function PlayerPage() {
                                 <Button 
                                     key={source.id} 
                                     size="sm" 
-                                    variant={activeSource?.id === source.id ? 'default' : 'outline'} 
-                                    className={cn("text-xs server-button", activeSource?.id === source.id && "btn-primary-gradient")}
+                                    className={cn(
+                                      "text-xs server-button", 
+                                      activeSource?.id === source.id && "server-button-active btn-primary-gradient"
+                                    )}
+                                    variant={activeSource?.id === source.id ? 'default' : 'outline'}
                                     onClick={() => handleServerSelect(source)}
                                 >
                                     {source.label} {source.quality && <Badge variant="secondary" className="ml-1.5 text-[0.6rem] px-1 py-0">{source.quality}</Badge>}
@@ -311,8 +321,11 @@ export default function PlayerPage() {
                                 <Button 
                                     key={source.id} 
                                     size="sm" 
-                                    variant={activeSource?.id === source.id ? 'default' : 'outline'} 
-                                    className={cn("text-xs server-button", activeSource?.id === source.id && "btn-primary-gradient")}
+                                    className={cn(
+                                      "text-xs server-button", 
+                                      activeSource?.id === source.id && "server-button-active btn-primary-gradient"
+                                    )}
+                                    variant={activeSource?.id === source.id ? 'default' : 'outline'}
                                     onClick={() => handleServerSelect(source)}
                                 >
                                     {source.label} {source.quality && <Badge variant="secondary" className="ml-1.5 text-[0.6rem] px-1 py-0">{source.quality}</Badge>}
@@ -353,25 +366,25 @@ export default function PlayerPage() {
               <CardContent className="p-0">
                 <ScrollArea className="h-[300px] lg:h-[350px] min-h-[200px] scrollbar-thin">
                   <div className="space-y-1.5 p-2 sm:p-3">
-                    {(displayAnime?.episodes || placeholderEpisodes).map((ep, idx) => (
+                    {(displayAnime?.episodes && displayAnime.episodes.length > 0 ? displayAnime.episodes : placeholderEpisodes).map((ep, idx) => (
                       <Button
                           key={ep.id || `placeholder-${idx}`}
-                          variant={currentEpisode?.id === ep.id ? 'secondary' : 'ghost'}
+                          variant={(currentEpisode?.id === ep.id && activeSource) ? 'secondary' : 'ghost'}
                           className={`w-full justify-start text-left h-auto py-2 px-2.5 text-xs ${
-                          currentEpisode?.id === ep.id ? 'bg-primary/20 text-primary font-semibold' : 'hover:bg-primary/10'
+                          (currentEpisode?.id === ep.id && activeSource) ? 'bg-primary/20 text-primary font-semibold' : 'hover:bg-primary/10'
                           }`}
                           onClick={() => anime && anime.episodes && handleEpisodeSelect(anime.episodes[idx])}
                           title={`Ep ${ep.episodeNumber}: ${ep.title}`}
-                          disabled={!anime || !anime.episodes || anime.episodes.length === 0}
+                          disabled={!anime || !anime.episodes || anime.episodes.length === 0 || !ep.sources || ep.sources.length === 0}
                       >
                           <div className="flex items-center w-full gap-2">
                               {ep.thumbnail ? <Image src={ep.thumbnail} alt="" width={64} height={36} className="rounded object-cover w-16 h-9 flex-shrink-0 bg-muted" data-ai-hint="episode thumbnail" />
                               : <Skeleton className="w-16 h-9 rounded bg-muted flex-shrink-0" />
                               }
-                              <span className={`flex-grow truncate ${currentEpisode?.id === ep.id ? 'text-primary' : 'text-foreground'}`}>
+                              <span className={`flex-grow truncate ${(currentEpisode?.id === ep.id && activeSource) ? 'text-primary' : 'text-foreground'}`}>
                               Ep {ep.episodeNumber || '?'}: {ep.title || 'Untitled Episode'}
                               </span>
-                              {currentEpisode?.id === ep.id && <PlayIconFallback className="w-4 h-4 ml-auto text-primary flex-shrink-0" />}
+                              {(currentEpisode?.id === ep.id && activeSource) && <PlayIconFallback className="w-4 h-4 ml-auto text-primary flex-shrink-0" />}
                           </div>
                       </Button>
                     ))}
@@ -471,3 +484,4 @@ export default function PlayerPage() {
     </div>
   );
 }
+
