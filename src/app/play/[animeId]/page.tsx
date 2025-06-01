@@ -11,7 +11,7 @@ import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; 
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Image from "next/image";
 import ReadMoreSynopsis from "@/components/anime/ReadMoreSynopsis";
@@ -26,8 +26,8 @@ import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Vidstack Imports
-import { MediaPlayer, Poster, type MediaCanPlayDetail, type MediaCanPlayEvent, type MediaEndedEvent, type PlayerSrc } from '@vidstack/react';
-import { MediaOutlet } from '@vidstack/react/player'; // Changed import for MediaOutlet
+// Corrected: MediaOutlet is imported directly from @vidstack/react
+import { MediaPlayer, MediaOutlet, Poster, type MediaCanPlayDetail, type MediaCanPlayEvent, type MediaEndedEvent, type PlayerSrc } from '@vidstack/react';
 import { DefaultAudioLayout, DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
@@ -82,6 +82,8 @@ export default function PlayerPage() {
           } else {
             setActiveServerUrl(null);
             setActiveServerType(null);
+            // Display a message in the player if URL is missing
+            // setPlayerError("Video source is not available for this episode.");
           }
 
           if (!epId && details.episodes && details.episodes.length > 0 && details.episodes[0]) {
@@ -92,6 +94,7 @@ export default function PlayerPage() {
           setActiveServerUrl(null);
           setActiveServerType(null);
           if (details.episodes && details.episodes.length > 0 && details.episodes[0]) {
+             // If no epId in URL, but episodes exist, redirect to first one.
              router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
           } else {
             setPlayerError("No episodes available for this anime.");
@@ -116,33 +119,39 @@ export default function PlayerPage() {
 
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
-      if (ep.id === currentEpisode?.id ) return;
-      setPlayerError(null); 
+      if (ep.id === currentEpisode?.id ) return; // Avoid re-setting if same episode
+      setPlayerError(null); // Clear previous player errors
       setCurrentEpisode(ep);
       if (ep.url) {
         setActiveServerUrl(ep.url);
         if (ep.url.endsWith('.m3u8')) setActiveServerType('m3u8');
         else if (ep.url.endsWith('.mp4')) setActiveServerType('mp4');
-        else setActiveServerType('embed');
+        else setActiveServerType('embed'); // Or any other logic for embed
       } else {
         setActiveServerUrl(null);
         setActiveServerType(null);
+        // setPlayerError("Video source is not available for this episode.");
       }
+      // Update URL query param without full page reload
       router.push(`/play/${animeId}?episode=${ep.id}`, { scroll: false }); 
     },
     [router, animeId, currentEpisode?.id]
   );
 
   const onCanPlay = (detail: MediaCanPlayDetail, nativeEvent: MediaCanPlayEvent) => {
+    // This is called when the media can begin playback.
+    // You can hide loading indicators here.
     console.log("Media can play", detail);
-    setPlayerError(null); 
+    setPlayerError(null); // Clear errors when media can play
   };
 
   const onMediaError = (event: any) => {
+    // Handle media errors (e.g., source not found, decoding issues)
     console.error("Vidstack Media Error:", event.detail);
     setPlayerError(`Error playing video: ${event.detail?.message || 'Unknown player error'}. Try another server if available.`);
   };
   
+  // Fallback/placeholder data structure for skeleton loading
   const placeholderEpisode = {
     id: 'placeholder-ep-1',
     title: 'Episode Title Placeholder',
@@ -186,6 +195,7 @@ export default function PlayerPage() {
     );
   }
   
+  // If anime fetch failed, but not during initial page load state handled above
   if (!anime && !pageIsLoading && playerError) { 
     return ( 
       <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-1px)] py-12 text-center">
@@ -204,7 +214,9 @@ export default function PlayerPage() {
       <Container className="py-4 md:py-6 flex-grow w-full">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           
+          {/* Main Content Area (Player + Below Player Info) */}
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
+            {/* Video Player Area */}
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
               {activeServerUrl && activeServerType !== 'embed' && anime ? (
                 <MediaPlayer
@@ -215,12 +227,12 @@ export default function PlayerPage() {
                   aspectRatio="16/9"
                   playsInline
                   autoPlay
-                  className="w-full h-full rounded-lg overflow-hidden bg-black"
+                  className="w-full h-full rounded-lg overflow-hidden bg-black" // Ensure player takes full space
                   onCanPlay={onCanPlay}
                   onError={onMediaError}
-                  crossOrigin
+                  crossOrigin // Important for HLS streams from different origins
                 >
-                  <MediaOutlet className="object-contain">
+                  <MediaOutlet className="object-contain"> {/* Ensures video isn't cropped */}
                     <Poster className="absolute inset-0 block h-full w-full rounded-md object-cover opacity-100 transition-opacity data-[hidden]:opacity-0" />
                   </MediaOutlet>
                   <DefaultAudioLayout icons={defaultLayoutIcons} />
@@ -228,13 +240,14 @@ export default function PlayerPage() {
                 </MediaPlayer>
               ) : activeServerUrl && activeServerType === 'embed' ? (
                  <iframe
-                    src={activeServerUrl as string} 
+                    src={activeServerUrl as string} // Assuming activeServerUrl is a string for embeds
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
               ) : (
+                   // Fallback content if no URL or if it's an embed (or other unhandled type)
                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-card pointer-events-none">
                       <PlayIconFallback className="w-24 h-24 opacity-30" />
                       <p className="mt-4 text-lg">
@@ -245,12 +258,14 @@ export default function PlayerPage() {
                       </p>
                   </div>
               )}
-               {pageIsLoading && !activeServerUrl && (
+               {/* Loading overlay specifically for player source change */}
+               {pageIsLoading && !activeServerUrl && ( // Show if page is loading and no active server URL yet (e.g. episode data still fetching)
                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
                       <Loader2 className="w-10 h-10 animate-spin text-primary" />
                       <p className="text-sm text-primary-foreground mt-2">Loading Episode...</p>
                   </div>
               )}
+              {/* Player Error Display */}
               {playerError && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center z-10">
                   <AlertTriangle className="w-10 h-10 text-destructive mb-2" />
@@ -260,16 +275,19 @@ export default function PlayerPage() {
               )}
             </div>
 
+            {/* Report Issue Banner */}
             <div className="player-report-banner p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
               <MessageSquareWarning className="w-5 h-5 flex-shrink-0"/>
               <span>If the video is not working or is the wrong episode, please report it using the button above. (Reporting feature coming soon!)</span>
             </div>
 
+            {/* Episode Info & Server Selection */}
             <div className="px-1 sm:px-0 space-y-3 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate font-orbitron">
                   EP {displayEpisode?.episodeNumber || '-'}: {displayEpisode?.title || 'Episode Title Not Available'}
                 </h1>
+                {/* Action Buttons */}
                 <div className="flex items-center space-x-1.5">
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Download (Coming Soon)"><Download size={16}/></Button>
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Report Issue (Coming Soon)"><AlertTriangle size={16}/></Button>
@@ -277,19 +295,24 @@ export default function PlayerPage() {
                 </div>
               </div>
               
+              {/* Server/Quality Selection Area */}
               <div className="bg-card p-3 rounded-lg shadow">
                 <div className="flex flex-col gap-3">
+                    {/* SUB Servers */}
                     <div>
                         <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><Clapperboard size={16} className="mr-1.5"/> SUB Servers</h3>
                         <div className="flex flex-wrap gap-2">
+                            {/* Placeholder Buttons - replace with dynamic server list later */}
                             <Button size="sm" variant="outline" className="text-xs">Server Alpha (SUB)</Button>
                             <Button size="sm" variant="default" className="text-xs btn-primary-gradient">Server Beta (SUB) (Active)</Button>
                             <Button size="sm" variant="outline" className="text-xs">Server Gamma (SUB)</Button>
                         </div>
                     </div>
+                    {/* DUB Servers */}
                     <div>
                         <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><Server size={16} className="mr-1.5"/> DUB Servers</h3>
                          <div className="flex flex-wrap gap-2">
+                            {/* Placeholder Buttons */}
                             <Button size="sm" variant="outline" className="text-xs">Server Delta (DUB)</Button>
                             <Button size="sm" variant="outline" className="text-xs">Server Epsilon (DUB)</Button>
                         </div>
@@ -298,13 +321,16 @@ export default function PlayerPage() {
                 <p className="text-xs text-muted-foreground mt-3">Server & quality selection coming soon! Choose wisely.</p>
               </div>
 
+              {/* Next Episode Air Date */}
               <div className="text-xs text-muted-foreground p-2 bg-card/50 rounded text-center sm:text-left">
                 Next episode air date will be shown here. (e.g., Episode { (displayEpisode?.episodeNumber || 0) + 1} will air on Sun, Jun 01, 2025...)
               </div>
             </div>
           </div>
 
+          {/* Sidebar (Episode List, Anime Details, Comments, Recommendations) */}
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
+            {/* Episode List Card */}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
                 <div className="flex justify-between items-center">
@@ -350,6 +376,7 @@ export default function PlayerPage() {
               </CardContent>
             </Card>
 
+            {/* Anime Details Snippet Card */}
             {anime && (
               <Card className="shadow-lg border-border/40">
                 <CardHeader className="p-3 sm:p-4 pb-2">
@@ -398,6 +425,7 @@ export default function PlayerPage() {
             )}
 
 
+            {/* Comments Card - Placeholder */}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2">
                 <CardTitle className="text-md font-semibold text-primary flex items-center">
@@ -405,6 +433,7 @@ export default function PlayerPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
+                {/* Comment Input Area */}
                 <div className="flex items-center gap-2">
                     <Avatar className="h-8 w-8">
                         <AvatarImage src={displayAnime?.coverImage || `https://placehold.co/40x40.png`} alt="User" />
@@ -413,15 +442,19 @@ export default function PlayerPage() {
                     <Textarea placeholder="Add a comment... (Feature coming soon)" className="text-xs flex-grow bg-input" rows={1} disabled />
                     <Button size="sm" variant="ghost" disabled><Send size={16}/></Button>
                 </div>
+                {/* Sort Options */}
                 <div className="text-xs text-muted-foreground flex justify-end">
                     Sort by: <Button variant="link" size="xs" className="px-1 text-muted-foreground hover:text-primary" disabled>Newest</Button>
                 </div>
+                {/* Comment List Placeholder */}
                 <div className="space-y-2 pt-2 border-t border-border/30">
                     <p className="text-center text-muted-foreground text-sm py-3">Comments are coming soon!</p>
+                    {/* Placeholder for actual comments */}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Recommendations Card - Placeholder */}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2">
                  <CardTitle className="text-md font-semibold text-primary">You Might Also Like</CardTitle>
@@ -442,4 +475,5 @@ export default function PlayerPage() {
     </div>
   );
 }
+
 
