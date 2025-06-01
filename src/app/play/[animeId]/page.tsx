@@ -11,7 +11,7 @@ import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; // Added ScrollBar
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"; 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import Image from "next/image";
 import ReadMoreSynopsis from "@/components/anime/ReadMoreSynopsis";
@@ -26,7 +26,8 @@ import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Vidstack Imports
-import { MediaPlayer, MediaOutlet, Poster, type MediaCanPlayDetail, type MediaCanPlayEvent, type MediaEndedEvent, type PlayerSrc } from '@vidstack/react';
+import { MediaPlayer, Poster, type MediaCanPlayDetail, type MediaCanPlayEvent, type MediaEndedEvent, type PlayerSrc } from '@vidstack/react';
+import { MediaOutlet } from '@vidstack/react/player'; // Changed import for MediaOutlet
 import { DefaultAudioLayout, DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
@@ -73,15 +74,11 @@ export default function PlayerPage() {
         
         if (epToSet) {
           setCurrentEpisode(epToSet);
-          // Set initial active server if episode has sources
-          // This logic will be expanded when source selection is implemented
-          // For now, just set the player src if a URL exists on the episode itself
           if (epToSet.url) {
              setActiveServerUrl(epToSet.url);
-             // Infer type (basic inference, will be refined with multiple sources)
              if (epToSet.url.endsWith('.m3u8')) setActiveServerType('m3u8');
              else if (epToSet.url.endsWith('.mp4')) setActiveServerType('mp4');
-             else setActiveServerType('embed'); // Fallback, or based on stored type
+             else setActiveServerType('embed'); 
           } else {
             setActiveServerUrl(null);
             setActiveServerType(null);
@@ -96,7 +93,6 @@ export default function PlayerPage() {
           setActiveServerType(null);
           if (details.episodes && details.episodes.length > 0 && details.episodes[0]) {
              router.replace(`/play/${animeId}?episode=${details.episodes[0].id}`, { scroll: false });
-             // setCurrentEpisode(details.episodes[0]); // This will be set by fetchDetails on re-render
           } else {
             setPlayerError("No episodes available for this anime.");
           }
@@ -123,7 +119,6 @@ export default function PlayerPage() {
       if (ep.id === currentEpisode?.id ) return;
       setPlayerError(null); 
       setCurrentEpisode(ep);
-      // Logic for setting active server from multiple sources will go here
       if (ep.url) {
         setActiveServerUrl(ep.url);
         if (ep.url.endsWith('.m3u8')) setActiveServerType('m3u8');
@@ -140,7 +135,7 @@ export default function PlayerPage() {
 
   const onCanPlay = (detail: MediaCanPlayDetail, nativeEvent: MediaCanPlayEvent) => {
     console.log("Media can play", detail);
-    setPlayerError(null); // Clear previous errors if media loads
+    setPlayerError(null); 
   };
 
   const onMediaError = (event: any) => {
@@ -211,7 +206,7 @@ export default function PlayerPage() {
           
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
-              {activeServerUrl && activeServerType !== 'embed' ? (
+              {activeServerUrl && activeServerType !== 'embed' && anime ? (
                 <MediaPlayer
                   ref={playerRef}
                   title={displayAnime?.title || 'Anime Video'}
@@ -220,7 +215,7 @@ export default function PlayerPage() {
                   aspectRatio="16/9"
                   playsInline
                   autoPlay
-                  className="w-full h-full rounded-lg overflow-hidden"
+                  className="w-full h-full rounded-lg overflow-hidden bg-black"
                   onCanPlay={onCanPlay}
                   onError={onMediaError}
                   crossOrigin
@@ -233,7 +228,7 @@ export default function PlayerPage() {
                 </MediaPlayer>
               ) : activeServerUrl && activeServerType === 'embed' ? (
                  <iframe
-                    src={activeServerUrl as string} // Assuming activeServerUrl is string for embed
+                    src={activeServerUrl as string} 
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
                     className="w-full h-full border-0 rounded-lg"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -260,7 +255,7 @@ export default function PlayerPage() {
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 p-4 text-center z-10">
                   <AlertTriangle className="w-10 h-10 text-destructive mb-2" />
                   <p className="text-destructive-foreground text-sm">{playerError}</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setPlayerError(null) /* Retry logic will be part of server selection */}>Dismiss</Button>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => setPlayerError(null)}>Dismiss</Button>
                 </div>
               )}
             </div>
@@ -287,7 +282,6 @@ export default function PlayerPage() {
                     <div>
                         <h3 className="text-sm font-semibold text-primary mb-1.5 flex items-center"><Clapperboard size={16} className="mr-1.5"/> SUB Servers</h3>
                         <div className="flex flex-wrap gap-2">
-                            {/* Placeholder server buttons */}
                             <Button size="sm" variant="outline" className="text-xs">Server Alpha (SUB)</Button>
                             <Button size="sm" variant="default" className="text-xs btn-primary-gradient">Server Beta (SUB) (Active)</Button>
                             <Button size="sm" variant="outline" className="text-xs">Server Gamma (SUB)</Button>
@@ -356,57 +350,53 @@ export default function PlayerPage() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg border-border/40">
-              <CardHeader className="p-3 sm:p-4 pb-2">
-                 <CardTitle className="text-md font-semibold text-foreground hover:text-primary transition-colors">
-                    <Link href={displayAnime.id !== 'placeholder-anime' ? `/anime/${displayAnime.id}` : '#'}>
-                        About: {displayAnime.title}
-                    </Link>
-                 </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 pt-0">
-                <div className="flex gap-3 sm:gap-4 mb-3">
-                    <div className="w-20 sm:w-24 flex-shrink-0">
-                    {displayAnime.coverImage ? (
-                      <Image 
-                          src={displayAnime.coverImage} 
-                          alt={displayAnime.title} 
-                          width={200} 
-                          height={300} 
-                          className="rounded-md object-cover aspect-[2/3] bg-muted"
-                          data-ai-hint="anime poster"
-                      />
-                    ) : (
-                       <Skeleton className="w-full h-[120px] sm:h-[135px] rounded-md bg-muted" />
-                    )}
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <h2 className="text-base sm:text-lg font-semibold text-foreground hover:text-primary transition-colors mb-1 truncate">
-                          <Link href={displayAnime.id !== 'placeholder-anime' ? `/anime/${displayAnime.id}` : '#'}>
-                              {displayAnime.title}
-                          </Link>
-                      </h2>
-                      {anime ? (
-                          <AnimeInteractionControls anime={anime} className="[&>button]:h-7 [&>button]:px-2 [&>button]:text-xs" />
+            {anime && (
+              <Card className="shadow-lg border-border/40">
+                <CardHeader className="p-3 sm:p-4 pb-2">
+                  <CardTitle className="text-md font-semibold text-foreground hover:text-primary transition-colors">
+                      <Link href={`/anime/${anime.id}`}>
+                          About: {anime.title}
+                      </Link>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <div className="flex gap-3 sm:gap-4 mb-3">
+                      <div className="w-20 sm:w-24 flex-shrink-0">
+                      {anime.coverImage ? (
+                        <Image 
+                            src={anime.coverImage} 
+                            alt={anime.title} 
+                            width={200} 
+                            height={300} 
+                            className="rounded-md object-cover aspect-[2/3] bg-muted"
+                            data-ai-hint="anime poster"
+                        />
                       ) : (
-                          <div className="flex space-x-2">
-                            <Skeleton className="h-7 w-24 rounded" />
-                            <Skeleton className="h-7 w-24 rounded" />
-                          </div>
+                        <Skeleton className="w-full h-[120px] sm:h-[135px] rounded-md bg-muted" />
                       )}
-                      <div className="text-xs text-muted-foreground space-y-0.5 mt-1.5">
-                          <p>Type: <Badge variant="outline" className="ml-1">{displayAnime.type || 'N/A'}</Badge></p>
-                          <p>Status: <Badge variant="outline" className="ml-1">{displayAnime.status || 'N/A'}</Badge></p>
-                          <p>Year: {displayAnime.year || 'N/A'}</p>
                       </div>
-                    </div>
-                </div>
-                <ReadMoreSynopsis text={displayAnime.synopsis || "No synopsis available."} maxLength={100} />
-                <div className="mt-2 flex flex-wrap gap-1">
-                    {(displayAnime.genre || []).slice(0,4).map(g => <Badge key={g} variant="secondary" className="text-[0.6rem]">{g}</Badge>)}
-                </div>
-              </CardContent>
-            </Card>
+                      <div className="flex-grow min-w-0">
+                        <h2 className="text-base sm:text-lg font-semibold text-foreground hover:text-primary transition-colors mb-1 truncate">
+                            <Link href={`/anime/${anime.id}`}>
+                                {anime.title}
+                            </Link>
+                        </h2>
+                        <AnimeInteractionControls anime={anime} className="[&>button]:h-7 [&>button]:px-2 [&>button]:text-xs" />
+                        <div className="text-xs text-muted-foreground space-y-0.5 mt-1.5">
+                            <p>Type: <Badge variant="outline" className="ml-1">{anime.type || 'N/A'}</Badge></p>
+                            <p>Status: <Badge variant="outline" className="ml-1">{anime.status || 'N/A'}</Badge></p>
+                            <p>Year: {anime.year || 'N/A'}</p>
+                        </div>
+                      </div>
+                  </div>
+                  <ReadMoreSynopsis text={anime.synopsis || "No synopsis available."} maxLength={100} />
+                  <div className="mt-2 flex flex-wrap gap-1">
+                      {(anime.genre || []).slice(0,4).map(g => <Badge key={g} variant="secondary" className="text-[0.6rem]">{g}</Badge>)}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
 
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2">
@@ -452,3 +442,4 @@ export default function PlayerPage() {
     </div>
   );
 }
+
