@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import type { Anime, Episode, VideoSource } from "@/types/anime";
 import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
@@ -27,7 +27,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Plyr Imports
 import Plyr from "plyr-react";
-import 'plyr/dist/plyr.css'; // Changed CSS import path
+import "plyr/dist/plyr.css"; // Changed CSS import path
 import type Hls from 'hls.js'; // Import Hls type for potential specific config
 
 
@@ -149,94 +149,16 @@ export default function PlayerPage() {
     setPlayerError(errorMessage);
   };
   
-  const placeholderEpisode = {
-    id: 'placeholder-ep-1',
-    title: 'Episode Title Placeholder',
-    episodeNumber: 1,
-    seasonNumber: 1,
-    thumbnail: `https://placehold.co/320x180.png`,
-    overview: 'This is a placeholder overview for the episode.',
-    duration: '24min',
-    sources: [{id: 'placeholder-src-1', url: '', type: 'mp4', label: 'Default Server', category: 'SUB' } as VideoSource]
-  };
-  const placeholderEpisodes = Array(10).fill(null).map((_, i) => ({
-    ...placeholderEpisode,
-    id: `placeholder-ep-${i+1}`,
-    episodeNumber: i + 1,
-    title: `Episode ${i + 1}: Placeholder`,
-    thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
-  }));
-
-  const displayEpisode = currentEpisode || (anime?.episodes?.find(ep => ep.sources && ep.sources.length > 0)) || (anime?.episodes?.[0]) || placeholderEpisode;
-  const displayAnime = anime || {
-    id: 'placeholder-anime',
-    title: 'Anime Title Placeholder',
-    coverImage: `https://placehold.co/200x300.png`,
-    bannerImage: `https://placehold.co/1280x300.png`,
-    year: 2024,
-    genre: ['Action', 'Adventure'],
-    status: 'Ongoing',
-    synopsis: 'Placeholder synopsis.',
-    type: 'TV',
-    isFeatured: false,
-    episodes: placeholderEpisodes,
-    averageRating: 7.5,
-  } as Anime;
-
-
-  if (pageIsLoading && !anime) {
-    return (
-      <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-1px)] py-12">
-        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading player and anime details...</p>
-      </Container>
-    );
-  }
-  
-  if (!anime && !pageIsLoading && playerError) { 
-    return ( 
-      <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-1px)] py-12 text-center">
-         <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
-         <h1 className="text-2xl font-bold text-destructive">Error Loading Anime</h1>
-         <p className="text-muted-foreground">{playerError || `Could not find details for anime ID: ${animeId}`}</p>
-         <Button asChild variant="link" className="mt-4">
-          <Link href="/">Go back to Home</Link>
-        </Button>
-      </Container>
-    );
-  }
-  
-  const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
-  const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
-
-  const plyrSource: Plyr.SourceInfo | null = activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8')
-    ? {
-        type: 'video',
-        title: `${displayAnime?.title || 'Video'} - ${displayEpisode?.title || 'Episode'}`,
-        sources: [
-          {
-            src: activeSource.url,
-            type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4',
-          },
-        ],
-        poster: displayEpisode?.thumbnail || displayAnime?.bannerImage || displayAnime?.coverImage || `https://placehold.co/1280x720.png`,
-      }
-    : null;
-
-  const plyrOptions: Plyr.Options = {
-    // controls: ['play-large', 'play', 'progress', 'current-time', 'mute', 'volume', 'captions', 'settings', 'pip', 'airplay', 'fullscreen'],
-    // settings: ['captions', 'quality', 'speed', 'loop'],
+  const plyrOptions: Plyr.Options = useMemo(() => ({
     autoplay: true,
-    // Add more Plyr options here as needed
-     // HLS.js specific configuration
     hls: {
       // You can pass HLS.js specific options here if needed
       // For example:
       // capLevelToPlayerSize: true,
       // maxMaxBufferLength: 60,
     },
-  };
-  
+  }), []); // Empty dependency array means these options are static
+
   // Dynamically import Hls.js only on client-side
   useEffect(() => {
     if (activeSource?.type === 'm3u8' && typeof window !== 'undefined') {
@@ -246,24 +168,21 @@ export default function PlayerPage() {
            if(hlsInstanceRef.current) {
             hlsInstanceRef.current.destroy();
           }
-          const hls = new Hls(plyrOptions.hls); // Pass HLS config from Plyr options
+          const hls = new Hls(plyrOptions.hls as any); // Pass HLS config from Plyr options
           hls.loadSource(activeSource.url);
           hls.attachMedia(playerRef.current.plyr.media as HTMLMediaElement);
           hlsInstanceRef.current = hls;
           
-          // Listen for HLS.js specific errors
           hls.on(Hls.Events.ERROR, (event, data) => {
             if (data.fatal) {
               switch (data.type) {
                 case Hls.ErrorTypes.NETWORK_ERROR:
                   console.error('HLS Network Error:', data);
                   handlePlayerError('A network error occurred while loading the video (HLS).');
-                  // Optionally, try to recover by calling hls.startLoad() or hls.loadSource(newSource)
                   break;
                 case Hls.ErrorTypes.MEDIA_ERROR:
                   console.error('HLS Media Error:', data);
                   handlePlayerError('A media error occurred (HLS).');
-                  // Optionally, try hls.recoverMediaError()
                   break;
                 default:
                   console.error('HLS Unhandled Error:', data);
@@ -286,6 +205,80 @@ export default function PlayerPage() {
   }, [activeSource, plyrOptions.hls]);
 
 
+  const placeholderEpisode = {
+    id: 'placeholder-ep-1',
+    title: 'Episode Title Placeholder',
+    episodeNumber: 1,
+    seasonNumber: 1,
+    thumbnail: `https://placehold.co/320x180.png`,
+    overview: 'This is a placeholder overview for the episode.',
+    duration: '24min',
+    sources: [{id: 'placeholder-src-1', url: '', type: 'mp4', label: 'Default Server', category: 'SUB' } as VideoSource]
+  };
+  const placeholderEpisodes = Array(10).fill(null).map((_, i) => ({
+    ...placeholderEpisode,
+    id: `placeholder-ep-${i+1}`,
+    episodeNumber: i + 1,
+    title: `Episode ${i + 1}: Placeholder`,
+    thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
+  }));
+
+  // Conditional returns must come AFTER all hook calls
+  if (pageIsLoading && !anime) {
+    return (
+      <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-1px)] py-12">
+        <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading player and anime details...</p>
+      </Container>
+    );
+  }
+  
+  if (!anime && !pageIsLoading && playerError) { 
+    return ( 
+      <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-1px)] py-12 text-center">
+         <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+         <h1 className="text-2xl font-bold text-destructive">Error Loading Anime</h1>
+         <p className="text-muted-foreground">{playerError || `Could not find details for anime ID: ${animeId}`}</p>
+         <Button asChild variant="link" className="mt-4">
+          <Link href="/">Go back to Home</Link>
+        </Button>
+      </Container>
+    );
+  }
+  
+  const displayEpisode = currentEpisode || (anime?.episodes?.find(ep => ep.sources && ep.sources.length > 0)) || (anime?.episodes?.[0]) || placeholderEpisode;
+  const displayAnime = anime || {
+    id: 'placeholder-anime',
+    title: 'Anime Title Placeholder',
+    coverImage: `https://placehold.co/200x300.png`,
+    bannerImage: `https://placehold.co/1280x300.png`,
+    year: 2024,
+    genre: ['Action', 'Adventure'],
+    status: 'Ongoing',
+    synopsis: 'Placeholder synopsis.',
+    type: 'TV',
+    isFeatured: false,
+    episodes: placeholderEpisodes,
+    averageRating: 7.5,
+  } as Anime;
+
+  const subServers = displayEpisode?.sources?.filter(s => s.category === 'SUB') || [];
+  const dubServers = displayEpisode?.sources?.filter(s => s.category === 'DUB') || [];
+
+  const plyrSource: Plyr.SourceInfo | null = activeSource && (activeSource.type === 'mp4' || activeSource.type === 'm3u8')
+    ? {
+        type: 'video',
+        title: `${displayAnime?.title || 'Video'} - ${displayEpisode?.title || 'Episode'}`,
+        sources: [
+          {
+            src: activeSource.url,
+            type: activeSource.type === 'm3u8' ? 'application/x-mpegURL' : 'video/mp4',
+          },
+        ],
+        poster: displayEpisode?.thumbnail || displayAnime?.bannerImage || displayAnime?.coverImage || `https://placehold.co/1280x720.png`,
+      }
+    : null;
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
       <Container className="py-4 md:py-6 flex-grow w-full">
@@ -300,10 +293,6 @@ export default function PlayerPage() {
                   source={plyrSource}
                   options={plyrOptions}
                   onLoadedData={() => setPlayerError(null)}
-                  // Plyr error event handling is often attached directly to the media element or via its API
-                  // The current setup might not catch all Plyr errors directly on the component.
-                  // For robust error handling, you might need to access playerRef.current.plyr.on('error', ...)
-                  // This is a basic setup for now.
                 />
               ) : activeSource && activeSource.type === 'embed' ? (
                  <iframe
@@ -551,3 +540,4 @@ export default function PlayerPage() {
   );
 }
 
+    
