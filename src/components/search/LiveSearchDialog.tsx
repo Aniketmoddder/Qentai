@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { searchAnimes } from '@/services/animeService';
 import type { Anime } from '@/types/anime';
-import { Dialog, DialogContent, DialogHeader, DialogClose } from '@/components/ui/dialog'; // DialogClose might not be needed if Esc works
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog'; // DialogClose might not be needed if Esc works
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Kbd } from '@/components/ui/kbd'; // Assuming Kbd component from previous request or will create one
@@ -85,6 +85,9 @@ export default function LiveSearchDialog({ isOpen, onOpenChange }: LiveSearchDia
         className="bg-popover/90 backdrop-blur-sm p-0 w-[90vw] max-w-xl rounded-xl border-border shadow-2xl top-[20%] sm:top-1/4 translate-y-0 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
         onOpenAutoFocus={(e) => e.preventDefault()} // Prevent auto-focus on first element, let inputRef handle it
       >
+        <DialogHeader className="p-0 m-0 h-0 overflow-hidden"> {/* Contain title but keep it hidden */}
+          <DialogTitle className="sr-only">Search Anime</DialogTitle>
+        </DialogHeader>
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-center text-xs text-muted-foreground mb-1">
             For quick access:
@@ -168,29 +171,3 @@ export default function LiveSearchDialog({ isOpen, onOpenChange }: LiveSearchDia
     </Dialog>
   );
 }
-
-// Kbd component if not already present, or ensure it's imported
-// You can create src/components/ui/kbd.tsx if needed:
-/*
-// src/components/ui/kbd.tsx
-import { cn } from "@/lib/utils";
-import React from "react";
-
-export const Kbd = React.forwardRef<
-  HTMLElement,
-  React.HTMLAttributes<HTMLElement>
->(({ className, ...props }, ref) => {
-  return (
-    <kbd
-      ref={ref}
-      className={cn(
-        "px-2 py-1 text-xs font-mono font-medium text-muted-foreground bg-muted/80 border border-border rounded-md shadow-sm",
-        className
-      )}
-      {...props}
-    />
-  );
-});
-Kbd.displayName = "Kbd";
-*/
-
