@@ -8,7 +8,7 @@ import Container from '@/components/layout/container';
 import { Button } from '@/components/ui/button';
 // Input component might not be needed directly in header anymore
 // import { Input } from '@/components/ui/input';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose, SheetTrigger } from '@/components/ui/sheet'; // Added SheetTrigger
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useState, useEffect, FormEvent, useCallback } from 'react';
