@@ -261,10 +261,7 @@
   .card-shadow { box-shadow: 0 4px 6px -1px hsl(var(--primary) / 0.1), 0 2px 4px -2px hsl(var(--primary) / 0.1); }
   .card-shadow:hover { box-shadow: 0 10px 15px -3px hsl(var(--primary) / 0.15), 0 4px 6px -4px hsl(var(--primary) / 0.15); }
 
-  /* Live Search Dropdown */
-  .live-search-dropdown {
-    @apply absolute top-full left-0 right-0 mt-1.5 w-full max-h-96 overflow-y-auto rounded-md bg-popover border border-border shadow-xl z-50;
-  }
+  /* Live Search Dropdown utility classes from guidelines */
   .live-search-item {
     @apply flex items-center gap-3 p-2.5 hover:bg-accent transition-colors cursor-pointer;
   }
@@ -286,6 +283,7 @@
   .live-search-no-results {
     @apply p-4 text-center text-muted-foreground;
   }
+
   .player-report-banner {
     background-color: hsl(var(--destructive) / 0.1);
     color: hsl(var(--destructive));
@@ -403,5 +401,3 @@
   outline-offset: 2px;
   box-shadow: 0 0 0 4px hsl(var(--ring) / 0.3);
 }
-
-    
