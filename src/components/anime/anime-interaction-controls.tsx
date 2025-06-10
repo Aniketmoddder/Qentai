@@ -114,29 +114,38 @@ export default function AnimeInteractionControls({ anime, className }: AnimeInte
     try {
       if (isFavorited) {
         await removeFromFavorites(user.uid, anime.id);
-        setIsFavorited(false);
+        setIsFavorited(false); // Update React state first
         toast({ title: "Removed from Favorites", description: `${anime.title} has been removed from your favorites.` });
-        if (heartIconRef.current) {
-          gsap.to(heartIconRef.current, { scale: 0.8, opacity: 0.7, duration: 0.2, ease: "power2.inOut", onComplete: () => {
-            gsap.to(heartIconRef.current, {scale: 1, opacity: 1, duration: 0.2});
-          }});
+        // GSAP Animation for removing favorite
+        if (heartIconRef.current && favButtonRef.current) {
+          gsap.timeline()
+            .to(favButtonRef.current, { scale: 0.97, duration: 0.1, ease: "power1.inOut" })
+            .to(heartIconRef.current, { scale: 0.7, opacity: 0.6, duration: 0.2, ease: "power2.in" }, 0)
+            .to(heartIconRef.current, { scale: 1, opacity: 1, duration: 0.3, ease: "power2.out" }, ">")
+            .to(favButtonRef.current, { scale: 1, duration: 0.2, ease: "back.out(1.7)" }, "<");
         }
       } else {
         await addToFavorites(user.uid, anime.id);
-        setIsFavorited(true);
+        setIsFavorited(true); // Update React state first
         toast({ title: "Added to Favorites", description: `${anime.title} has been added to your favorites.` });
+        // GSAP Animation for adding favorite
         if (heartIconRef.current && favButtonRef.current) {
-          const tl = gsap.timeline();
-          tl.to(heartIconRef.current, { scale: 1.4, duration: 0.15, ease: "power2.inOut" })
-            .to(heartIconRef.current, { scale: 1, duration: 0.4, ease: "elastic.out(1, 0.5)" });
-          tl.to(favButtonRef.current, { scale: 0.98, duration: 0.1, ease: "power1.inOut" }, 0)
-            .to(favButtonRef.current, { scale: 1, duration: 0.2, ease: "back.out(1.7)" }, ">0.05");
+          gsap.timeline()
+            .to(favButtonRef.current, { scale: 0.97, duration: 0.1, ease: "power1.inOut" })
+            .fromTo(heartIconRef.current, 
+              { scale: 0.5, opacity: 0, rotation: -30 }, 
+              { scale: 1.3, opacity: 1, rotation: 0, duration: 0.3, ease: "back.out(2.5)" }
+            , "+=0.05")
+            .to(heartIconRef.current, { scale: 1, duration: 0.4, ease: "elastic.out(1, 0.5)" })
+            .to(favButtonRef.current, { scale: 1, duration: 0.2, ease: "back.out(1.7)" }, "<0.1");
         }
       }
       setInitialStatusError(null); 
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       toast({ variant: "destructive", title: "Error Updating Favorites", description: message });
+      // Revert state on error if needed
+      if (isFavorited) setIsFavorited(false); else setIsFavorited(true);
     } finally {
       setLoadingFavoriteToggle(false);
     }
@@ -155,29 +164,54 @@ export default function AnimeInteractionControls({ anime, className }: AnimeInte
     try {
       if (isInWishlisted) {
         await removeFromWishlist(user.uid, anime.id);
-        setIsInWishlisted(false);
+        setIsInWishlisted(false); // Update React state first
         toast({ title: "Removed from Wishlist", description: `${anime.title} has been removed from your wishlist.` });
-        if (bookmarkIconRef.current) {
-          gsap.to(bookmarkIconRef.current, { scale: 0.8, opacity: 0.7, duration: 0.2, ease: "power2.inOut", onComplete: () => {
-            gsap.to(bookmarkIconRef.current, {scale: 1, opacity: 1, duration: 0.2});
-          }});
+        // GSAP Animation for removing from wishlist
+        if (bookmarkIconRef.current && wishButtonRef.current) {
+          gsap.timeline()
+            .to(wishButtonRef.current, { scale: 0.97, duration: 0.1, ease: "power1.inOut" })
+            .to(bookmarkIconRef.current, { scale: 0.7, opacity: 0.6, duration: 0.2, ease: "power2.in" }, 0)
+            .to(bookmarkIconRef.current, { scale: 1, opacity: 1, duration: 0.3, ease: "power2.out" }, ">")
+            .to(wishButtonRef.current, { scale: 1, duration: 0.2, ease: "back.out(1.7)" }, "<");
         }
       } else {
         await addToWishlist(user.uid, anime.id);
-        setIsInWishlisted(true);
+        setIsInWishlisted(true); // Update React state first
         toast({ title: "Added to Wishlist", description: `${anime.title} has been added to your wishlist.` });
+        // GSAP Animation for adding to wishlist (stamp)
          if (bookmarkIconRef.current && wishButtonRef.current) {
-            const tl = gsap.timeline();
-            tl.to(bookmarkIconRef.current, { scale: 0.7, y: 3, rotation: -10, duration: 0.1, ease: "power1.in" })
-              .to(bookmarkIconRef.current, { scale: 1, y: 0, rotation: 0, duration: 0.3, ease: "elastic.out(1, 0.5)" });
-            tl.to(wishButtonRef.current, { scale: 0.98, duration: 0.1, ease: "power1.inOut" }, 0)
-              .to(wishButtonRef.current, { scale: 1, duration: 0.2, ease: "back.out(1.7)" }, ">0.05");
+            gsap.timeline()
+              .to(wishButtonRef.current, { scale: 0.97, duration: 0.1, ease: "power1.inOut" })
+              .to(bookmarkIconRef.current, { 
+                y: 6, 
+                scale: 0.7,
+                rotation: -15,
+                duration: 0.1, 
+                ease: "power1.in"
+              }, "+=0.05")
+              .to(bookmarkIconRef.current, { 
+                y: -4, 
+                scale: 1.2,
+                rotation: 5,
+                duration: 0.15, 
+                ease: "power1.out" 
+              })
+              .to(bookmarkIconRef.current, { 
+                y: 0, 
+                scale: 1, 
+                rotation: 0,
+                duration: 0.4, 
+                ease: "elastic.out(1, 0.4)" 
+              })
+              .to(wishButtonRef.current, { scale: 1, duration: 0.2, ease: "back.out(1.7)" }, "<0.1");
         }
       }
        setInitialStatusError(null); 
     } catch (error: unknown) {
       const message = getErrorMessage(error);
       toast({ variant: "destructive", title: "Error Updating Wishlist", description: message });
+      // Revert state on error if needed
+      if (isInWishlisted) setIsInWishlisted(false); else setIsInWishlisted(true);
     } finally {
       setLoadingWishlistToggle(false);
     }
@@ -219,35 +253,35 @@ export default function AnimeInteractionControls({ anime, className }: AnimeInte
         <Button 
           variant="outline" 
           size="lg" 
-          className={cn(commonButtonClasses, "bg-card hover:bg-muted text-card-foreground border-border/50")}
+          className={cn(commonButtonClasses, "bg-card text-card-foreground border-border/50 hover:bg-muted hover:border-border")}
           onClick={() => toast({ title: 'Login Required', description: 'Please log in to manage your favorites.'})}
         >
-          <Heart className="mr-2 h-5 w-5" /> Add to Favorites
+          <Heart className="mr-2 h-5 w-5 text-muted-foreground" /> Add to Favorites
         </Button>
         <Button 
           variant="outline" 
           size="lg" 
-          className={cn(commonButtonClasses, "bg-card hover:bg-muted text-card-foreground border-border/50")}
+          className={cn(commonButtonClasses, "bg-card text-card-foreground border-border/50 hover:bg-muted hover:border-border")}
           onClick={() => toast({ title: 'Login Required', description: 'Please log in to manage your wishlist.'})}
         >
-          <Bookmark className="mr-2 h-5 w-5" /> Add to Wishlist
+          <Bookmark className="mr-2 h-5 w-5 text-muted-foreground" /> Add to Wishlist
         </Button>
       </div>
     );
   }
 
   return (
-    <div className={cn("flex flex-col sm:flex-row gap-3", className)}>
+    <div className={cn("flex flex-col sm:flex-row gap-3 group", className)}>
       <Button
         ref={favButtonRef}
         variant="outline"
         size="lg"
         className={cn(
             commonButtonClasses, 
-            "border-border/50",
+            "border-border/50", // Base border
             isFavorited 
-                ? "bg-destructive/10 text-destructive hover:bg-destructive/20 border-destructive/30" 
-                : "bg-card text-card-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                ? "bg-destructive/15 text-destructive border-destructive/50 hover:bg-destructive/25" // Active and its hover
+                : "bg-card text-card-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/40" // Inactive and its hover
         )}
         onClick={handleFavoriteToggle}
         disabled={loadingFavoriteToggle || isCheckingInitialStatus}
@@ -255,7 +289,13 @@ export default function AnimeInteractionControls({ anime, className }: AnimeInte
         {loadingFavoriteToggle ? (
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
         ) : (
-          <Heart ref={heartIconRef} className={cn("mr-2 h-5 w-5 transition-colors", isFavorited ? 'fill-destructive text-destructive' : 'text-muted-foreground group-hover:text-destructive')} />
+          <Heart 
+            ref={heartIconRef} 
+            className={cn(
+              "mr-2 h-5 w-5 transition-all duration-150", 
+              isFavorited ? 'fill-destructive text-destructive' : 'text-muted-foreground group-hover:text-destructive'
+            )} 
+          />
         )}
         {isFavorited ? 'In Favorites' : 'Add to Favorites'}
       </Button>
@@ -265,10 +305,10 @@ export default function AnimeInteractionControls({ anime, className }: AnimeInte
         size="lg"
         className={cn(
             commonButtonClasses, 
-            "border-border/50",
+            "border-border/50", // Base border
             isInWishlisted
-                ? "bg-primary/10 text-primary hover:bg-primary/20 border-primary/30"
-                : "bg-card text-card-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                ? "bg-primary/15 text-primary border-primary/50 hover:bg-primary/25" // Active and its hover
+                : "bg-card text-card-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/40" // Inactive and its hover
         )}
         onClick={handleWishlistToggle}
         disabled={loadingWishlistToggle || isCheckingInitialStatus}
@@ -276,7 +316,13 @@ export default function AnimeInteractionControls({ anime, className }: AnimeInte
         {loadingWishlistToggle ? (
           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
         ) : (
-          <Bookmark ref={bookmarkIconRef} className={cn("mr-2 h-5 w-5 transition-colors", isInWishlisted ? 'fill-primary text-primary' : 'text-muted-foreground group-hover:text-primary')} />
+          <Bookmark 
+            ref={bookmarkIconRef} 
+            className={cn(
+              "mr-2 h-5 w-5 transition-all duration-150", 
+              isInWishlisted ? 'fill-primary text-primary' : 'text-muted-foreground group-hover:text-primary'
+            )} 
+          />
         )}
         {isInWishlisted ? 'In Wishlist' : 'Add to Wishlist'}
       </Button>
