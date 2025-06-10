@@ -16,6 +16,7 @@ import Logo from '@/components/common/logo';
 import ReadMoreSynopsis from '@/components/anime/ReadMoreSynopsis';
 import { Skeleton } from '@/components/ui/skeleton';
 import EpisodeListSection from '@/components/anime/EpisodeListSection';
+import AnimatedPoster from '@/components/anime/AnimatedPoster'; // Import the new component
 
 interface AnimeDetailsPageProps {
   params: {
@@ -121,16 +122,12 @@ export default async function AnimeDetailsPage({ params }: AnimeDetailsPageProps
         <div className="md:grid md:grid-cols-12 md:gap-6 lg:gap-8">
           <div className="md:col-span-4 lg:col-span-3">
              <div className="sticky top-[calc(var(--header-height,4rem)+1.5rem)] max-w-[200px] sm:max-w-[220px] mx-auto md:mx-0">
-              <div className="aspect-[2/3] relative rounded-xl overflow-hidden shadow-2xl border-2 border-border/20 bg-card">
-                <Image
-                  src={coverImageSrc}
-                  alt={anime.title || 'Anime cover'}
-                  fill
-                  sizes="(max-width: 640px) 200px, (max-width: 768px) 220px, (max-width: 1024px) 33vw, 25vw"
-                  className="object-cover" 
-                  data-ai-hint={`${anime.genre?.[0] || 'anime'} portrait`}
-                />
-              </div>
+              {/* Replace direct Image with AnimatedPoster */}
+              <AnimatedPoster
+                src={coverImageSrc}
+                alt={anime.title || 'Anime cover'}
+                aiHint={`${anime.genre?.[0] || 'anime'} portrait`}
+              />
             </div>
           </div>
 
