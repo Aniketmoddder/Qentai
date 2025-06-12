@@ -23,7 +23,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import MoreLikeThisSection from "@/components/anime/MoreLikeThisSection"; 
+import MoreLikeThisSection from "@/components/anime/MoreLikeThisSection";
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
 
 import PlyrComponent from "plyr-react";
 import type Plyr from "plyr";
@@ -658,7 +660,6 @@ export default function PlayerPage() {
               </Card>
             )}
             
-            {/* Placeholder for You Might Also Like Section */}
             {anime && <MoreLikeThisSection currentAnime={anime} />}
 
 
@@ -692,3 +693,5 @@ export default function PlayerPage() {
     </div>
   );
 }
+
+    
