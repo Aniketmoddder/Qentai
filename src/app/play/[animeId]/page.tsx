@@ -23,8 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import AnimeCardSkeleton from "@/components/anime/AnimeCardSkeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import MoreLikeThisSection from "@/components/anime/MoreLikeThisSection"; 
 
 import PlyrComponent from "plyr-react";
 import type Plyr from "plyr";
@@ -68,8 +67,8 @@ export default function PlayerPage() {
   const [pageIsLoading, setPageIsLoading] = useState(true);
   const [playerError, setPlayerError] = useState<string | null>(null);
   
-  const plyrContainerRef = useRef<HTMLDivElement>(null); // Ref to the div wrapping PlyrComponent
-  const plyrInstanceRef = useRef<Plyr | null>(null); // Ref to the actual Plyr API instance
+  const plyrContainerRef = useRef<HTMLDivElement>(null); 
+  const plyrInstanceRef = useRef<Plyr | null>(null); 
   const hlsInstanceRef = useRef<Hls | null>(null);
   
   const [displayMode, setDisplayMode] = useState<'plyr' | 'iframe' | 'none'>('none');
@@ -107,7 +106,6 @@ export default function PlayerPage() {
     listeners: {
       error: handlePlyrError, 
     },
-    // HLS config is now managed in the HLS setup useEffect
   }), [handlePlyrError]);
 
   const fetchDetails = useCallback(async () => {
@@ -195,26 +193,24 @@ export default function PlayerPage() {
     setActiveSource(source);
   };
 
-  // Effect to manage display mode and player states based on activeSource
   useEffect(() => {
     if (activeSource) {
       if (activeSource.type === 'embed') {
-        if (hlsInstanceRef.current) { // Destroy HLS first
+        if (hlsInstanceRef.current) { 
           hlsInstanceRef.current.destroy();
           hlsInstanceRef.current = null;
         }
-        if (plyrInstanceRef.current?.playing) { // Then pause Plyr
+        if (plyrInstanceRef.current?.playing) { 
           plyrInstanceRef.current.pause();
         }
         setDisplayMode('iframe');
       } else if (activeSource.type === 'mp4' || activeSource.type === 'm3u8') {
         setDisplayMode('plyr');
       } else {
-        setDisplayMode('none'); // Unknown source type
+        setDisplayMode('none'); 
       }
-    } else { // No active source
+    } else { 
       setDisplayMode('none');
-      // Ensure cleanup if no source
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
         hlsInstanceRef.current = null;
@@ -234,14 +230,12 @@ export default function PlayerPage() {
         poster: currentEpisode?.thumbnail || anime?.bannerImage || anime?.coverImage || `https://placehold.co/1280x720.png`,
       };
     }
-    return undefined; // Plyr source is undefined if not in 'plyr' mode or no valid source
+    return undefined; 
   }, [displayMode, activeSource, anime, currentEpisode]);
 
-  // Effect to manage HLS instance for Plyr when plyrSourceToPlay changes
   useEffect(() => {
     const videoElement = plyrInstanceRef.current?.media;
 
-    // Cleanup previous HLS instance if it exists
     if (hlsInstanceRef.current) {
       hlsInstanceRef.current.destroy();
       hlsInstanceRef.current = null;
@@ -253,7 +247,7 @@ export default function PlayerPage() {
             onError: (event, data) => {
                 if (data.fatal) {
                     console.error('HLS Fatal Error:', data);
-                    handlePlyrError({ type: 'error', data }); // Use our centralized error handler
+                    handlePlyrError({ type: 'error', data }); 
                 } else {
                     console.warn('HLS Non-Fatal Error:', data);
                 }
@@ -268,7 +262,6 @@ export default function PlayerPage() {
         handlePlyrError("HLS is not supported on this browser for M3U8 streams.");
       }
     }
-    // Cleanup function for this effect
     return () => {
       if (hlsInstanceRef.current) {
         hlsInstanceRef.current.destroy();
@@ -279,7 +272,6 @@ export default function PlayerPage() {
 
 
   useEffect(() => {
-    // Cleanup function for the main component
     return () => {
       if (plyrInstanceRef.current) {
         try {
@@ -301,6 +293,7 @@ export default function PlayerPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot submit report: missing context.' });
       return;
     }
+    // isSubmitting is handled by RHF formState, no need to set it manually
     try {
       await addReportToFirestore({
         userId: authUser?.uid || null,
@@ -321,7 +314,9 @@ export default function PlayerPage() {
       console.error('Failed to submit report:', error);
       toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not submit your report. Please try again.' });
     }
+    // isSubmitting will be reset by RHF
   };
+
 
   const issueTypes: { value: ReportIssueType; label: string }[] = [
     { value: 'video-not-playing', label: 'Video Not Playing' },
@@ -386,7 +381,7 @@ export default function PlayerPage() {
               
               <div ref={plyrContainerRef} style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
                 <PlyrComponent
-                    ref={instance => plyrInstanceRef.current = instance} // Assign Plyr API instance directly
+                    ref={instance => plyrInstanceRef.current = instance} 
                     source={plyrSourceToPlay} 
                     options={plyrOptions}
                 />
@@ -394,10 +389,10 @@ export default function PlayerPage() {
 
               {displayMode === 'iframe' && activeSource && activeSource.type === 'embed' && (
                  <iframe
-                    key={iframeKey} // Keyed for iframe reload on URL change
+                    key={iframeKey} 
                     src={activeSource.url}
                     title={`${displayAnime?.title} - ${displayEpisode?.title}`}
-                    className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]" // High z-index
+                    className="w-full h-full border-0 rounded-lg absolute inset-0 z-[10]" 
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                   ></iframe>
@@ -662,6 +657,10 @@ export default function PlayerPage() {
                 </CardContent>
               </Card>
             )}
+            
+            {/* Placeholder for You Might Also Like Section */}
+            {anime && <MoreLikeThisSection currentAnime={anime} />}
+
 
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2">
@@ -687,25 +686,9 @@ export default function PlayerPage() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg border-border/40">
-              <CardHeader className="p-3 sm:p-4 pb-2">
-                 <CardTitle className="text-md font-semibold text-primary">You Might Also Like</CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 pt-0">
-                <ScrollArea className="w-full whitespace-nowrap">
-                    <div className="flex space-x-3 pb-2">
-                        {[...Array(4)].map((_, i) => <AnimeCardSkeleton key={i} className="w-[100px]" />)}
-                    </div>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-                <p className="text-center text-muted-foreground text-xs mt-2">Recommendations are coming soon!</p>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </Container>
     </div>
   );
 }
-
-    

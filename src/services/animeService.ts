@@ -25,7 +25,8 @@ import {
   startAt,
   endAt,
   getCountFromServer,
-  serverTimestamp
+  serverTimestamp,
+  or
 } from 'firebase/firestore';
 import { fetchAniListMediaDetails } from './aniListService';
 import type { AniListCharacterEdge, AniListMedia } from '@/types/anilist';
@@ -335,22 +336,17 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
     id: slug,
     updatedAt: serverTimestamp(),
 
-    // Required or defaulted string fields
-    title: animeData.title || null, // Ensure title is not empty, fallback to null if so (should be caught by Zod)
-    coverImage: animeData.coverImage || null, // Ensure coverImage is not empty
+    title: animeData.title || null, 
+    coverImage: animeData.coverImage || null, 
     synopsis: animeData.synopsis || null,
     type: animeData.type || 'Unknown',
     status: animeData.status || 'Unknown',
     sourceAdmin: animeData.sourceAdmin || 'manual',
-
-    // Number fields (handle NaN)
     year: (typeof animeData.year === 'number' && !isNaN(animeData.year)) ? animeData.year : null,
-    
-    // Optional fields (convert undefined to null or default)
     bannerImage: animeData.bannerImage || null,
     averageRating: (typeof animeData.averageRating === 'number' && !isNaN(animeData.averageRating)) ? animeData.averageRating : null,
-    popularity: (typeof animeData.popularity === 'number' && !isNaN(animeData.popularity)) ? animeData.popularity : 0, // Default to 0 for popularity
-    isFeatured: animeData.isFeatured === undefined ? false : animeData.isFeatured, // Default to false
+    popularity: (typeof animeData.popularity === 'number' && !isNaN(animeData.popularity)) ? animeData.popularity : 0, 
+    isFeatured: animeData.isFeatured === undefined ? false : animeData.isFeatured, 
     aniListId: (typeof animeData.aniListId === 'number' && !isNaN(animeData.aniListId)) ? animeData.aniListId : null,
     trailerUrl: animeData.trailerUrl || null,
     downloadPageUrl: animeData.downloadPageUrl || null,
@@ -358,27 +354,24 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
     seasonYear: (typeof animeData.seasonYear === 'number' && !isNaN(animeData.seasonYear)) ? animeData.seasonYear : ((typeof animeData.year === 'number' && !isNaN(animeData.year)) ? animeData.year : null),
     countryOfOrigin: animeData.countryOfOrigin || null,
     source: animeData.source || null,
-    format: animeData.format || (animeData.type || 'Unknown'), // Default format to type
-    duration: (typeof animeData.duration === 'number' && !isNaN(animeData.duration)) ? animeData.duration : null, // Anime-level duration
+    format: animeData.format || (animeData.type || 'Unknown'), 
+    duration: (typeof animeData.duration === 'number' && !isNaN(animeData.duration)) ? animeData.duration : null, 
     airedFrom: animeData.airedFrom || null,
     airedTo: animeData.airedTo || null,
-    
-    // Array fields (default to empty array)
     genre: Array.isArray(animeData.genre) ? animeData.genre : [],
     studios: Array.isArray(animeData.studios) ? animeData.studios : [],
     characters: Array.isArray(animeData.characters) ? animeData.characters : [],
   };
 
-  // Process episodes
   dataToSave.episodes = (animeData.episodes || []).map((ep, index) => {
     const episodeId = ep.id || `${slug}-s${(typeof ep.seasonNumber === 'number' && !isNaN(ep.seasonNumber) ? ep.seasonNumber : 0)}-e${(typeof ep.episodeNumber === 'number' && !isNaN(ep.episodeNumber) ? ep.episodeNumber : index)}-${Date.now()}`;
     
     const sources = (ep.sources || []).map((source, sourceIdx) => ({
       id: source.id || `source-${episodeId}-${Date.now()}-${sourceIdx}`,
-      url: source.url || null, // Should be caught by Zod on form, but defensive
-      label: source.label || null, // Should be caught by Zod on form
-      type: source.type || 'mp4', // Default, Zod requires it
-      category: source.category || 'SUB', // Default, Zod requires it
+      url: source.url || null, 
+      label: source.label || null, 
+      type: source.type || 'mp4', 
+      category: source.category || 'SUB', 
       quality: (source.quality === '' || source.quality === undefined) ? null : source.quality,
     }));
 
@@ -391,29 +384,25 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
       duration: ep.duration || null,
       overview: ep.overview || null,
       airDate: ep.airDate || null,
-      sources: sources.length > 0 ? sources : null, // Store null if no sources, or empty array is also fine for Firestore
-      // url: undefined, // Ensure old top-level URL is explicitly not saved
+      sources: sources.length > 0 ? sources : null, 
     };
   });
   dataToSave.episodesCount = dataToSave.episodes?.length || 0;
   
-  // Remove top-level url field from episodes if present from old structure
   if (dataToSave.episodes) {
     dataToSave.episodes.forEach((ep: any) => delete ep.url);
   }
-
 
   try {
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
       console.warn(`Anime with slug "${slug}" already exists. Updating existing document.`);
       const existingData = docSnap.data();
-      // Ensure serverTimestamps are not overwritten by potentially stale client data if merging
       const updatePayload = { 
         ...existingData, 
         ...dataToSave, 
-        updatedAt: serverTimestamp(), // Always set/update this
-        createdAt: existingData.createdAt || serverTimestamp() // Preserve existing or set if new
+        updatedAt: serverTimestamp(), 
+        createdAt: existingData.createdAt || serverTimestamp() 
       };
       await updateDoc(docRef, updatePayload);
     } else {
@@ -441,25 +430,23 @@ export async function updateAnimeInFirestore(id: string, animeData: Partial<Omit
   const docRef = doc(animesCollection, id);
   const updatePayload: { [key: string]: any } = { updatedAt: serverTimestamp() };
 
-  // Helper function to sanitize value for Firestore
   const sanitizeForFirestore = (value: any, isNumericField: boolean = false, isBooleanField: boolean = false, isArrayField: boolean = false) => {
     if (value === undefined) {
-      return null; // Default to null for undefined optional fields unless specific default needed
+      return null; 
     }
     if (isNumericField) {
-      const num = Number(value); // Zod should have coerced, but be safe
+      const num = Number(value); 
       return (typeof num === 'number' && !isNaN(num)) ? num : null;
     }
     if (isBooleanField) {
-      return typeof value === 'boolean' ? value : false; // Default booleans to false if not explicitly true/false
+      return typeof value === 'boolean' ? value : false; 
     }
     if (isArrayField) {
-      return Array.isArray(value) ? value : []; // Default arrays to empty array
+      return Array.isArray(value) ? value : []; 
     }
     if (typeof value === 'string' && value === '') {
-      // For specific string fields that should be null if empty (like URLs, optional text)
       const nullableStringFields = ['bannerImage', 'trailerUrl', 'downloadPageUrl', 'thumbnail', 'overview', 'airDate', 'duration', 'quality', 'season', 'countryOfOrigin', 'source', 'format'];
-      const currentKey = Object.keys(animeData).find(k => animeData[k as keyof typeof animeData] === value); // This is a bit hacky to get current key
+      const currentKey = Object.keys(animeData).find(k => animeData[k as keyof typeof animeData] === value); 
       if (currentKey && nullableStringFields.includes(currentKey)) {
         return null;
       }
@@ -492,7 +479,6 @@ export async function updateAnimeInFirestore(id: string, animeData: Partial<Omit
             airDate: sanitizeForFirestore(ep.airDate),
             sources: sources.length > 0 ? sources : null,
           };
-          // delete (cleanedEpisode as any).url; // Ensure old top-level URL is removed
           return cleanedEpisode;
         });
         updatePayload.episodesCount = updatePayload.episodes?.length ?? 0;
@@ -506,18 +492,14 @@ export async function updateAnimeInFirestore(id: string, animeData: Partial<Omit
         let isArray = ['genre', 'studios', 'characters'].includes(key);
         const sanitized = sanitizeForFirestore(value, isNumeric, isBoolean, isArray);
         
-        // Only add to payload if the original value was actually provided in animeData
-        // or if we're setting a specific default like isFeatured=false
         if (animeData.hasOwnProperty(key) || (isBoolean && value === undefined)) {
              updatePayload[key] = sanitized;
         }
     }
   });
 
-  // Remove any top-level undefined properties from updatePayload (should be handled by sanitizeForFirestore now)
   Object.keys(updatePayload).forEach(key => {
     if (updatePayload[key] === undefined) {
-      // This should not happen if sanitizeForFirestore works correctly
       console.warn(`updateAnimeInFirestore: field ${key} was undefined before updateDoc. Setting to null or default.`);
        if (key === 'isFeatured') updatePayload[key] = false;
        else if (key === 'popularity') updatePayload[key] = 0;
@@ -573,15 +555,12 @@ export async function updateAnimeEpisode(animeId: string, episodeId: string, epi
     const currentEpisode = episodes[episodeIndex];
     const updatedEpisodeFields: Partial<Episode> = {};
 
-    // Sanitize and prepare fields from episodeData payload
     (Object.keys(episodeData) as Array<keyof Partial<Episode>>).forEach(key => {
         const value = episodeData[key];
         if (value === undefined) {
-            // For optional fields being explicitly "cleared" via undefined, set to null
             if (['title', 'thumbnail', 'duration', 'overview', 'airDate', 'sources'].includes(key)) {
                  updatedEpisodeFields[key as keyof Episode] = null as any;
             }
-            // episodeNumber and seasonNumber shouldn't become null if just undefined in payload, keep existing
         } else if (key === 'thumbnail' && value === '') {
             updatedEpisodeFields.thumbnail = null;
         } else if (key === 'sources') {
@@ -595,7 +574,7 @@ export async function updateAnimeEpisode(animeId: string, episodeId: string, epi
             }));
             if (updatedEpisodeFields.sources.length === 0) updatedEpisodeFields.sources = null;
         } else if (key === 'episodeNumber' || key === 'seasonNumber') {
-            updatedEpisodeFields[key] = (typeof value === 'number' && !isNaN(value)) ? value : currentEpisode[key]; // Keep existing if NaN
+            updatedEpisodeFields[key] = (typeof value === 'number' && !isNaN(value)) ? value : currentEpisode[key]; 
         }
          else {
             updatedEpisodeFields[key as keyof Episode] = value;
@@ -606,11 +585,9 @@ export async function updateAnimeEpisode(animeId: string, episodeId: string, epi
       ...currentEpisode,
       ...updatedEpisodeFields,
     };
-    // Ensure url is not present if sources is
     if (episodes[episodeIndex].sources && episodes[episodeIndex].sources!.length > 0) {
         delete episodes[episodeIndex].url;
     }
-
 
     await updateDoc(animeRef, { episodes: episodes, updatedAt: serverTimestamp() });
     revalidatePath(`/anime/${animeId}`);
@@ -678,7 +655,7 @@ export async function getUniqueGenres(): Promise<string[]> {
 }
 
 
-export async function searchAnimes(searchTerm: string, count: number = 5): Promise<Anime[]> { // Default count to 5 for live search
+export async function searchAnimes(searchTerm: string, count: number = 5): Promise<Anime[]> { 
   if (!searchTerm || searchTerm.trim() === '') {
     return [];
   }
@@ -762,4 +739,63 @@ export async function getTotalAnimeCount(): Promise<number> {
   }
 }
 
-    
+export async function getSimilarAnimes({
+  currentAnimeId,
+  currentAnimeGenres,
+  count = 6,
+}: {
+  currentAnimeId: string;
+  currentAnimeGenres: string[];
+  count?: number;
+}): Promise<Anime[]> {
+  if (!currentAnimeGenres || currentAnimeGenres.length === 0) {
+    // Fallback: get top popular anime excluding current one
+    try {
+      const popularAnimes = await getAllAnimes({ count: count + 1, filters: { sortBy: 'popularity', sortOrder: 'desc' } });
+      return popularAnimes.filter(anime => anime.id !== currentAnimeId).slice(0, count);
+    } catch (error) {
+      console.error("Error fetching popular animes as fallback for similar animes:", error);
+      return [];
+    }
+  }
+
+  const queryConstraints: QueryConstraint[] = [
+    where('genre', 'array-contains-any', currentAnimeGenres.slice(0, 10)), // Firestore limit for array-contains-any
+    orderBy('popularity', 'desc'),
+    limit(count + 10), // Fetch a bit more to filter out current anime and ensure enough results
+  ];
+
+  const q = query(animesCollection, ...queryConstraints);
+
+  try {
+    const querySnapshot = await getDocs(q);
+    const similarAnimes = querySnapshot.docs
+      .map(docSnap => convertAnimeTimestampsForClient(docSnap.data() as Anime))
+      .filter(anime => anime.id !== currentAnimeId); // Exclude the current anime
+
+    // If not enough results, we could try with fewer genre matches or just return what we have
+    return similarAnimes.slice(0, count);
+  } catch (error) {
+    if (error instanceof FirestoreError && error.code === 'failed-precondition') {
+      console.warn(`Firestore query for getSimilarAnimes (genres: ${currentAnimeGenres.join(', ')}) requires an index. Falling back to single genre search. Details: ${error.message}`);
+      // Fallback to searching by the first genre if 'array-contains-any' index is missing
+      try {
+        const fallbackConstraints: QueryConstraint[] = [
+          where('genre', 'array-contains', currentAnimeGenres[0]),
+          orderBy('popularity', 'desc'),
+          limit(count + 5),
+        ];
+        const fallbackQuery = query(animesCollection, ...fallbackConstraints);
+        const fallbackSnapshot = await getDocs(fallbackQuery);
+        const fallbackAnimes = fallbackSnapshot.docs
+          .map(docSnap => convertAnimeTimestampsForClient(docSnap.data() as Anime))
+          .filter(anime => anime.id !== currentAnimeId);
+        return fallbackAnimes.slice(0, count);
+      } catch (fallbackError) {
+        console.error("Fallback query for getSimilarAnimes also failed:", fallbackError);
+        throw handleFirestoreError(fallbackError, `getSimilarAnimes (fallback - genres: ${currentAnimeGenres.join(', ')})`);
+      }
+    }
+    throw handleFirestoreError(error, `getSimilarAnimes (genres: ${currentAnimeGenres.join(', ')})`);
+  }
+}
