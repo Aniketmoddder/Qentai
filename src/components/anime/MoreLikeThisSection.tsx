@@ -14,6 +14,7 @@ import type { Swiper as SwiperInstance } from 'swiper';
 import { Navigation } from 'swiper/modules';
 import { gsap } from 'gsap';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Added import
 
 import 'swiper/css';
 import 'swiper/css/navigation';
@@ -71,7 +72,7 @@ export default function MoreLikeThisSection({ currentAnime }: MoreLikeThisSectio
             stagger: 0.1,
             ease: 'power2.out',
             scrollTrigger: { // Animate when section scrolls into view
-              trigger: validCardRefs[0].closest('.swiper-container'), // or the section itself
+              trigger: validCardRefs[0].closest('.swiper-container') || validCardRefs[0].closest('.group\\/carousel'),
               start: 'top bottom-=100px',
               toggleActions: 'play none none none',
               once: true,
@@ -85,7 +86,7 @@ export default function MoreLikeThisSection({ currentAnime }: MoreLikeThisSectio
   const handleMouseEnterCard = (el: HTMLDivElement | null) => {
     if (!el) return;
     const imageEl = el.querySelector('img');
-    gsap.to(el, { y: -5, scale: 1.05, duration: 0.25, ease: 'power1.out' });
+    gsap.to(el, { y: -5, scale: 1.05, duration: 0.25, ease: 'power1.out', zIndex:10 });
     if (imageEl) {
       gsap.to(imageEl, { scale: 1.1, duration: 0.3, ease: 'power1.out' });
     }
@@ -94,7 +95,7 @@ export default function MoreLikeThisSection({ currentAnime }: MoreLikeThisSectio
   const handleMouseLeaveCard = (el: HTMLDivElement | null) => {
     if (!el) return;
     const imageEl = el.querySelector('img');
-    gsap.to(el, { y: 0, scale: 1, duration: 0.25, ease: 'power1.out' });
+    gsap.to(el, { y: 0, scale: 1, duration: 0.25, ease: 'power1.out', zIndex:1 });
     if (imageEl) {
       gsap.to(imageEl, { scale: 1, duration: 0.3, ease: 'power1.out' });
     }
@@ -235,3 +236,4 @@ export default function MoreLikeThisSection({ currentAnime }: MoreLikeThisSectio
     </Card>
   );
 }
+
