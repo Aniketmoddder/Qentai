@@ -7,7 +7,7 @@ import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard } from "lucide-react";
+import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import MoreLikeThisSection from "@/components/anime/MoreLikeThisSection";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { gsap } from 'gsap';
 
 
 import PlyrComponent from "plyr-react";
@@ -78,7 +79,10 @@ export default function PlayerPage() {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const { user: authUser } = useAuth();
 
-  const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number>(1);
+  const [currentSeasonIndex, setCurrentSeasonIndex] = useState<number>(0);
+  const [isAnimatingSeason, setIsAnimatingSeason] = useState(false);
+  const seasonTextRef = useRef<HTMLParagraphElement>(null);
+
 
   const reportForm = useForm<ReportFormValues>({
     resolver: zodResolver(reportFormSchema),
@@ -112,6 +116,17 @@ export default function PlayerPage() {
     },
   }), [handlePlyrError]);
 
+  const availableSeasons = useMemo(() => {
+    if (!anime?.episodes) return [];
+    const seasonNumbers = new Set(anime.episodes.map(ep => ep.seasonNumber || 1));
+    return Array.from(seasonNumbers).sort((a, b) => a - b);
+  }, [anime?.episodes]);
+
+  const selectedSeasonNumber = useMemo(() => {
+    return availableSeasons.length > 0 ? availableSeasons[currentSeasonIndex] : 1;
+  }, [availableSeasons, currentSeasonIndex]);
+
+
   const fetchDetails = useCallback(async () => {
     if (!animeId) {
       setPlayerError("Anime ID is missing.");
@@ -127,9 +142,9 @@ export default function PlayerPage() {
       if (details) {
         setAnime(details);
         
-        const seasons = details.episodes ? Array.from(new Set(details.episodes.map(ep => ep.seasonNumber || 1))).sort((a, b) => a - b) : [1];
-        const initialSeason = seasons[0] || 1;
-        setSelectedSeasonNumber(initialSeason);
+        const localAvailableSeasons = details.episodes ? Array.from(new Set(details.episodes.map(ep => ep.seasonNumber || 1))).sort((a, b) => a - b) : [1];
+        let initialSeasonNumber = localAvailableSeasons[0] || 1;
+        let initialSeasonIdx = 0;
 
         const epIdFromUrl = searchParams.get("episode");
         let epToSet: Episode | undefined;
@@ -137,14 +152,20 @@ export default function PlayerPage() {
         if (epIdFromUrl) {
             const foundEpInUrlSeason = details.episodes?.find(e => e.id === epIdFromUrl);
             if (foundEpInUrlSeason) {
-                setSelectedSeasonNumber(foundEpInUrlSeason.seasonNumber || 1);
+                initialSeasonNumber = foundEpInUrlSeason.seasonNumber || 1;
+                const foundIndex = localAvailableSeasons.indexOf(initialSeasonNumber);
+                if (foundIndex !== -1) {
+                  initialSeasonIdx = foundIndex;
+                }
                 epToSet = foundEpInUrlSeason;
             }
         }
         
+        setCurrentSeasonIndex(initialSeasonIdx);
+
         if (!epToSet) {
-            epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeason && ep.sources && ep.sources.length > 0) ||
-                      details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeason);
+            epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumber && ep.sources && ep.sources.length > 0) ||
+                      details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumber);
         }
 
         if (epToSet) {
@@ -201,19 +222,54 @@ export default function PlayerPage() {
     [router, animeId, currentEpisode?.id, activeSource]
   );
   
-  const handleSeasonSelect = (seasonNum: number) => {
-    setSelectedSeasonNumber(seasonNum);
-    const firstEpisodeOfSeason = anime?.episodes?.find(ep => (ep.seasonNumber || 1) === seasonNum && ep.sources && ep.sources.length > 0) ||
-                                anime?.episodes?.find(ep => (ep.seasonNumber || 1) === seasonNum);
-    if (firstEpisodeOfSeason) {
-      handleEpisodeSelect(firstEpisodeOfSeason);
-    } else {
-      setCurrentEpisode(null);
-      setActiveSource(null);
-      setPlayerError(`No episodes with playable sources found for Season ${seasonNum}.`);
-    }
+  const handleSeasonChange = (direction: 'next' | 'prev') => {
+    if (isAnimatingSeason || availableSeasons.length <= 1) return;
+    setIsAnimatingSeason(true);
+
+    const newIndex = direction === 'next'
+      ? (currentSeasonIndex + 1) % availableSeasons.length
+      : (currentSeasonIndex - 1 + availableSeasons.length) % availableSeasons.length;
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        if (seasonTextRef.current) {
+          seasonTextRef.current.textContent = `Season ${String(availableSeasons[newIndex]).padStart(2, '0')}`;
+        }
+        setCurrentSeasonIndex(newIndex); // Update React state for selectedSeasonNumber derivation
+
+        gsap.fromTo(seasonTextRef.current, 
+          { y: direction === 'next' ? 30 : -30, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out', 
+            onComplete: () => setIsAnimatingSeason(false) 
+          }
+        );
+      }
+    });
+
+    tl.to(seasonTextRef.current, {
+      y: direction === 'next' ? -30 : 30,
+      opacity: 0,
+      duration: 0.3,
+      ease: 'power2.in'
+    });
   };
 
+  useEffect(() => {
+    if (anime && selectedSeasonNumber) {
+        const firstEpisodeOfSeason = anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber && ep.sources && ep.sources.length > 0) ||
+                                     anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber);
+        if (firstEpisodeOfSeason) {
+            if (firstEpisodeOfSeason.id !== currentEpisode?.id) {
+                 handleEpisodeSelect(firstEpisodeOfSeason);
+            }
+        } else if (currentEpisode !== null) { // If no episodes for this season, clear current episode
+            setCurrentEpisode(null);
+            setActiveSource(null);
+            setPlayerError(`No episodes with playable sources found for Season ${selectedSeasonNumber}.`);
+        }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSeasonNumber, anime]); // Deliberately not including handleEpisodeSelect to avoid loops, currentEpisode
 
   const handleServerSelect = (source: VideoSource) => {
     setPlayerError(null); 
@@ -361,12 +417,6 @@ export default function PlayerPage() {
     ...placeholderEpisode, id: `placeholder-ep-${i+1}`, episodeNumber: i + 1,
     title: `Episode ${i + 1}: Placeholder`, thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
   }));
-
-  const availableSeasons = useMemo(() => {
-    if (!anime?.episodes) return [];
-    const seasonNumbers = new Set(anime.episodes.map(ep => ep.seasonNumber || 1));
-    return Array.from(seasonNumbers).sort((a, b) => a - b);
-  }, [anime?.episodes]);
 
   const episodesForSelectedSeason = useMemo(() => {
     if (!anime?.episodes) return placeholderEpisodes;
@@ -603,35 +653,34 @@ export default function PlayerPage() {
 
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
             {availableSeasons.length > 1 && (
-              <Card className="shadow-lg border-border/40 bg-card/70 backdrop-blur-sm">
-                <CardHeader className="p-3 sm:p-4 pb-2">
-                  <CardTitle className="text-md font-semibold text-primary flex items-center">
-                    <Tv className="mr-2 w-5 h-5" /> Seasons
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-3 sm:p-4 pt-0">
-                  <ScrollArea className="w-full whitespace-nowrap -mx-1 px-1 pb-1.5">
-                    <div className="flex space-x-2 sm:space-x-3">
-                      {availableSeasons.map(seasonNum => (
-                        <button
-                          key={`season-chip-${seasonNum}`}
-                          onClick={() => handleSeasonSelect(seasonNum)}
-                          className={cn(
-                            "rounded-full px-4 py-1.5 text-xs sm:text-sm transition-all duration-300 ease-out transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-background focus-visible:ring-offset-2",
-                            selectedSeasonNumber === seasonNum
-                              ? "bg-primary text-primary-foreground font-semibold shadow-xl scale-105"
-                              : "bg-muted/40 backdrop-blur-sm border border-border/40 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/50 hover:scale-105 hover:shadow-md"
-                          )}
-                          aria-pressed={selectedSeasonNumber === seasonNum}
-                        >
-                          Season {seasonNum}
-                        </button>
-                      ))}
-                    </div>
-                    <ScrollBar orientation="horizontal" className="h-1.5 mt-2" />
-                  </ScrollArea>
-                </CardContent>
-              </Card>
+              <div className="relative flex items-center justify-center p-4 rounded-lg bg-primary/10 backdrop-blur-sm border border-primary/20 shadow-lg my-4 min-h-[80px] sm:min-h-[100px] group overflow-hidden">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => handleSeasonChange('prev')}
+                  disabled={isAnimatingSeason || availableSeasons.length <= 1}
+                  className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-10 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary/30 rounded-full w-8 h-8 sm:w-10 sm:h-10 opacity-50 group-hover:opacity-100 transition-opacity"
+                  aria-label="Previous Season"
+                >
+                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                </Button>
+                <div className="text-center">
+                  <p className="text-xs text-primary-foreground/80 uppercase tracking-wider">Currently Viewing</p>
+                  <p ref={seasonTextRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary transition-colors duration-300">
+                    Season {String(selectedSeasonNumber).padStart(2, '0')}
+                  </p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => handleSeasonChange('next')}
+                  disabled={isAnimatingSeason || availableSeasons.length <= 1}
+                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-10 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary/30 rounded-full w-8 h-8 sm:w-10 sm:h-10 opacity-50 group-hover:opacity-100 transition-opacity"
+                  aria-label="Next Season"
+                >
+                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+                </Button>
+              </div>
             )}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
@@ -765,6 +814,7 @@ export default function PlayerPage() {
     </div>
   );
 }
+    
 
     
 
