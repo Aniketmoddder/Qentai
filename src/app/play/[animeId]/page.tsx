@@ -7,7 +7,7 @@ import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard } from "lucide-react"; // Removed ChevronLeft, ChevronRight as they are no longer used
+import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, Edit3, UserCircle, Send, Server as ServerIcon, Clapperboard, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -26,12 +26,10 @@ import { Textarea } from "@/components/ui/textarea";
 import MoreLikeThisSection from "@/components/anime/MoreLikeThisSection";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { gsap } from 'gsap';
-
 import PlyrComponent from "plyr-react";
 import type Plyr from "plyr";
 import "plyr/dist/plyr.css";
 import Hls from 'hls.js';
-
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -40,13 +38,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/use-auth';
 import type { ReportIssueType } from '@/types/report';
 import { addReportToFirestore } from '@/services/reportService';
-
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
-import { EffectCreative } from 'swiper/modules'; // Navigation, Pagination removed as not directly used by this simplified swiper
 import 'swiper/css';
-import 'swiper/css/effect-creative'; // Only effect-creative is needed for this setup
-
+import CommentsSection from '@/components/comments/CommentsSection'; // Import CommentsSection
 
 const reportFormSchema = z.object({
   issueType: z.enum([
@@ -85,11 +80,10 @@ export default function PlayerPage() {
   const { user: authUser } = useAuth();
 
   const [currentSeasonIndex, setCurrentSeasonIndex] = useState<number>(0);
-  const previousSeasonIndexRef = useRef<number>(0); // Stores the index *before* a swipe/change
+  const previousSeasonIndexRef = useRef<number>(0); 
   const [isAnimatingSeasonText, setIsAnimatingSeasonText] = useState(false);
-  const seasonTextContainerRef = useRef<HTMLDivElement>(null); // Target for GSAP text animation
+  const seasonTextContainerRef = useRef<HTMLDivElement>(null); 
   const swiperInstanceRef = useRef<SwiperInstance | null>(null);
-
 
   const reportForm = useForm<ReportFormValues>({
     resolver: zodResolver(reportFormSchema),
@@ -173,15 +167,12 @@ export default function PlayerPage() {
             }
         }
         
-        // Set currentSeasonIndex first, then update previousSeasonIndexRef
         setCurrentSeasonIndex(initialSeasonIdx);
         previousSeasonIndexRef.current = initialSeasonIdx; 
         
-        // Initialize Swiper to the correct slide without animation
         if (swiperInstanceRef.current && !swiperInstanceRef.current.destroyed) {
-            swiperInstanceRef.current.slideToLoop(initialSeasonIdx, 0, false); // Use slideToLoop if loop is true, slideTo otherwise
+            swiperInstanceRef.current.slideToLoop(initialSeasonIdx, 0, false);
         }
-
 
         if (!epToSet) {
             epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumberForEpisodes && ep.sources && ep.sources.length > 0) ||
@@ -230,13 +221,11 @@ export default function PlayerPage() {
     
     setIsAnimatingSeasonText(true);
     const container = seasonTextContainerRef.current;
-    
     container.innerHTML = ''; // Clear previous content
 
-    // Create spans for old text
     const oldChars = oldSeasonText.split('').map(char => {
         const span = document.createElement('span');
-        span.textContent = char === ' ' ? '\u00A0' : char; // Handle spaces
+        span.textContent = char === ' ' ? '\u00A0' : char;
         span.style.display = 'inline-block';
         gsap.set(span, { opacity: 1, y: 0, filter: 'blur(0px)', willChange: 'transform, opacity, filter' });
         container.appendChild(span);
@@ -245,73 +234,63 @@ export default function PlayerPage() {
 
     const tl = gsap.timeline({
       onComplete: () => {
-        container.innerHTML = ''; // Clear old character spans
-
-        // Create spans for new text
+        container.innerHTML = ''; 
         const newChars = newSeasonText.split('').map(char => {
             const span = document.createElement('span');
             span.textContent = char === ' ' ? '\u00A0' : char;
             span.style.display = 'inline-block';
-            // Initial position for incoming characters (from opposite direction)
             gsap.set(span, { 
                 opacity: 0, 
-                y: animationDirection === 'next' ? 25 : -25, 
-                filter: 'blur(5px)',
+                y: animationDirection === 'next' ? 30 : -30, 
+                filter: 'blur(8px)',
                 willChange: 'transform, opacity, filter'
             });
             container.appendChild(span);
             return span;
         });
-
-        // Animate in new text
         gsap.to(newChars, {
             opacity: 1,
             y: 0,
             filter: 'blur(0px)',
             stagger: 0.05, 
             duration: 0.6, 
-            ease: 'power2.out',
+            ease: 'power3.out',
             onComplete: () => {
               setIsAnimatingSeasonText(false);
-              gsap.set(newChars, { clearProps: 'willChange' }); // Clean up
+              gsap.set(newChars, { clearProps: 'willChange' }); 
             }
         });
       }
     });
 
-    // Animate out old text (slide in the direction of swipe)
     tl.to(oldChars, {
         opacity: 0,
-        y: animationDirection === 'next' ? -25 : 25,
-        filter: 'blur(5px)',
+        y: animationDirection === 'next' ? -30 : 30,
+        filter: 'blur(8px)',
         stagger: {
             each: 0.04,
             from: animationDirection === 'next' ? "start" : "end" 
         },
         duration: 0.5,
-        ease: 'power2.in',
+        ease: 'power3.in',
         onComplete: () => {
            gsap.set(oldChars, { clearProps: 'willChange' });
         }
     });
-
   }, [isAnimatingSeasonText]);
   
-  // Effect to trigger animation when currentSeasonIndex changes
   useEffect(() => {
-    if (availableSeasons.length > 0 && !isAnimatingSeasonText) {
-        const oldSeasonText = `Season ${String(availableSeasons[previousSeasonIndexRef.current] || 1).padStart(2, '0')}`;
+    if (availableSeasons.length > 0 && !isAnimatingSeasonText && seasonTextContainerRef.current) {
+        const oldSeasonText = seasonTextContainerRef.current.textContent || `Season ${String(availableSeasons[previousSeasonIndexRef.current] || 1).padStart(2, '0')}`;
         const newSeasonText = `Season ${String(availableSeasons[currentSeasonIndex] || 1).padStart(2, '0')}`;
         const animationDirection = currentSeasonIndex > previousSeasonIndexRef.current ? 'next' : 'prev';
         
-        if (oldSeasonText !== newSeasonText) { // Only animate if text actually changes
+        if (oldSeasonText !== newSeasonText || previousSeasonIndexRef.current !== currentSeasonIndex) {
              handleSeasonChangeAnimation(oldSeasonText, newSeasonText, animationDirection);
         }
-        previousSeasonIndexRef.current = currentSeasonIndex; // Update ref after using it
+        previousSeasonIndexRef.current = currentSeasonIndex;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSeasonIndex, availableSeasons]); // isAnimatingSeasonText removed to allow trigger
-
+  }, [currentSeasonIndex, availableSeasons, isAnimatingSeasonText, handleSeasonChangeAnimation]);
 
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
@@ -330,9 +309,8 @@ export default function PlayerPage() {
     [router, animeId, currentEpisode?.id, activeSource]
   );
 
-  // This useEffect handles selecting the first episode of a newly selected season
   useEffect(() => {
-    if (anime && availableSeasons.length > 0 && !pageIsLoading) { // Ensure anime data is loaded
+    if (anime && availableSeasons.length > 0 && !pageIsLoading) {
         const firstEpisodeOfSeason = anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber && ep.sources && ep.sources.length > 0) ||
                                      anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber);
         if (firstEpisodeOfSeason) {
@@ -345,12 +323,10 @@ export default function PlayerPage() {
             setPlayerError(`No episodes with playable sources found for Season ${selectedSeasonNumber}.`);
         }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSeasonNumber, anime, availableSeasons, pageIsLoading]); // Removed handleEpisodeSelect, currentEpisode from deps to avoid potential loops
+  }, [selectedSeasonNumber, anime, availableSeasons, pageIsLoading, currentEpisode, handleEpisodeSelect]); 
 
   const handleSwiperInstance = (swiper: SwiperInstance) => {
     swiperInstanceRef.current = swiper;
-    // If anime data is already loaded, ensure swiper is on the correct initial slide
     if (anime && !pageIsLoading) {
         const initialIdx = availableSeasons.indexOf(selectedSeasonNumber);
         if (initialIdx !== -1 && swiper.activeIndex !== initialIdx) {
@@ -364,7 +340,6 @@ export default function PlayerPage() {
       setCurrentSeasonIndex(swiper.activeIndex);
     }
   };
-
 
   const handleServerSelect = (source: VideoSource) => {
     setPlayerError(null); 
@@ -448,7 +423,6 @@ export default function PlayerPage() {
     };
   }, [plyrSourceToPlay, handlePlyrError]);
 
-
   useEffect(() => {
     return () => {
       if (plyrInstanceRef.current) {
@@ -493,7 +467,6 @@ export default function PlayerPage() {
     }
   };
 
-
   const issueTypes: { value: ReportIssueType; label: string }[] = [
     { value: 'video-not-playing', label: 'Video Not Playing' },
     { value: 'wrong-video-episode', label: 'Wrong Video / Episode' },
@@ -514,13 +487,12 @@ export default function PlayerPage() {
   }));
 
   const episodesForSelectedSeason = useMemo(() => {
-    if (!anime?.episodes) return placeholderEpisodes; // Use placeholder if anime or episodes are not loaded
+    if (!anime?.episodes) return pageIsLoading ? placeholderEpisodes : []; // Use placeholder if anime or episodes are not loaded during page load
     const filtered = anime.episodes
       .filter(ep => (ep.seasonNumber || 1) === selectedSeasonNumber)
       .sort((a, b) => (a.episodeNumber || 0) - (b.episodeNumber || 0));
-    return filtered.length > 0 ? filtered : []; // Return empty array if no episodes for season
-  }, [anime?.episodes, selectedSeasonNumber, placeholderEpisodes]);
-
+    return filtered.length > 0 ? filtered : []; 
+  }, [anime?.episodes, selectedSeasonNumber, pageIsLoading, placeholderEpisodes]);
 
   if (pageIsLoading && !anime) {
     return (
@@ -745,41 +717,38 @@ export default function PlayerPage() {
                 Next episode air date will be shown here.
               </div>
             </div>
+             {/* Comments Section Integration */}
+            {anime && currentEpisode && (
+              <CommentsSection animeId={anime.id} episodeId={currentEpisode.id} />
+            )}
           </div>
 
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-             {availableSeasons.length > 0 && (
-              <div className="relative group/season-selector flex items-center justify-center rounded-lg bg-primary/5 backdrop-blur-sm border border-primary/10 shadow-lg my-4 min-h-[80px] sm:min-h-[100px] overflow-hidden">
+            {availableSeasons.length > 0 && (
+                <div className="relative group/season-selector flex items-center justify-center rounded-lg bg-primary/10 backdrop-blur-sm border border-primary/20 shadow-lg my-4 min-h-[80px] sm:min-h-[100px] overflow-hidden">
                 <Swiper
-                  modules={[EffectCreative]} // Only EffectCreative needed if not using navigation/pagination modules
-                  onSwiper={handleSwiperInstance}
-                  onSlideChangeTransitionEnd={handleSwiperSlideChange} // Use this to ensure slide transition is complete
-                  slidesPerView={1}
-                  loop={false} // Crucial: loop=false for reliable activeIndex with GSAP sync
-                  allowTouchMove={!isAnimatingSeasonText} // Prevent swipe during GSAP text animation
-                  effect="creative" 
-                  creativeEffect={{
-                    prev: { shadow: true, translate: ["-100%", 0, -500], opacity: 0.5, },
-                    next: { shadow: true, translate: ["100%", 0, -500], opacity: 0.5, },
-                  }}
-                  className="h-full w-full"
-                  initialSlide={currentSeasonIndex} // Ensure Swiper starts at the correct index
+                    modules={[]}
+                    onSwiper={handleSwiperInstance}
+                    onSlideChangeTransitionEnd={handleSwiperSlideChange} 
+                    slidesPerView={1}
+                    loop={false} 
+                    allowTouchMove={!isAnimatingSeasonText}
+                    className="h-full w-full"
+                    initialSlide={currentSeasonIndex}
                 >
-                  {availableSeasons.map((seasonNum, index) => (
+                    {availableSeasons.map((seasonNum, index) => (
                     <SwiperSlide key={index} className="flex flex-col items-center justify-center text-center h-full p-4 select-none cursor-grab active:cursor-grabbing">
-                        {/* This div will be targeted by GSAP for text animation, not the Swiper slide itself */}
+                        {/* Placeholder for Swiper slide content, actual text animated separately */}
                     </SwiperSlide>
-                  ))}
+                    ))}
                 </Swiper>
-                {/* Central text container for GSAP animation, positioned over the Swiper */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <p className="text-xs text-primary-foreground/70 uppercase tracking-wider">Currently Viewing</p>
                     <div ref={seasonTextContainerRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mt-1 text-center min-h-[1.2em]">
-                        {/* Initial text before animation */}
-                        {availableSeasons.length > 0 ? `Season ${String(availableSeasons[currentSeasonIndex] || 1).padStart(2, '0')}` : ''}
+                        {`Season ${String(availableSeasons[currentSeasonIndex] || 1).padStart(2, '0')}`}
                     </div>
                 </div>
-              </div>
+                </div>
             )}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
@@ -883,44 +852,10 @@ export default function PlayerPage() {
             )}
             
             {anime && <MoreLikeThisSection currentAnime={anime} />}
-
-
-            <Card className="shadow-lg border-border/40">
-              <CardHeader className="p-3 sm:p-4 pb-2">
-                <CardTitle className="text-md font-semibold text-primary flex items-center">
-                    <Edit3 className="w-5 h-5 mr-2"/> Comments (0)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={displayAnime?.coverImage || `https://placehold.co/40x40.png`} alt="User" data-ai-hint="user avatar" />
-                        <AvatarFallback><UserCircle size={18}/></AvatarFallback>
-                    </Avatar>
-                    <Textarea placeholder="Add a comment... (Feature coming soon)" className="text-xs flex-grow bg-input" rows={1} disabled />
-                    <Button size="sm" variant="ghost" disabled><Send size={16}/></Button>
-                </div>
-                <div className="text-xs text-muted-foreground flex justify-end">
-                    Sort by: <Button variant="link" size="xs" className="px-1 text-muted-foreground hover:text-primary" disabled>Newest</Button>
-                </div>
-                <div className="space-y-2 pt-2 border-t border-border/30">
-                    <p className="text-center text-muted-foreground text-sm py-3">Comments are coming soon!</p>
-                </div>
-              </CardContent>
-            </Card>
-
           </div>
         </div>
       </Container>
     </div>
   );
 }
-    
-
-    
-
-    
-
-    
-
     
