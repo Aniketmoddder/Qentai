@@ -41,7 +41,7 @@ import { addReportToFirestore } from '@/services/reportService';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
 import 'swiper/css';
-import CommentsSection from '@/components/comments/CommentsSection'; // Import CommentsSection
+import CommentsSection from '@/components/comments/CommentsSection';
 
 const reportFormSchema = z.object({
   issueType: z.enum([
@@ -225,7 +225,7 @@ export default function PlayerPage() {
 
     const oldChars = oldSeasonText.split('').map(char => {
         const span = document.createElement('span');
-        span.textContent = char === ' ' ? '\u00A0' : char;
+        span.textContent = char === ' ' ? '\u00A0' : char; // Handle spaces
         span.style.display = 'inline-block';
         gsap.set(span, { opacity: 1, y: 0, filter: 'blur(0px)', willChange: 'transform, opacity, filter' });
         container.appendChild(span);
@@ -268,10 +268,10 @@ export default function PlayerPage() {
         y: animationDirection === 'next' ? -30 : 30,
         filter: 'blur(8px)',
         stagger: {
-            each: 0.04,
+            each: 0.04, // Slower stagger for smoother exit
             from: animationDirection === 'next' ? "start" : "end" 
         },
-        duration: 0.5,
+        duration: 0.5, // Slightly longer duration
         ease: 'power3.in',
         onComplete: () => {
            gsap.set(oldChars, { clearProps: 'willChange' });
@@ -280,17 +280,29 @@ export default function PlayerPage() {
   }, [isAnimatingSeasonText]);
   
   useEffect(() => {
-    if (availableSeasons.length > 0 && !isAnimatingSeasonText && seasonTextContainerRef.current) {
-        const oldSeasonText = seasonTextContainerRef.current.textContent || `Season ${String(availableSeasons[previousSeasonIndexRef.current] || 1).padStart(2, '0')}`;
+    if (swiperInstanceRef.current && !swiperInstanceRef.current.destroyed) {
+        // Sync Swiper's internal active slide with our currentSeasonIndex
+        // This is crucial if currentSeasonIndex changes programmatically (e.g., from URL param processing in fetchDetails)
+        if (swiperInstanceRef.current.realIndex !== currentSeasonIndex) {
+            swiperInstanceRef.current.slideToLoop(currentSeasonIndex, 0, false); // Use slideToLoop if loop is true
+        }
+    }
+
+    // Trigger animation if the index actually changed, it's not the initial load, and we have seasons
+    if (previousSeasonIndexRef.current !== currentSeasonIndex && !pageIsLoading && availableSeasons.length > 0) {
+        const oldSeasonText = `Season ${String(availableSeasons[previousSeasonIndexRef.current] || 1).padStart(2, '0')}`;
         const newSeasonText = `Season ${String(availableSeasons[currentSeasonIndex] || 1).padStart(2, '0')}`;
+        // Determine direction more robustly by comparing old and new index
         const animationDirection = currentSeasonIndex > previousSeasonIndexRef.current ? 'next' : 'prev';
         
-        if (oldSeasonText !== newSeasonText || previousSeasonIndexRef.current !== currentSeasonIndex) {
-             handleSeasonChangeAnimation(oldSeasonText, newSeasonText, animationDirection);
-        }
-        previousSeasonIndexRef.current = currentSeasonIndex;
+        handleSeasonChangeAnimation(oldSeasonText, newSeasonText, animationDirection);
     }
-  }, [currentSeasonIndex, availableSeasons, isAnimatingSeasonText, handleSeasonChangeAnimation]);
+    
+    // Update previousSeasonIndexRef AFTER the animation logic for the current change.
+    previousSeasonIndexRef.current = currentSeasonIndex;
+
+  }, [currentSeasonIndex, availableSeasons, pageIsLoading, handleSeasonChangeAnimation]);
+
 
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
@@ -313,31 +325,39 @@ export default function PlayerPage() {
     if (anime && availableSeasons.length > 0 && !pageIsLoading) {
         const firstEpisodeOfSeason = anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber && ep.sources && ep.sources.length > 0) ||
                                      anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber);
+        
         if (firstEpisodeOfSeason) {
-            if (!currentEpisode || (currentEpisode.seasonNumber || 1) !== selectedSeasonNumber || currentEpisode.id !== firstEpisodeOfSeason.id) {
+            // Only auto-select if currentEpisode is null OR belongs to a different season OR is not the first of the target season
+            if (!currentEpisode || (currentEpisode.seasonNumber || 1) !== selectedSeasonNumber) {
                  handleEpisodeSelect(firstEpisodeOfSeason);
             }
-        } else if (currentEpisode !== null) { 
+        } else if (currentEpisode !== null && (currentEpisode.seasonNumber || 1) === selectedSeasonNumber) {
+            // If current episode IS in this season, but no *first* episode found (edge case),
+            // this means the list is empty for this season but we thought we had an episode.
+            // Clear it to show "no episodes for this season" message.
             setCurrentEpisode(null);
             setActiveSource(null);
             setPlayerError(`No episodes with playable sources found for Season ${selectedSeasonNumber}.`);
+        } else if (currentEpisode === null && episodesForSelectedSeason.length === 0) {
+            // If no current episode AND the new season has no episodes.
+            setPlayerError(`No episodes available for Season ${selectedSeasonNumber}.`);
         }
     }
   }, [selectedSeasonNumber, anime, availableSeasons, pageIsLoading, currentEpisode, handleEpisodeSelect]); 
 
   const handleSwiperInstance = (swiper: SwiperInstance) => {
     swiperInstanceRef.current = swiper;
-    if (anime && !pageIsLoading) {
-        const initialIdx = availableSeasons.indexOf(selectedSeasonNumber);
-        if (initialIdx !== -1 && swiper.activeIndex !== initialIdx) {
-            swiper.slideToLoop(initialIdx, 0, false);
-        }
+    // Initial sync after swiper is ready
+    if (anime && !pageIsLoading && swiper.realIndex !== currentSeasonIndex) {
+        swiper.slideToLoop(currentSeasonIndex, 0, false);
     }
   };
 
   const handleSwiperSlideChange = (swiper: SwiperInstance) => {
-    if (!isAnimatingSeasonText && swiper.activeIndex !== currentSeasonIndex) {
-      setCurrentSeasonIndex(swiper.activeIndex);
+    if (!isAnimatingSeasonText && swiper.realIndex !== currentSeasonIndex) {
+      // Update previousSeasonIndexRef BEFORE setCurrentSeasonIndex to capture the "from" state for animation
+      previousSeasonIndexRef.current = currentSeasonIndex; 
+      setCurrentSeasonIndex(swiper.realIndex);
     }
   };
 
@@ -487,7 +507,7 @@ export default function PlayerPage() {
   }));
 
   const episodesForSelectedSeason = useMemo(() => {
-    if (!anime?.episodes) return pageIsLoading ? placeholderEpisodes : []; // Use placeholder if anime or episodes are not loaded during page load
+    if (!anime?.episodes) return pageIsLoading ? placeholderEpisodes : [];
     const filtered = anime.episodes
       .filter(ep => (ep.seasonNumber || 1) === selectedSeasonNumber)
       .sort((a, b) => (a.episodeNumber || 0) - (b.episodeNumber || 0));
@@ -534,8 +554,8 @@ export default function PlayerPage() {
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
+            {/* Video Player Section */}
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
-              
               <div ref={plyrContainerRef} style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
                 <PlyrComponent
                     ref={instance => plyrInstanceRef.current = instance} 
@@ -543,7 +563,6 @@ export default function PlayerPage() {
                     options={plyrOptions}
                 />
               </div>
-
               {displayMode === 'iframe' && activeSource && activeSource.type === 'embed' && (
                  <iframe
                     key={iframeKey} 
@@ -554,7 +573,6 @@ export default function PlayerPage() {
                     allowFullScreen
                   ></iframe>
               )}
-              
               {displayMode === 'none' && !pageIsLoading && !playerError && (
                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground bg-card pointer-events-none">
                       <PlayIconFallback className="w-24 h-24 opacity-30" />
@@ -567,7 +585,6 @@ export default function PlayerPage() {
                       </p>
                   </div>
               )}
-
                {pageIsLoading && !activeSource && (
                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 z-20">
                       <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -586,11 +603,11 @@ export default function PlayerPage() {
               )}
             </div>
 
+            {/* Report Banner and Episode Title/Controls */}
             <div className="player-report-banner p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
               <MessageSquareWarning className="w-5 h-5 flex-shrink-0"/>
               <span>If the video is not working or is the wrong episode, please report it using the button below.</span>
             </div>
-
             <div className="px-1 sm:px-0 space-y-3 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate font-orbitron">
@@ -598,7 +615,6 @@ export default function PlayerPage() {
                 </h1>
                 <div className="flex items-center space-x-1.5">
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Download (Coming Soon)"><Download size={16}/></Button>
-                  
                   <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" size="icon" className="w-8 h-8" title="Report Issue">
@@ -662,11 +678,9 @@ export default function PlayerPage() {
                       </Form>
                     </DialogContent>
                   </Dialog>
-
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Autoplay Settings (Coming Soon)"><Settings2 size={16}/></Button>
                 </div>
               </div>
-              
               <Card className="p-3 sm:p-4 bg-card shadow-sm border-border/40">
                 <div className="space-y-3">
                   {subServers.length > 0 && (
@@ -712,44 +726,54 @@ export default function PlayerPage() {
                   )}
                 </div>
               </Card>
-
               <div className="text-xs text-muted-foreground p-2 bg-card/50 rounded text-center sm:text-left">
                 Next episode air date will be shown here.
               </div>
             </div>
-             {/* Comments Section Integration */}
+
+            {/* Comments Section (MOVED HERE - BELOW player and server controls) */}
             {anime && currentEpisode && (
               <CommentsSection animeId={anime.id} episodeId={currentEpisode.id} />
             )}
           </div>
 
+          {/* Right Column: Season Selector, Episode List, About Anime, More Like This */}
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-            {availableSeasons.length > 0 && (
-                <div className="relative group/season-selector flex items-center justify-center rounded-lg bg-primary/10 backdrop-blur-sm border border-primary/20 shadow-lg my-4 min-h-[80px] sm:min-h-[100px] overflow-hidden">
-                <Swiper
-                    modules={[]}
-                    onSwiper={handleSwiperInstance}
-                    onSlideChangeTransitionEnd={handleSwiperSlideChange} 
-                    slidesPerView={1}
-                    loop={false} 
-                    allowTouchMove={!isAnimatingSeasonText}
-                    className="h-full w-full"
-                    initialSlide={currentSeasonIndex}
-                >
-                    {availableSeasons.map((seasonNum, index) => (
-                    <SwiperSlide key={index} className="flex flex-col items-center justify-center text-center h-full p-4 select-none cursor-grab active:cursor-grabbing">
-                        {/* Placeholder for Swiper slide content, actual text animated separately */}
-                    </SwiperSlide>
-                    ))}
-                </Swiper>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <p className="text-xs text-primary-foreground/70 uppercase tracking-wider">Currently Viewing</p>
-                    <div ref={seasonTextContainerRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mt-1 text-center min-h-[1.2em]">
-                        {`Season ${String(availableSeasons[currentSeasonIndex] || 1).padStart(2, '0')}`}
+            {/* Kinetic Season Title Carousel */}
+            {availableSeasons.length > 1 && (
+                <div className="relative group/season-selector bg-card/70 backdrop-blur-sm border border-primary/20 shadow-lg rounded-xl min-h-[80px] sm:min-h-[100px] overflow-hidden">
+                    <Swiper
+                        modules={[]} // No specific modules needed if just using for swipe detection. Navigation handled externally if needed.
+                        onSwiper={handleSwiperInstance}
+                        onSlideChangeTransitionEnd={handleSwiperSlideChange} // Changed to TransitionEnd
+                        slidesPerView={1}
+                        loop={false} // Loop set to false for easier index management
+                        allowTouchMove={!isAnimatingSeasonText}
+                        className="h-full w-full"
+                        initialSlide={currentSeasonIndex} // Set initial slide
+                    >
+                        {/* Create a slide for each season, content will be handled by the animated text overlay */}
+                        {availableSeasons.map((seasonNum, index) => (
+                        <SwiperSlide key={index} className="flex flex-col items-center justify-center text-center h-full p-4 select-none cursor-grab active:cursor-grabbing">
+                            {/* This slide's content is effectively invisible, the animated text overlays it */}
+                        </SwiperSlide>
+                        ))}
+                    </Swiper>
+                    {/* Animated Text Overlay */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2">
+                        <p className="text-xs text-primary-foreground/70 uppercase tracking-wider font-medium">Currently Viewing</p>
+                        <div 
+                            ref={seasonTextContainerRef} 
+                            className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary text-center min-h-[1.2em] mt-1"
+                            style={{ textShadow: '0 1px 3px hsla(var(--primary-raw-hsl), 0.3)' }}
+                        >
+                            {/* Initial text will be set by animation or direct DOM manipulation */}
+                        </div>
                     </div>
                 </div>
-                </div>
             )}
+            
+            {/* Episode List */}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
                 <div className="flex justify-between items-center">
@@ -767,7 +791,10 @@ export default function PlayerPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <div key={selectedSeasonNumber} className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500 ease-out">
+                <div 
+                    key={selectedSeasonNumber} // Key change triggers re-render and animation
+                    className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500 ease-out"
+                >
                     <ScrollArea className="h-[300px] lg:h-[350px] min-h-[200px] scrollbar-thin">
                     <div className="space-y-1.5 p-2 sm:p-3">
                         {episodesForSelectedSeason.length > 0 ? episodesForSelectedSeason.map((ep, idx) => (
@@ -802,6 +829,7 @@ export default function PlayerPage() {
               </CardContent>
             </Card>
 
+            {/* About Anime Card */}
             {anime && (
               <Card className="shadow-lg border-border/40">
                 <CardHeader className="p-3 sm:p-4 pb-2">
@@ -851,6 +879,7 @@ export default function PlayerPage() {
               </Card>
             )}
             
+            {/* More Like This Section */}
             {anime && <MoreLikeThisSection currentAnime={anime} />}
           </div>
         </div>

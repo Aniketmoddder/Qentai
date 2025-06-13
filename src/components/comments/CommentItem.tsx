@@ -2,7 +2,7 @@
 // src/components/comments/CommentItem.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Comment } from '@/types/comment';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -24,8 +24,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/components/ui/alert-dialog"; // Removed AlertDialogTrigger, it's part of item
 
 interface CommentItemProps {
   comment: Comment;
@@ -50,65 +49,119 @@ export default function CommentItem({
   const [comment, setComment] = useState<Comment>(initialComment);
   const [isReplying, setIsReplying] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(comment.text);
+  const [editText, setEditText] = useState(initialComment.text);
   const [isInteracting, setIsInteracting] = useState<'like' | 'dislike' | 'edit' | 'delete' | null>(null);
 
-  const [likedByCurrentUser, setLikedByCurrentUser] = useState(user ? comment.likedBy.includes(user.uid) : false);
-  const [dislikedByCurrentUser, setDislikedByCurrentUser] = useState(user ? comment.dislikedBy.includes(user.uid) : false);
+  // These states are crucial for immediate UI feedback and are reconciled with Firestore updates.
+  const [localLikes, setLocalLikes] = useState(initialComment.likes || 0);
+  const [localDislikes, setLocalDislikes] = useState(initialComment.dislikes || 0);
+  const [likedByCurrentUser, setLikedByCurrentUser] = useState(user ? initialComment.likedBy.includes(user.uid) : false);
+  const [dislikedByCurrentUser, setDislikedByCurrentUser] = useState(user ? initialComment.dislikedBy.includes(user.uid) : false);
   
   useEffect(() => {
     setComment(initialComment); // Update local state if prop changes
+    setLocalLikes(initialComment.likes || 0);
+    setLocalDislikes(initialComment.dislikes || 0);
     setLikedByCurrentUser(user ? initialComment.likedBy.includes(user.uid) : false);
     setDislikedByCurrentUser(user ? initialComment.dislikedBy.includes(user.uid) : false);
+    setEditText(initialComment.text); // Ensure editText also updates if comment prop changes externally
   }, [initialComment, user]);
-
 
   const handleLike = async () => {
     if (!user) { toast({ variant: 'destructive', title: 'Login Required' }); return; }
     setIsInteracting('like');
+
+    // Optimistic UI update
+    const originalLikes = localLikes;
+    const originalDislikes = localDislikes;
+    const originalLikedStatus = likedByCurrentUser;
+    const originalDislikedStatus = dislikedByCurrentUser;
+
+    if (likedByCurrentUser) { // Unlike
+      setLocalLikes(prev => prev - 1);
+      setLikedByCurrentUser(false);
+    } else { // Like
+      setLocalLikes(prev => prev + 1);
+      setLikedByCurrentUser(true);
+      if (dislikedByCurrentUser) { // If was disliked, remove dislike
+        setLocalDislikes(prev => prev - 1);
+        setDislikedByCurrentUser(false);
+      }
+    }
+
     try {
       const { toggleLikeComment } = await import('@/services/commentService');
-      const { likes, likedByCurrentUser: updatedLikedStatus } = await toggleLikeComment(comment.id, user.uid);
+      const serverState = await toggleLikeComment(comment.id, user.uid);
       
-      // Optimistic update for UI, then reconcile with server state.
-      // If the server says the user now dislikes it (because they unliked and were previously disliking),
-      // we need to reflect that.
-      const serverData = await (await import('@/services/commentService')).getDoc( (await import('@/services/commentService')).doc((await import('@/services/commentService')).db, 'comments', comment.id));
-      if(serverData.exists()){
-        const freshCommentData = serverData.data() as Comment;
-        setComment(prev => ({ ...prev, likes: freshCommentData.likes, dislikes: freshCommentData.dislikes, likedBy: freshCommentData.likedBy, dislikedBy: freshCommentData.dislikedBy }));
-        setLikedByCurrentUser(freshCommentData.likedBy.includes(user.uid));
-        setDislikedByCurrentUser(freshCommentData.dislikedBy.includes(user.uid));
-      } else { // Fallback to simpler update if fetch fails
-        setComment(prev => ({ ...prev, likes, likedBy: updatedLikedStatus ? [...prev.likedBy, user.uid] : prev.likedBy.filter(id => id !== user.uid) }));
-        setLikedByCurrentUser(updatedLikedStatus);
-        if(updatedLikedStatus && dislikedByCurrentUser) setDislikedByCurrentUser(false); // If liked, remove dislike
+      // Reconcile with server state
+      setLocalLikes(serverState.likes);
+      setLikedByCurrentUser(serverState.likedByCurrentUser);
+      // The service function handles dislike removal if a like is added, so fetch fresh dislike count
+      const freshCommentData = await (await import('@/services/commentService')).getDoc( (await import('@/services/commentService')).doc((await import('@/services/commentService')).db, 'comments', comment.id));
+      if(freshCommentData.exists()){
+        const freshData = freshCommentData.data() as Comment;
+        setLocalDislikes(freshData.dislikes);
+        setDislikedByCurrentUser(freshData.dislikedBy.includes(user.uid));
+        setComment(prev => ({...prev, ...freshData})); // Update the whole comment for consistency
+        onCommentUpdated({...prev, ...freshData});
       }
-    } catch (e) { toast({ variant: 'destructive', title: 'Error Liking' }); }
+
+    } catch (e) { 
+      toast({ variant: 'destructive', title: 'Error Liking Comment' });
+      // Revert optimistic update on error
+      setLocalLikes(originalLikes);
+      setLikedByCurrentUser(originalLikedStatus);
+      setLocalDislikes(originalDislikes);
+      setDislikedByCurrentUser(originalDislikedStatus);
+    }
     finally { setIsInteracting(null); }
   };
 
   const handleDislike = async () => {
     if (!user) { toast({ variant: 'destructive', title: 'Login Required' }); return; }
     setIsInteracting('dislike');
+
+    const originalLikes = localLikes;
+    const originalDislikes = localDislikes;
+    const originalLikedStatus = likedByCurrentUser;
+    const originalDislikedStatus = dislikedByCurrentUser;
+
+    if (dislikedByCurrentUser) { // Undislike
+      setLocalDislikes(prev => prev - 1);
+      setDislikedByCurrentUser(false);
+    } else { // Dislike
+      setLocalDislikes(prev => prev + 1);
+      setDislikedByCurrentUser(true);
+      if (likedByCurrentUser) { // If was liked, remove like
+        setLocalLikes(prev => prev - 1);
+        setLikedByCurrentUser(false);
+      }
+    }
+    
     try {
       const { toggleDislikeComment } = await import('@/services/commentService');
-      const { dislikes, dislikedByCurrentUser: updatedDislikedStatus } = await toggleDislikeComment(comment.id, user.uid);
-      
-      const serverData = await (await import('@/services/commentService')).getDoc( (await import('@/services/commentService')).doc((await import('@/services/commentService')).db, 'comments', comment.id));
-      if(serverData.exists()){
-        const freshCommentData = serverData.data() as Comment;
-        setComment(prev => ({ ...prev, likes: freshCommentData.likes, dislikes: freshCommentData.dislikes, likedBy: freshCommentData.likedBy, dislikedBy: freshCommentData.dislikedBy }));
-        setLikedByCurrentUser(freshCommentData.likedBy.includes(user.uid));
-        setDislikedByCurrentUser(freshCommentData.dislikedBy.includes(user.uid));
-      } else {
-        setComment(prev => ({ ...prev, dislikes, dislikedBy: updatedDislikedStatus ? [...prev.dislikedBy, user.uid] : prev.dislikedBy.filter(id => id !== user.uid) }));
-        setDislikedByCurrentUser(updatedDislikedStatus);
-        if(updatedDislikedStatus && likedByCurrentUser) setLikedByCurrentUser(false); // If disliked, remove like
+      const serverState = await toggleDislikeComment(comment.id, user.uid);
+
+      setLocalDislikes(serverState.dislikes);
+      setDislikedByCurrentUser(serverState.dislikedByCurrentUser);
+      const freshCommentData = await (await import('@/services/commentService')).getDoc( (await import('@/services/commentService')).doc((await import('@/services/commentService')).db, 'comments', comment.id));
+       if(freshCommentData.exists()){
+        const freshData = freshCommentData.data() as Comment;
+        setLocalLikes(freshData.likes);
+        setLikedByCurrentUser(freshData.likedBy.includes(user.uid));
+        setComment(prev => ({...prev, ...freshData}));
+        onCommentUpdated({...prev, ...freshData});
       }
-    } catch (e) { toast({ variant: 'destructive', title: 'Error Disliking' }); }
+    } catch (e) { 
+      toast({ variant: 'destructive', title: 'Error Disliking Comment' });
+      setLocalLikes(originalLikes);
+      setLikedByCurrentUser(originalLikedStatus);
+      setLocalDislikes(originalDislikes);
+      setDislikedByCurrentUser(originalDislikedStatus);
+    }
     finally { setIsInteracting(null); }
   };
+
 
   const handleEditSubmit = async () => {
     if (!user || !editText.trim()) return;
@@ -194,14 +247,14 @@ export default function CommentItem({
         {!isEditing && (
             <div className="flex items-center gap-1 sm:gap-2 text-muted-foreground mt-1.5">
             <Button variant="ghost" size="xs" onClick={handleLike} disabled={!user || isInteracting === 'like' || isInteracting === 'dislike'} className={cn("group hover:text-primary", likedByCurrentUser && "text-primary")}>
-                {isInteracting === 'like' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ThumbsUp size={14} className={cn("group-hover:fill-primary/20", likedByCurrentUser && "fill-primary/20")}/>}
-                <span className="ml-1 text-xs tabular-nums">{comment.likes}</span>
+                {isInteracting === 'like' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ThumbsUp size={14} className={cn("group-hover:fill-primary/20", likedByCurrentUser && "fill-primary text-primary")}/>}
+                <span className="ml-1 text-xs tabular-nums">{localLikes}</span>
             </Button>
             <Button variant="ghost" size="xs" onClick={handleDislike} disabled={!user || isInteracting === 'like' || isInteracting === 'dislike'} className={cn("group hover:text-destructive", dislikedByCurrentUser && "text-destructive")}>
-                {isInteracting === 'dislike' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ThumbsDown size={14} className={cn("group-hover:fill-destructive/20", dislikedByCurrentUser && "fill-destructive/20")}/>}
-                 <span className="ml-1 text-xs tabular-nums">{comment.dislikes}</span>
+                {isInteracting === 'dislike' ? <Loader2 className="h-3.5 w-3.5 animate-spin"/> : <ThumbsDown size={14} className={cn("group-hover:fill-destructive/20", dislikedByCurrentUser && "fill-destructive text-destructive")}/>}
+                 <span className="ml-1 text-xs tabular-nums">{localDislikes}</span>
             </Button>
-            {!isReply && ( // Do not allow replying to replies for now to keep nesting simple
+            {!isReply && ( 
                 <Button variant="ghost" size="xs" onClick={() => setIsReplying(!isReplying)} disabled={!user} className="hover:text-foreground">
                     <MessageSquare size={14} />
                     <span className="ml-1 text-xs">Reply {comment.replyCount && comment.replyCount > 0 ? `(${comment.replyCount})` : ''}</span>
@@ -267,4 +320,3 @@ export default function CommentItem({
     </div>
   );
 }
-
