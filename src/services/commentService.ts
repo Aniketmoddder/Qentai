@@ -10,7 +10,6 @@ import {
   query,
   where,
   orderBy,
-  Timestamp, // Keep Timestamp for server-side logic
   serverTimestamp,
   getDocs,
   doc,
@@ -22,9 +21,10 @@ import {
   arrayRemove,
   writeBatch,
   runTransaction,
+  Timestamp, // Import Timestamp for type checking if needed, but don't re-export it
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
-import { convertCommentTimestampsForClient } from '@/lib/commentUtils'; // Import from new location
+import { convertCommentTimestampsForClient } from '@/lib/commentUtils';
 
 const commentsCollection = collection(db, 'comments');
 
@@ -272,6 +272,10 @@ export async function deleteComment(commentId: string, userId: string): Promise<
     }
 }
 
-// Exporting Firestore and Timestamp for potential use in other server-side logic related to comments if needed,
-// but generally, they should be encapsulated within this service.
-export { doc as firestoreDoc, getDoc as firestoreGetDoc, db as firestoreDb, Timestamp as FirestoreTimestamp };
+// Removed problematic export of Firestore utilities
+// export { doc as firestoreDoc, getDoc as firestoreGetDoc, db as firestoreDb, Timestamp as FirestoreTimestamp };
+
+// Note: Timestamp might still be needed for type definitions within this file, but it should not be re-exported.
+// If used for type annotations, it should be imported directly from 'firebase/firestore'.
+// However, for data being sent TO Firestore, `serverTimestamp()` is preferred for `createdAt` and `updatedAt`.
+// For data being READ, it will be a Firestore Timestamp object, which is then converted by `convertCommentTimestampsForClient`.
