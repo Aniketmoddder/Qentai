@@ -40,7 +40,9 @@ import type { ReportIssueType } from '@/types/report';
 import { addReportToFirestore } from '@/services/reportService';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
-import 'swiper/css';
+// Removed Swiper modules that are not explicitly used for this setup
+// Minimal CSS for Swiper core
+import 'swiper/css'; 
 import CommentsSection from '@/components/comments/CommentsSection';
 
 const reportFormSchema = z.object({
@@ -135,70 +137,70 @@ export default function PlayerPage() {
   }, [availableSeasons, currentSeasonIndex]);
 
 
-  const handleSeasonChangeAnimation = useCallback(
-    (oldSeasonText: string, newSeasonText: string, animationDirection: 'next' | 'prev' | 'none', onAnimationComplete: () => void) => {
-      const container = seasonTextContainerRef.current;
-       if (!container || animationDirection === 'none' || (oldSeasonText === newSeasonText && !isInitialLoadRef.current) ) {
-        onAnimationComplete(); // Ensure callback is always called
-        return;
-      }
+  const handleSeasonChangeAnimation = useCallback((oldSeasonText: string, newSeasonText: string, animationDirection: 'next' | 'prev' | 'none') => {
+    const container = seasonTextContainerRef.current;
+    if (!container || animationDirection === 'none' || (oldSeasonText === newSeasonText && !isInitialLoadRef.current)) {
+      if (container) container.textContent = newSeasonText; // Ensure new text is set if no animation
+      setIsAnimatingSeasonText(false); // Ensure flag is reset
+      return;
+    }
+    
+    setIsAnimatingSeasonText(true);
+    container.innerHTML = ''; // Clear previous content
 
-      container.innerHTML = ''; // Clear previous content
+    const oldChars = oldSeasonText.split('').map(char => {
+      const span = document.createElement('span');
+      span.textContent = char === ' ' ? '\u00A0' : char;
+      gsap.set(span, { display: 'inline-block', opacity: 1, y: 0, filter: 'blur(0px)', willChange: 'transform, opacity, filter' });
+      return span;
+    });
 
-      const oldChars = oldSeasonText.split('').map(char => {
-        const span = document.createElement('span');
-        span.textContent = char === ' ' ? '\u00A0' : char; // Preserve spaces
-        span.style.display = 'inline-block';
-        gsap.set(span, { opacity: 1, y: 0, filter: 'blur(0px)', willChange: 'transform, opacity, filter' });
-        return span;
-      });
+    const newChars = newSeasonText.split('').map(char => {
+      const span = document.createElement('span');
+      span.textContent = char === ' ' ? '\u00A0' : char;
+      gsap.set(span, { display: 'inline-block', opacity: 0, y: animationDirection === 'next' ? 20 : -20, filter: 'blur(5px)', willChange: 'transform, opacity, filter' });
+      return span;
+    });
+    
+    const masterTimeline = gsap.timeline({
+        onComplete: () => {
+            setIsAnimatingSeasonText(false);
+            isInitialLoadRef.current = false;
+            gsap.set(newChars, { clearProps: 'all' }); // Clear all GSAP applied styles
+            gsap.set(oldChars, { clearProps: 'all' });
+            if (container) container.textContent = newSeasonText; // Final text setting
+        }
+    });
 
-      const newChars = newSeasonText.split('').map(char => {
-        const span = document.createElement('span');
-        span.textContent = char === ' ' ? '\u00A0' : char;
-        span.style.display = 'inline-block';
-        gsap.set(span, { opacity: 0, y: animationDirection === 'next' ? 30 : -30, filter: 'blur(8px)', willChange: 'transform, opacity, filter' });
-        return span;
-      });
-      
-      const masterTimeline = gsap.timeline({
-          onComplete: () => {
-              onAnimationComplete();
-              gsap.set(newChars, { clearProps: 'willChange' });
-              gsap.set(oldChars, { clearProps: 'willChange' });
-          }
-      });
-
-      if (oldChars.length > 0 && !isInitialLoadRef.current) { // Don't animate out on initial load
-        oldChars.forEach(charElement => container.appendChild(charElement));
-        masterTimeline.to(oldChars, {
-          opacity: 0,
-          y: animationDirection === 'next' ? -30 : 30,
-          filter: 'blur(8px)',
-          stagger: {
-            each: 0.04,
-            from: animationDirection === 'next' ? "start" : "end"
-          },
-          duration: 0.5,
-          ease: 'power3.in',
-        }, 0);
-      }
-      
-      // Add new characters after old ones (or immediately if no old ones to animate out)
-      newChars.forEach(charElement => container.appendChild(charElement));
-      masterTimeline.to(newChars, {
-        opacity: 1,
-        y: 0,
-        filter: 'blur(0px)',
+    if (oldChars.length > 0 && !isInitialLoadRef.current) {
+      oldChars.forEach(charElement => container.appendChild(charElement));
+      masterTimeline.to(oldChars, {
+        opacity: 0,
+        y: animationDirection === 'next' ? -20 : 20,
+        filter: 'blur(5px)',
         stagger: {
-          each: 0.05,
+          each: 0.03,
           from: animationDirection === 'next' ? "start" : "end"
         },
-        duration: 0.6,
-        ease: 'power3.out',
-      }, oldChars.length > 0 && !isInitialLoadRef.current ? (masterTimeline.recent().endTime() - 0.4) : 0); // Start incoming slightly before outgoing finishes or at start
+        duration: 0.4,
+        ease: 'power2.in',
+      }, 0);
+    }
+    
+    newChars.forEach(charElement => container.appendChild(charElement));
+    masterTimeline.to(newChars, {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      stagger: {
+        each: 0.04,
+        from: animationDirection === 'next' ? "start" : "end"
+      },
+      duration: 0.5,
+      ease: 'power2.out',
+    }, oldChars.length > 0 && !isInitialLoadRef.current ? (masterTimeline.recent().endTime() - 0.3) : 0);
 
-    }, []);
+  }, []);
 
 
   const fetchDetails = useCallback(async () => {
@@ -236,16 +238,18 @@ export default function PlayerPage() {
             }
         }
         
+        previousSeasonIndexRef.current = initialSeasonIdx;
         setCurrentSeasonIndex(initialSeasonIdx);
-        previousSeasonIndexRef.current = initialSeasonIdx; 
         
         if (swiperInstanceRef.current && !swiperInstanceRef.current.destroyed) {
-           if(swiperInstanceRef.current.params.loop){
-            swiperInstanceRef.current.slideToLoop(initialSeasonIdx, 0, false);
-           } else {
-            swiperInstanceRef.current.slideTo(initialSeasonIdx, 0, false);
-           }
+           swiperInstanceRef.current.slideTo(initialSeasonIdx, 0, false); // Use slideTo for non-looping
         }
+
+        // Set initial text directly for the very first load before animation logic takes over
+        if (seasonTextContainerRef.current && localAvailableSeasons.length > 0) {
+            seasonTextContainerRef.current.textContent = `Season ${String(localAvailableSeasons[initialSeasonIdx] || 1).padStart(2, '0')}`;
+        }
+
 
         if (!epToSet) {
             epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumberForEpisodes && ep.sources && ep.sources.length > 0) ||
@@ -282,46 +286,31 @@ export default function PlayerPage() {
       setPlayerError(`Failed to load anime details: ${e.message || "Unknown error"}`);
     } finally {
       setPageIsLoading(false);
-      // Trigger animation for initial load after a slight delay to ensure DOM is ready
-      setTimeout(() => {
-        isInitialLoadRef.current = true; // Set to true so initial animation runs
-        // Manually trigger effect for initial load if currentSeasonIndex didn't change but we need animation
-        if (currentSeasonIndex === previousSeasonIndexRef.current) {
-            const initialSeasonText = `Season ${String(availableSeasons[currentSeasonIndex] || 1).padStart(2, '0')}`;
-            setIsAnimatingSeasonText(true); // Set before calling
-            handleSeasonChangeAnimation('', initialSeasonText, 'next', () => {
-                setIsAnimatingSeasonText(false);
-                isInitialLoadRef.current = false;
-            });
-        }
-      }, 100);
+      isInitialLoadRef.current = false; // Mark initial load as complete
     }
-  }, [animeId, searchParams, router, handleSeasonChangeAnimation, availableSeasons, currentSeasonIndex]);
+  }, [animeId, searchParams, router]);
 
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
   
+  // useEffect for handling season text animation on currentSeasonIndex change
   useEffect(() => {
-    if (pageIsLoading || !anime || availableSeasons.length === 0 || isInitialLoadRef.current) return;
+    if (pageIsLoading || isInitialLoadRef.current || !anime || availableSeasons.length === 0 || isAnimatingSeasonText) return;
 
-    const newIndex = currentSeasonIndex;
     const oldIndex = previousSeasonIndexRef.current;
+    const newIndex = currentSeasonIndex;
 
-    if (newIndex === oldIndex) return;
+    if (newIndex === oldIndex) return; // No change, no animation
 
     const oldSeasonText = `Season ${String(availableSeasons[oldIndex] || 1).padStart(2, '0')}`;
     const newSeasonText = `Season ${String(availableSeasons[newIndex] || 1).padStart(2, '0')}`;
     const animationDirection = newIndex > oldIndex ? 'next' : 'prev';
     
-    setIsAnimatingSeasonText(true);
-    handleSeasonChangeAnimation(oldSeasonText, newSeasonText, animationDirection, () => {
-        setIsAnimatingSeasonText(false);
-    });
+    handleSeasonChangeAnimation(oldSeasonText, newSeasonText, animationDirection);
+    previousSeasonIndexRef.current = newIndex; // Update ref AFTER triggering animation with the old value
 
-    previousSeasonIndexRef.current = newIndex;
-
-  }, [currentSeasonIndex, pageIsLoading, anime, availableSeasons, handleSeasonChangeAnimation]);
+  }, [currentSeasonIndex, pageIsLoading, anime, availableSeasons, handleSeasonChangeAnimation, isAnimatingSeasonText]);
 
 
   const handleEpisodeSelect = useCallback(
@@ -347,10 +336,12 @@ export default function PlayerPage() {
                                      anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber);
         
         if (firstEpisodeOfSeason) {
+            // Only auto-select if currentEpisode is not already in the selectedSeason or if currentEpisode is null
             if (!currentEpisode || (currentEpisode.seasonNumber || 1) !== selectedSeasonNumber) {
                  handleEpisodeSelect(firstEpisodeOfSeason);
             }
         } else if (currentEpisode !== null && (currentEpisode.seasonNumber || 1) === selectedSeasonNumber) {
+            // If current episode was in this season but no more episodes are found (e.g. due to data change)
             setCurrentEpisode(null);
             setActiveSource(null);
             setPlayerError(`No episodes with playable sources found for Season ${selectedSeasonNumber}.`);
@@ -358,24 +349,17 @@ export default function PlayerPage() {
             setPlayerError(`No episodes available for Season ${selectedSeasonNumber}.`);
         }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSeasonNumber, anime, availableSeasons, pageIsLoading]); // Removed currentEpisode, handleEpisodeSelect to break potential loops
+  }, [selectedSeasonNumber, anime, availableSeasons, pageIsLoading, currentEpisode, handleEpisodeSelect]); // episodesForSelectedSeason removed from dep
+
 
   const handleSwiperInstance = (swiper: SwiperInstance) => {
     swiperInstanceRef.current = swiper;
-    if (anime && !pageIsLoading && !isInitialLoadRef.current) { // Check if initial load ref is false
-        const targetIndex = currentSeasonIndex;
-        if (swiper.params.loop) {
-            if (swiper.realIndex !== targetIndex) swiper.slideToLoop(targetIndex, 0, false);
-        } else {
-            if (swiper.activeIndex !== targetIndex) swiper.slideTo(targetIndex, 0, false);
-        }
-    }
+    // Sync Swiper initial slide if needed, done in fetchDetails now
   };
 
   const handleSwiperSlideChange = (swiper: SwiperInstance) => {
-    if (isAnimatingSeasonText || pageIsLoading) return; // Prevent update during text animation or page load
-    const newIndex = swiper.params.loop ? swiper.realIndex : swiper.activeIndex;
+    if (isAnimatingSeasonText || pageIsLoading) return;
+    const newIndex = swiper.activeIndex; // Not swiper.realIndex for loop: false
     if (newIndex !== currentSeasonIndex) {
         setCurrentSeasonIndex(newIndex);
     }
@@ -533,7 +517,6 @@ export default function PlayerPage() {
       .filter(ep => (ep.seasonNumber || 1) === selectedSeasonNumber)
       .sort((a, b) => (a.episodeNumber || 0) - (b.episodeNumber || 0));
     return filtered.length > 0 ? filtered : []; 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anime?.episodes, selectedSeasonNumber, pageIsLoading]);
 
   if (pageIsLoading && !anime) {
@@ -575,6 +558,7 @@ export default function PlayerPage() {
       <Container className="py-4 md:py-6 flex-grow w-full">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           
+          {/* Main Content Column (Player & Comments) */}
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             {/* Video Player Section */}
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
@@ -753,7 +737,6 @@ export default function PlayerPage() {
               </div>
             </div>
             
-            {/* Comments Section - Moved Here */}
             {displayAnime && displayEpisode && (
               <CommentsSection animeId={displayAnime.id} episodeId={displayEpisode.id} />
             )}
@@ -761,34 +744,33 @@ export default function PlayerPage() {
 
           {/* Right Column: Season Selector, Episode List, About Anime, More Like This */}
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
-            {/* Swipeable Season Title Carousel */}
-            {availableSeasons.length > 0 && (
+             {/* Swipeable Season Title Carousel */}
+             {availableSeasons.length > 0 && (
                 <div className="relative group/season-selector bg-card/70 backdrop-blur-sm border border-primary/20 shadow-lg rounded-xl min-h-[80px] sm:min-h-[100px] overflow-hidden">
                     <Swiper
-                        key={availableSeasons.join('-')} // Re-initialize Swiper if seasons change (unlikely here but good practice)
+                        key={availableSeasons.join('-') + (anime?.id || '')}
                         modules={[]} 
                         onSwiper={handleSwiperInstance}
-                        onSlideChangeTransitionEnd={handleSwiperSlideChange}
+                        onSlideChangeTransitionEnd={handleSwiperSlideChange} // Changed to onSlideChangeTransitionEnd
                         slidesPerView={1}
-                        loop={false} 
-                        allowTouchMove={!isAnimatingSeasonText && availableSeasons.length > 1} // Only allow touch if not animating and more than one season
+                        loop={false} // Loop must be false for activeIndex to be reliable without realIndex
+                        allowTouchMove={!isAnimatingSeasonText && availableSeasons.length > 1}
                         className="h-full w-full"
-                        initialSlide={currentSeasonIndex} // Set initial slide based on state
+                        initialSlide={currentSeasonIndex}
                     >
                         {availableSeasons.map((seasonNum, index) => (
                             <SwiperSlide key={index} className="flex flex-col items-center justify-center text-center h-full p-4 select-none cursor-grab active:cursor-grabbing">
-                                {/* Static text for Swiper slide content - GSAP will animate the separate display element */}
+                                {/* This text won't be directly visible if the animated container overlays it */}
                                 <span className="opacity-0 pointer-events-none">Season {String(seasonNum).padStart(2, '0')}</span>
                             </SwiperSlide>
                         ))}
                     </Swiper>
-                    {/* Absolutely positioned container for the GSAP-animated text */}
                     <div 
                         ref={seasonTextContainerRef} 
-                        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-2 text-center"
+                        className="absolute inset-0 flex items-center justify-center pointer-events-none p-2 text-center text-2xl sm:text-3xl font-bold text-primary select-none"
                         style={{ textShadow: '0 1px 3px hsla(var(--primary-raw-hsl), 0.3)' }}
                     >
-                        {/* This div will be populated by GSAP with character spans */}
+                        {/* GSAP populates this, initially set in fetchDetails */}
                     </div>
                 </div>
             )}
@@ -899,7 +881,6 @@ export default function PlayerPage() {
               </Card>
             )}
             
-            {/* More Like This Section */}
             {displayAnime && <MoreLikeThisSection currentAnime={displayAnime} />}
           </div>
         </div>
@@ -907,4 +888,6 @@ export default function PlayerPage() {
     </div>
   );
 }
+    
+
     
