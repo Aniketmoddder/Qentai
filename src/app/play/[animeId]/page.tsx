@@ -7,7 +7,7 @@ import { getAnimeById } from '@/services/animeService';
 import Container from "@/components/layout/container";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, MessageSquareWarning, Loader2, List, Star, PlayCircleIcon as PlayIconFallback, Download, Settings2, ArrowUpDown, ExternalLink, Share2, Tv, Film, ListVideo as ListVideoIcon, Info, RefreshCw, ThumbsUp, ThumbsDown, Edit3, Users, UserCircle, Send, Server as ServerIcon, Clapperboard } from "lucide-react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +27,6 @@ import MoreLikeThisSection from "@/components/anime/MoreLikeThisSection";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { gsap } from 'gsap';
 
-
 import PlyrComponent from "plyr-react";
 import type Plyr from "plyr";
 import "plyr/dist/plyr.css";
@@ -41,6 +40,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/use-auth';
 import type { ReportIssueType } from '@/types/report';
 import { addReportToFirestore } from '@/services/reportService';
+
+import { Swiper, SwiperSlide } from 'swiper/react';
+import type { Swiper as SwiperInstance } from 'swiper';
+import { Navigation, Pagination, EffectCreative } from 'swiper/modules'; // Added EffectCreative
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-creative';
 
 
 const reportFormSchema = z.object({
@@ -80,8 +87,9 @@ export default function PlayerPage() {
   const { user: authUser } = useAuth();
 
   const [currentSeasonIndex, setCurrentSeasonIndex] = useState<number>(0);
-  const [isAnimatingSeason, setIsAnimatingSeason] = useState(false);
-  const seasonTextRef = useRef<HTMLParagraphElement>(null);
+  const [isAnimatingSeasonText, setIsAnimatingSeasonText] = useState(false);
+  const seasonTextContainerRef = useRef<HTMLDivElement>(null); // For character animation
+  const swiperInstanceRef = useRef<SwiperInstance | null>(null);
 
 
   const reportForm = useForm<ReportFormValues>({
@@ -162,6 +170,10 @@ export default function PlayerPage() {
         }
         
         setCurrentSeasonIndex(initialSeasonIdx);
+        if (swiperInstanceRef.current && swiperInstanceRef.current.destroyed === false) {
+            swiperInstanceRef.current.slideTo(initialSeasonIdx, 0); // Update swiper without animation
+        }
+
 
         if (!epToSet) {
             epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumber && ep.sources && ep.sources.length > 0) ||
@@ -205,6 +217,68 @@ export default function PlayerPage() {
     fetchDetails();
   }, [fetchDetails]);
 
+
+  const handleSeasonChangeAnimation = useCallback((oldIndex: number, newIndex: number) => {
+    if (!seasonTextContainerRef.current || isAnimatingSeasonText || availableSeasons.length === 0) return;
+    setIsAnimatingSeasonText(true);
+
+    const oldText = `Season ${String(availableSeasons[oldIndex]).padStart(2, '0')}`;
+    const newText = `Season ${String(availableSeasons[newIndex]).padStart(2, '0')}`;
+    const container = seasonTextContainerRef.current;
+
+    // Clear previous content
+    container.innerHTML = '';
+
+    // Create spans for old text
+    const oldChars = oldText.split('').map(char => {
+        const span = document.createElement('span');
+        span.textContent = char === ' ' ? '\u00A0' : char; // Non-breaking space for spaces
+        span.style.display = 'inline-block';
+        span.style.opacity = '1';
+        container.appendChild(span);
+        return span;
+    });
+
+    // Animate out old text
+    gsap.to(oldChars, {
+        opacity: 0,
+        y: -20,
+        filter: 'blur(5px)',
+        stagger: 0.03,
+        duration: 0.3,
+        ease: 'power2.in',
+        onComplete: () => {
+            container.innerHTML = ''; // Clear old characters
+
+            // Create spans for new text
+            const newChars = newText.split('').map(char => {
+                const span = document.createElement('span');
+                span.textContent = char === ' ' ? '\u00A0' : char;
+                span.style.display = 'inline-block';
+                span.style.opacity = '0';
+                span.style.transform = 'translateY(20px)';
+                span.style.filter = 'blur(5px)';
+                container.appendChild(span);
+                return span;
+            });
+
+            // Animate in new text
+            gsap.to(newChars, {
+                opacity: 1,
+                y: 0,
+                filter: 'blur(0px)',
+                stagger: 0.04,
+                duration: 0.4,
+                ease: 'power2.out',
+                onComplete: () => {
+                    setIsAnimatingSeasonText(false);
+                }
+            });
+        }
+    });
+  }, [availableSeasons, isAnimatingSeasonText]);
+
+
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
       if (ep.id === currentEpisode?.id && activeSource) return; 
@@ -221,55 +295,33 @@ export default function PlayerPage() {
     },
     [router, animeId, currentEpisode?.id, activeSource]
   );
-  
-  const handleSeasonChange = (direction: 'next' | 'prev') => {
-    if (isAnimatingSeason || availableSeasons.length <= 1) return;
-    setIsAnimatingSeason(true);
 
-    const newIndex = direction === 'next'
-      ? (currentSeasonIndex + 1) % availableSeasons.length
-      : (currentSeasonIndex - 1 + availableSeasons.length) % availableSeasons.length;
-
-    const tl = gsap.timeline({
-      onComplete: () => {
-        if (seasonTextRef.current) {
-          seasonTextRef.current.textContent = `Season ${String(availableSeasons[newIndex]).padStart(2, '0')}`;
-        }
-        setCurrentSeasonIndex(newIndex); // Update React state for selectedSeasonNumber derivation
-
-        gsap.fromTo(seasonTextRef.current, 
-          { y: direction === 'next' ? 30 : -30, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.4, ease: 'power2.out', 
-            onComplete: () => setIsAnimatingSeason(false) 
-          }
-        );
-      }
-    });
-
-    tl.to(seasonTextRef.current, {
-      y: direction === 'next' ? -30 : 30,
-      opacity: 0,
-      duration: 0.3,
-      ease: 'power2.in'
-    });
-  };
-
+  // Effect to handle episode list update when selectedSeasonNumber changes
   useEffect(() => {
-    if (anime && selectedSeasonNumber) {
-        const firstEpisodeOfSeason = anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber && ep.sources && ep.sources.length > 0) ||
-                                     anime.episodes?.find(ep => (ep.seasonNumber || 1) === selectedSeasonNumber);
+    if (anime && availableSeasons.length > 0) {
+        const currentActualSeasonNumber = availableSeasons[currentSeasonIndex];
+        const firstEpisodeOfSeason = anime.episodes?.find(ep => (ep.seasonNumber || 1) === currentActualSeasonNumber && ep.sources && ep.sources.length > 0) ||
+                                     anime.episodes?.find(ep => (ep.seasonNumber || 1) === currentActualSeasonNumber);
         if (firstEpisodeOfSeason) {
-            if (firstEpisodeOfSeason.id !== currentEpisode?.id) {
-                 handleEpisodeSelect(firstEpisodeOfSeason);
+            if (currentEpisode === null || (currentEpisode.seasonNumber || 1) !== currentActualSeasonNumber) {
+                handleEpisodeSelect(firstEpisodeOfSeason);
             }
-        } else if (currentEpisode !== null) { // If no episodes for this season, clear current episode
+        } else if (currentEpisode !== null) {
             setCurrentEpisode(null);
             setActiveSource(null);
-            setPlayerError(`No episodes with playable sources found for Season ${selectedSeasonNumber}.`);
+            setPlayerError(`No episodes with playable sources found for Season ${currentActualSeasonNumber}.`);
         }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSeasonNumber, anime]); // Deliberately not including handleEpisodeSelect to avoid loops, currentEpisode
+  }, [currentSeasonIndex, anime, availableSeasons]); // currentEpisode removed to prevent loops, handleEpisodeSelect dependency added
+
+  const handleSwiperSeasonChange = (swiper: SwiperInstance) => {
+    if (swiper.activeIndex !== currentSeasonIndex) {
+      handleSeasonChangeAnimation(currentSeasonIndex, swiper.activeIndex);
+      setCurrentSeasonIndex(swiper.activeIndex);
+    }
+  };
+
 
   const handleServerSelect = (source: VideoSource) => {
     setPlayerError(null); 
@@ -420,10 +472,11 @@ export default function PlayerPage() {
 
   const episodesForSelectedSeason = useMemo(() => {
     if (!anime?.episodes) return placeholderEpisodes;
+    const actualSelectedSeasonNumber = availableSeasons.length > 0 ? availableSeasons[currentSeasonIndex] : 1;
     return anime.episodes
-      .filter(ep => (ep.seasonNumber || 1) === selectedSeasonNumber)
+      .filter(ep => (ep.seasonNumber || 1) === actualSelectedSeasonNumber)
       .sort((a, b) => (a.episodeNumber || 0) - (b.episodeNumber || 0));
-  }, [anime?.episodes, selectedSeasonNumber, placeholderEpisodes]);
+  }, [anime?.episodes, currentSeasonIndex, availableSeasons, placeholderEpisodes]);
 
 
   if (pageIsLoading && !anime) {
@@ -526,7 +579,7 @@ export default function PlayerPage() {
             <div className="px-1 sm:px-0 space-y-3 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate font-orbitron">
-                  S{displayEpisode?.seasonNumber || '-'}:EP {displayEpisode?.episodeNumber || '-'}: {displayEpisode?.title || 'Episode Title Not Available'}
+                  S{String(selectedSeasonNumber).padStart(2,'0')}:EP {displayEpisode?.episodeNumber || '-'}: {displayEpisode?.title || 'Episode Title Not Available'}
                 </h1>
                 <div className="flex items-center space-x-1.5">
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Download (Coming Soon)"><Download size={16}/></Button>
@@ -653,34 +706,41 @@ export default function PlayerPage() {
 
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
             {availableSeasons.length > 1 && (
-              <div className="relative flex items-center justify-center p-4 rounded-lg bg-primary/10 backdrop-blur-sm border border-primary/20 shadow-lg my-4 min-h-[80px] sm:min-h-[100px] group overflow-hidden">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => handleSeasonChange('prev')}
-                  disabled={isAnimatingSeason || availableSeasons.length <= 1}
-                  className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-10 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary/30 rounded-full w-8 h-8 sm:w-10 sm:h-10 opacity-50 group-hover:opacity-100 transition-opacity"
-                  aria-label="Previous Season"
-                >
-                  <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-                </Button>
-                <div className="text-center">
-                  <p className="text-xs text-primary-foreground/80 uppercase tracking-wider">Currently Viewing</p>
-                  <p ref={seasonTextRef} className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary transition-colors duration-300">
-                    Season {String(selectedSeasonNumber).padStart(2, '0')}
-                  </p>
+                <div className="relative p-0 rounded-lg bg-primary/5 backdrop-blur-sm border border-primary/10 shadow-lg my-4 min-h-[80px] sm:min-h-[100px] group overflow-hidden">
+                  <Swiper
+                    modules={[Navigation, Pagination, EffectCreative]}
+                    onSwiper={(swiper) => swiperInstanceRef.current = swiper}
+                    onSlideChange={handleSwiperSeasonChange}
+                    slidesPerView={1}
+                    loop={false}
+                    allowTouchMove={true}
+                    effect="creative"
+                    creativeEffect={{
+                        prev: {
+                            shadow: true,
+                            translate: ["-120%", 0, -500],
+                            opacity: 0,
+                        },
+                        next: {
+                            shadow: true,
+                            translate: ["120%", 0, -500],
+                            opacity: 0,
+                        },
+                    }}
+                    className="h-full"
+                    initialSlide={currentSeasonIndex}
+                   >
+                    {availableSeasons.map((seasonNum, index) => (
+                        <SwiperSlide key={index} className="flex flex-col items-center justify-center text-center h-full p-4">
+                             <p className="text-xs text-primary-foreground/70 uppercase tracking-wider">Currently Viewing</p>
+                             <div ref={index === currentSeasonIndex ? seasonTextContainerRef : null} className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary transition-colors duration-300 mt-1">
+                                {/* Initial text will be set by animation or direct if no animation occurs */}
+                                {index === currentSeasonIndex ? `Season ${String(seasonNum).padStart(2, '0')}` : `Season ${String(seasonNum).padStart(2, '0')}` }
+                             </div>
+                        </SwiperSlide>
+                    ))}
+                  </Swiper>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => handleSeasonChange('next')}
-                  disabled={isAnimatingSeason || availableSeasons.length <= 1}
-                  className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-10 text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary/30 rounded-full w-8 h-8 sm:w-10 sm:h-10 opacity-50 group-hover:opacity-100 transition-opacity"
-                  aria-label="Next Season"
-                >
-                  <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-                </Button>
-              </div>
             )}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
@@ -699,36 +759,38 @@ export default function PlayerPage() {
                 </div>
               </CardHeader>
               <CardContent className="p-0">
-                <ScrollArea className="h-[300px] lg:h-[350px] min-h-[200px] scrollbar-thin">
-                  <div className="space-y-1.5 p-2 sm:p-3">
-                    {episodesForSelectedSeason.length > 0 ? episodesForSelectedSeason.map((ep, idx) => (
-                      <Button
-                          key={ep.id || `placeholder-${idx}`}
-                          variant={(currentEpisode?.id === ep.id && activeSource) ? 'secondary' : 'ghost'}
-                          className={`w-full justify-start text-left h-auto py-2 px-2.5 text-xs ${
-                          (currentEpisode?.id === ep.id && activeSource) ? 'bg-primary/20 text-primary font-semibold' : 'hover:bg-primary/10'
-                          }`}
-                          onClick={() => handleEpisodeSelect(ep)}
-                          title={`Ep ${ep.episodeNumber}: ${ep.title}`}
-                          disabled={!ep.sources || ep.sources.length === 0}
-                      >
-                          <div className="flex items-center w-full gap-2">
-                              {ep.thumbnail ? <Image src={ep.thumbnail} alt="" width={64} height={36} className="rounded object-cover w-16 h-9 flex-shrink-0 bg-muted" data-ai-hint="episode thumbnail" />
-                              : <Skeleton className="w-16 h-9 rounded bg-muted flex-shrink-0" />
-                              }
-                              <span className={`flex-grow truncate ${(currentEpisode?.id === ep.id && activeSource) ? 'text-primary' : 'text-foreground'}`}>
-                              Ep {ep.episodeNumber || '?'}: {ep.title || 'Untitled Episode'}
-                              </span>
-                              {(currentEpisode?.id === ep.id && activeSource) && <PlayIconFallback className="w-4 h-4 ml-auto text-primary flex-shrink-0" />}
-                          </div>
-                      </Button>
-                    )) : (
-                      <div className="p-4 text-center text-muted-foreground">
-                        No episodes found for this season.
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
+                <div key={selectedSeasonNumber} className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500 ease-out">
+                    <ScrollArea className="h-[300px] lg:h-[350px] min-h-[200px] scrollbar-thin">
+                    <div className="space-y-1.5 p-2 sm:p-3">
+                        {episodesForSelectedSeason.length > 0 ? episodesForSelectedSeason.map((ep, idx) => (
+                        <Button
+                            key={ep.id || `placeholder-${idx}`}
+                            variant={(currentEpisode?.id === ep.id && activeSource) ? 'secondary' : 'ghost'}
+                            className={`w-full justify-start text-left h-auto py-2 px-2.5 text-xs ${
+                            (currentEpisode?.id === ep.id && activeSource) ? 'bg-primary/20 text-primary font-semibold' : 'hover:bg-primary/10'
+                            }`}
+                            onClick={() => handleEpisodeSelect(ep)}
+                            title={`Ep ${ep.episodeNumber}: ${ep.title}`}
+                            disabled={!ep.sources || ep.sources.length === 0}
+                        >
+                            <div className="flex items-center w-full gap-2">
+                                {ep.thumbnail ? <Image src={ep.thumbnail} alt="" width={64} height={36} className="rounded object-cover w-16 h-9 flex-shrink-0 bg-muted" data-ai-hint="episode thumbnail" />
+                                : <Skeleton className="w-16 h-9 rounded bg-muted flex-shrink-0" />
+                                }
+                                <span className={`flex-grow truncate ${(currentEpisode?.id === ep.id && activeSource) ? 'text-primary' : 'text-foreground'}`}>
+                                Ep {ep.episodeNumber || '?'}: {ep.title || 'Untitled Episode'}
+                                </span>
+                                {(currentEpisode?.id === ep.id && activeSource) && <PlayIconFallback className="w-4 h-4 ml-auto text-primary flex-shrink-0" />}
+                            </div>
+                        </Button>
+                        )) : (
+                        <div className="p-4 text-center text-muted-foreground">
+                            No episodes found for this season.
+                        </div>
+                        )}
+                    </div>
+                    </ScrollArea>
+                </div>
               </CardContent>
             </Card>
 
@@ -814,6 +876,8 @@ export default function PlayerPage() {
     </div>
   );
 }
+    
+
     
 
     
