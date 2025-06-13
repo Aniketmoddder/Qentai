@@ -603,31 +603,32 @@ export default function PlayerPage() {
 
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
             {availableSeasons.length > 1 && (
-              <Card className="shadow-lg border-border/40">
+              <Card className="shadow-lg border-border/40 bg-card/70 backdrop-blur-sm">
                 <CardHeader className="p-3 sm:p-4 pb-2">
                   <CardTitle className="text-md font-semibold text-primary flex items-center">
                     <Tv className="mr-2 w-5 h-5" /> Seasons
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-3 sm:p-4 pt-0">
-                  <ScrollArea className="w-full whitespace-nowrap">
-                    <div className="flex space-x-2">
+                  <ScrollArea className="w-full whitespace-nowrap -mx-1 px-1 pb-1.5">
+                    <div className="flex space-x-2 sm:space-x-3">
                       {availableSeasons.map(seasonNum => (
-                        <Button
-                          key={`season-${seasonNum}`}
-                          variant={selectedSeasonNumber === seasonNum ? 'default' : 'outline'}
-                          size="sm"
+                        <button
+                          key={`season-chip-${seasonNum}`}
                           onClick={() => handleSeasonSelect(seasonNum)}
                           className={cn(
-                            "transition-all duration-200 ease-in-out transform hover:scale-105",
-                            selectedSeasonNumber === seasonNum ? "bg-primary text-primary-foreground shadow-md" : "border-border/70 hover:bg-primary/10 hover:border-primary"
+                            "rounded-full px-4 py-1.5 text-xs sm:text-sm transition-all duration-300 ease-out transform focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-background focus-visible:ring-offset-2",
+                            selectedSeasonNumber === seasonNum
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xl scale-105"
+                              : "bg-muted/40 backdrop-blur-sm border border-border/40 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/50 hover:scale-105 hover:shadow-md"
                           )}
+                          aria-pressed={selectedSeasonNumber === seasonNum}
                         >
                           Season {seasonNum}
-                        </Button>
+                        </button>
                       ))}
                     </div>
-                    <ScrollBar orientation="horizontal" />
+                    <ScrollBar orientation="horizontal" className="h-1.5 mt-2" />
                   </ScrollArea>
                 </CardContent>
               </Card>
@@ -725,7 +726,7 @@ export default function PlayerPage() {
                   </div>
                   <ReadMoreSynopsis text={anime.synopsis || "No synopsis available."} maxLength={100} />
                   <div className="mt-2 flex flex-wrap gap-1">
-                      {(anime.genre || []).slice(0,4).map(g => <Badge key={g} variant="secondary" className="text-[0.6rem]">{g}</Badge>)}
+                      {(anime.genre || []).slice(0,4).map(g => <Badge key={g} variant="secondary" className="text-[0.65rem]">{g}</Badge>)}
                   </div>
                 </CardContent>
               </Card>
@@ -764,6 +765,8 @@ export default function PlayerPage() {
     </div>
   );
 }
+
+    
 
     
 
