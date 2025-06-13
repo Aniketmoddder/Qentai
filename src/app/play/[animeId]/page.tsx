@@ -78,6 +78,8 @@ export default function PlayerPage() {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const { user: authUser } = useAuth();
 
+  const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number>(1);
+
   const reportForm = useForm<ReportFormValues>({
     resolver: zodResolver(reportFormSchema),
     defaultValues: {
@@ -124,18 +126,27 @@ export default function PlayerPage() {
       const details = await getAnimeById(animeId);
       if (details) {
         setAnime(details);
+        
+        const seasons = details.episodes ? Array.from(new Set(details.episodes.map(ep => ep.seasonNumber || 1))).sort((a, b) => a - b) : [1];
+        const initialSeason = seasons[0] || 1;
+        setSelectedSeasonNumber(initialSeason);
+
         const epIdFromUrl = searchParams.get("episode");
-        let epToSet = details.episodes?.find(ep => ep.sources && ep.sources.length > 0) || details.episodes?.[0]; 
+        let epToSet: Episode | undefined;
 
         if (epIdFromUrl) {
-          const foundEp = details.episodes?.find((e) => e.id === epIdFromUrl);
-          if (foundEp && foundEp.sources && foundEp.sources.length > 0) {
-            epToSet = foundEp;
-          } else if (foundEp) {
-            epToSet = foundEp; 
-          }
+            const foundEpInUrlSeason = details.episodes?.find(e => e.id === epIdFromUrl);
+            if (foundEpInUrlSeason) {
+                setSelectedSeasonNumber(foundEpInUrlSeason.seasonNumber || 1);
+                epToSet = foundEpInUrlSeason;
+            }
         }
         
+        if (!epToSet) {
+            epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeason && ep.sources && ep.sources.length > 0) ||
+                      details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeason);
+        }
+
         if (epToSet) {
           setCurrentEpisode(epToSet);
           const firstSource = epToSet.sources?.[0];
@@ -153,7 +164,7 @@ export default function PlayerPage() {
           setCurrentEpisode(null);
           setActiveSource(null);
           if (details.episodes && details.episodes.length > 0 && details.episodes[0]?.id) {
-             setPlayerError("No episodes with playable sources available.");
+             setPlayerError("No episodes with playable sources available for the selected season.");
           } else {
             setPlayerError("No episodes available for this anime.");
           }
@@ -189,6 +200,20 @@ export default function PlayerPage() {
     },
     [router, animeId, currentEpisode?.id, activeSource]
   );
+  
+  const handleSeasonSelect = (seasonNum: number) => {
+    setSelectedSeasonNumber(seasonNum);
+    const firstEpisodeOfSeason = anime?.episodes?.find(ep => (ep.seasonNumber || 1) === seasonNum && ep.sources && ep.sources.length > 0) ||
+                                anime?.episodes?.find(ep => (ep.seasonNumber || 1) === seasonNum);
+    if (firstEpisodeOfSeason) {
+      handleEpisodeSelect(firstEpisodeOfSeason);
+    } else {
+      setCurrentEpisode(null);
+      setActiveSource(null);
+      setPlayerError(`No episodes with playable sources found for Season ${seasonNum}.`);
+    }
+  };
+
 
   const handleServerSelect = (source: VideoSource) => {
     setPlayerError(null); 
@@ -295,7 +320,6 @@ export default function PlayerPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'Cannot submit report: missing context.' });
       return;
     }
-    // isSubmitting is handled by RHF formState, no need to set it manually
     try {
       await addReportToFirestore({
         userId: authUser?.uid || null,
@@ -316,7 +340,6 @@ export default function PlayerPage() {
       console.error('Failed to submit report:', error);
       toast({ variant: 'destructive', title: 'Submission Failed', description: 'Could not submit your report. Please try again.' });
     }
-    // isSubmitting will be reset by RHF
   };
 
 
@@ -338,6 +361,20 @@ export default function PlayerPage() {
     ...placeholderEpisode, id: `placeholder-ep-${i+1}`, episodeNumber: i + 1,
     title: `Episode ${i + 1}: Placeholder`, thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
   }));
+
+  const availableSeasons = useMemo(() => {
+    if (!anime?.episodes) return [];
+    const seasonNumbers = new Set(anime.episodes.map(ep => ep.seasonNumber || 1));
+    return Array.from(seasonNumbers).sort((a, b) => a - b);
+  }, [anime?.episodes]);
+
+  const episodesForSelectedSeason = useMemo(() => {
+    if (!anime?.episodes) return placeholderEpisodes;
+    return anime.episodes
+      .filter(ep => (ep.seasonNumber || 1) === selectedSeasonNumber)
+      .sort((a, b) => (a.episodeNumber || 0) - (b.episodeNumber || 0));
+  }, [anime?.episodes, selectedSeasonNumber, placeholderEpisodes]);
+
 
   if (pageIsLoading && !anime) {
     return (
@@ -361,7 +398,7 @@ export default function PlayerPage() {
     );
   }
   
-  const displayEpisode = currentEpisode || (anime?.episodes?.find(ep => ep.sources && ep.sources.length > 0)) || (anime?.episodes?.[0]) || placeholderEpisode;
+  const displayEpisode = currentEpisode || episodesForSelectedSeason[0] || placeholderEpisode;
   const displayAnime = anime || {
     id: 'placeholder-anime', title: 'Anime Title Placeholder', coverImage: `https://placehold.co/200x300.png`,
     bannerImage: `https://placehold.co/1280x300.png`, year: 2024, genre: ['Action', 'Adventure'],
@@ -439,7 +476,7 @@ export default function PlayerPage() {
             <div className="px-1 sm:px-0 space-y-3 mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate font-orbitron">
-                  EP {displayEpisode?.episodeNumber || '-'}: {displayEpisode?.title || 'Episode Title Not Available'}
+                  S{displayEpisode?.seasonNumber || '-'}:EP {displayEpisode?.episodeNumber || '-'}: {displayEpisode?.title || 'Episode Title Not Available'}
                 </h1>
                 <div className="flex items-center space-x-1.5">
                   <Button variant="outline" size="icon" className="w-8 h-8" title="Download (Coming Soon)"><Download size={16}/></Button>
@@ -565,11 +602,41 @@ export default function PlayerPage() {
           </div>
 
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
+            {availableSeasons.length > 1 && (
+              <Card className="shadow-lg border-border/40">
+                <CardHeader className="p-3 sm:p-4 pb-2">
+                  <CardTitle className="text-md font-semibold text-primary flex items-center">
+                    <Tv className="mr-2 w-5 h-5" /> Seasons
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <ScrollArea className="w-full whitespace-nowrap">
+                    <div className="flex space-x-2">
+                      {availableSeasons.map(seasonNum => (
+                        <Button
+                          key={`season-${seasonNum}`}
+                          variant={selectedSeasonNumber === seasonNum ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => handleSeasonSelect(seasonNum)}
+                          className={cn(
+                            "transition-all duration-200 ease-in-out transform hover:scale-105",
+                            selectedSeasonNumber === seasonNum ? "bg-primary text-primary-foreground shadow-md" : "border-border/70 hover:bg-primary/10 hover:border-primary"
+                          )}
+                        >
+                          Season {seasonNum}
+                        </Button>
+                      ))}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
             <Card className="shadow-lg border-border/40">
               <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-md font-semibold text-primary flex items-center">
-                      <List className="mr-2 w-5 h-5" /> Episodes ({displayAnime?.episodes?.length || 0})
+                      <List className="mr-2 w-5 h-5" /> Episodes ({episodesForSelectedSeason.length})
                   </CardTitle>
                   <div className="flex items-center space-x-1">
                       <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary w-7 h-7" title="Refresh List (Coming Soon)">
@@ -584,16 +651,16 @@ export default function PlayerPage() {
               <CardContent className="p-0">
                 <ScrollArea className="h-[300px] lg:h-[350px] min-h-[200px] scrollbar-thin">
                   <div className="space-y-1.5 p-2 sm:p-3">
-                    {(displayAnime?.episodes && displayAnime.episodes.length > 0 ? displayAnime.episodes : placeholderEpisodes).map((ep, idx) => (
+                    {episodesForSelectedSeason.length > 0 ? episodesForSelectedSeason.map((ep, idx) => (
                       <Button
                           key={ep.id || `placeholder-${idx}`}
                           variant={(currentEpisode?.id === ep.id && activeSource) ? 'secondary' : 'ghost'}
                           className={`w-full justify-start text-left h-auto py-2 px-2.5 text-xs ${
                           (currentEpisode?.id === ep.id && activeSource) ? 'bg-primary/20 text-primary font-semibold' : 'hover:bg-primary/10'
                           }`}
-                          onClick={() => anime && anime.episodes && anime.episodes[idx] && handleEpisodeSelect(anime.episodes[idx])}
+                          onClick={() => handleEpisodeSelect(ep)}
                           title={`Ep ${ep.episodeNumber}: ${ep.title}`}
-                          disabled={!anime || !anime.episodes || anime.episodes.length === 0 || !ep.sources || ep.sources.length === 0}
+                          disabled={!ep.sources || ep.sources.length === 0}
                       >
                           <div className="flex items-center w-full gap-2">
                               {ep.thumbnail ? <Image src={ep.thumbnail} alt="" width={64} height={36} className="rounded object-cover w-16 h-9 flex-shrink-0 bg-muted" data-ai-hint="episode thumbnail" />
@@ -605,7 +672,11 @@ export default function PlayerPage() {
                               {(currentEpisode?.id === ep.id && activeSource) && <PlayIconFallback className="w-4 h-4 ml-auto text-primary flex-shrink-0" />}
                           </div>
                       </Button>
-                    ))}
+                    )) : (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No episodes found for this season.
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>
@@ -693,5 +764,7 @@ export default function PlayerPage() {
     </div>
   );
 }
+
+    
 
     
