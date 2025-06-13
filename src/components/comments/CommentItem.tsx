@@ -24,7 +24,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Removed AlertDialogTrigger, it's part of item
+  AlertDialogTrigger, // Added missing import
+} from "@/components/ui/alert-dialog";
 
 interface CommentItemProps {
   comment: Comment;
@@ -52,63 +53,61 @@ export default function CommentItem({
   const [editText, setEditText] = useState(initialComment.text);
   const [isInteracting, setIsInteracting] = useState<'like' | 'dislike' | 'edit' | 'delete' | null>(null);
 
-  // These states are crucial for immediate UI feedback and are reconciled with Firestore updates.
   const [localLikes, setLocalLikes] = useState(initialComment.likes || 0);
   const [localDislikes, setLocalDislikes] = useState(initialComment.dislikes || 0);
   const [likedByCurrentUser, setLikedByCurrentUser] = useState(user ? initialComment.likedBy.includes(user.uid) : false);
   const [dislikedByCurrentUser, setDislikedByCurrentUser] = useState(user ? initialComment.dislikedBy.includes(user.uid) : false);
   
   useEffect(() => {
-    setComment(initialComment); // Update local state if prop changes
+    setComment(initialComment);
     setLocalLikes(initialComment.likes || 0);
     setLocalDislikes(initialComment.dislikes || 0);
     setLikedByCurrentUser(user ? initialComment.likedBy.includes(user.uid) : false);
     setDislikedByCurrentUser(user ? initialComment.dislikedBy.includes(user.uid) : false);
-    setEditText(initialComment.text); // Ensure editText also updates if comment prop changes externally
+    setEditText(initialComment.text);
   }, [initialComment, user]);
 
   const handleLike = async () => {
     if (!user) { toast({ variant: 'destructive', title: 'Login Required' }); return; }
     setIsInteracting('like');
 
-    // Optimistic UI update
     const originalLikes = localLikes;
     const originalDislikes = localDislikes;
     const originalLikedStatus = likedByCurrentUser;
     const originalDislikedStatus = dislikedByCurrentUser;
 
-    if (likedByCurrentUser) { // Unlike
+    if (likedByCurrentUser) {
       setLocalLikes(prev => prev - 1);
       setLikedByCurrentUser(false);
-    } else { // Like
+    } else {
       setLocalLikes(prev => prev + 1);
       setLikedByCurrentUser(true);
-      if (dislikedByCurrentUser) { // If was disliked, remove dislike
+      if (dislikedByCurrentUser) {
         setLocalDislikes(prev => prev - 1);
         setDislikedByCurrentUser(false);
       }
     }
 
     try {
-      const { toggleLikeComment } = await import('@/services/commentService');
-      const serverState = await toggleLikeComment(comment.id, user.uid);
+      const { toggleLikeComment, getDoc: getCommentDoc, doc: commentDoc, db: firestoreDb } = await import('@/services/commentService');
+      await toggleLikeComment(comment.id, user.uid);
       
-      // Reconcile with server state
-      setLocalLikes(serverState.likes);
-      setLikedByCurrentUser(serverState.likedByCurrentUser);
-      // The service function handles dislike removal if a like is added, so fetch fresh dislike count
-      const freshCommentData = await (await import('@/services/commentService')).getDoc( (await import('@/services/commentService')).doc((await import('@/services/commentService')).db, 'comments', comment.id));
-      if(freshCommentData.exists()){
-        const freshData = freshCommentData.data() as Comment;
+      const freshCommentSnap = await getCommentDoc(commentDoc(firestoreDb, 'comments', comment.id));
+      if(freshCommentSnap.exists()){
+        const freshData = freshCommentSnap.data() as Comment;
+        // Ensure local state matches final DB state for all relevant fields
+        setLocalLikes(freshData.likes);
+        setLikedByCurrentUser(freshData.likedBy.includes(user.uid));
         setLocalDislikes(freshData.dislikes);
         setDislikedByCurrentUser(freshData.dislikedBy.includes(user.uid));
-        setComment(prev => ({...prev, ...freshData})); // Update the whole comment for consistency
-        onCommentUpdated({...prev, ...freshData});
+        // Create an updated comment object that reflects the new state
+        const updatedCommentWithAllChanges = { ...comment, ...freshData };
+        setComment(updatedCommentWithAllChanges);
+        onCommentUpdated(updatedCommentWithAllChanges);
       }
 
     } catch (e) { 
       toast({ variant: 'destructive', title: 'Error Liking Comment' });
-      // Revert optimistic update on error
       setLocalLikes(originalLikes);
       setLikedByCurrentUser(originalLikedStatus);
       setLocalDislikes(originalDislikes);
@@ -126,31 +125,32 @@ export default function CommentItem({
     const originalLikedStatus = likedByCurrentUser;
     const originalDislikedStatus = dislikedByCurrentUser;
 
-    if (dislikedByCurrentUser) { // Undislike
+    if (dislikedByCurrentUser) {
       setLocalDislikes(prev => prev - 1);
       setDislikedByCurrentUser(false);
-    } else { // Dislike
+    } else {
       setLocalDislikes(prev => prev + 1);
       setDislikedByCurrentUser(true);
-      if (likedByCurrentUser) { // If was liked, remove like
+      if (likedByCurrentUser) {
         setLocalLikes(prev => prev - 1);
         setLikedByCurrentUser(false);
       }
     }
     
     try {
-      const { toggleDislikeComment } = await import('@/services/commentService');
-      const serverState = await toggleDislikeComment(comment.id, user.uid);
+      const { toggleDislikeComment, getDoc: getCommentDoc, doc: commentDoc, db: firestoreDb } = await import('@/services/commentService');
+      await toggleDislikeComment(comment.id, user.uid);
 
-      setLocalDislikes(serverState.dislikes);
-      setDislikedByCurrentUser(serverState.dislikedByCurrentUser);
-      const freshCommentData = await (await import('@/services/commentService')).getDoc( (await import('@/services/commentService')).doc((await import('@/services/commentService')).db, 'comments', comment.id));
-       if(freshCommentData.exists()){
-        const freshData = freshCommentData.data() as Comment;
+      const freshCommentSnap = await getCommentDoc(commentDoc(firestoreDb, 'comments', comment.id));
+       if(freshCommentSnap.exists()){
+        const freshData = freshCommentSnap.data() as Comment;
+        setLocalDislikes(freshData.dislikes);
+        setDislikedByCurrentUser(freshData.dislikedBy.includes(user.uid));
         setLocalLikes(freshData.likes);
         setLikedByCurrentUser(freshData.likedBy.includes(user.uid));
-        setComment(prev => ({...prev, ...freshData}));
-        onCommentUpdated({...prev, ...freshData});
+        const updatedCommentWithAllChanges = { ...comment, ...freshData };
+        setComment(updatedCommentWithAllChanges);
+        onCommentUpdated(updatedCommentWithAllChanges);
       }
     } catch (e) { 
       toast({ variant: 'destructive', title: 'Error Disliking Comment' });
