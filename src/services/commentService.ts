@@ -10,7 +10,7 @@ import {
   query,
   where,
   orderBy,
-  Timestamp,
+  Timestamp, // Keep Timestamp for server-side logic
   serverTimestamp,
   getDocs,
   doc,
@@ -24,20 +24,11 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
+import { convertCommentTimestampsForClient } from '@/lib/commentUtils'; // Import from new location
 
 const commentsCollection = collection(db, 'comments');
 
-// Helper to convert Firestore Timestamps to ISO strings for client components
-export const convertCommentTimestampsForClient = (commentData: any): Comment => {
-  const data = { ...commentData };
-  if (data.createdAt instanceof Timestamp) {
-    data.createdAt = data.createdAt.toDate().toISOString();
-  }
-  if (data.updatedAt instanceof Timestamp) {
-    data.updatedAt = data.updatedAt.toDate().toISOString();
-  }
-  return data as Comment;
-};
+// Helper to convert Firestore Timestamps to ISO strings for client components - MOVED to commentUtils.ts
 
 export async function addComment(
   commentData: Omit<Comment, 'id' | 'createdAt' | 'updatedAt' | 'likes' | 'dislikes' | 'likedBy' | 'dislikedBy' | 'replyCount' | 'isEdited' | 'isDeleted'>
@@ -280,3 +271,7 @@ export async function deleteComment(commentId: string, userId: string): Promise<
         throw error;
     }
 }
+
+// Exporting Firestore and Timestamp for potential use in other server-side logic related to comments if needed,
+// but generally, they should be encapsulated within this service.
+export { doc as firestoreDoc, getDoc as firestoreGetDoc, db as firestoreDb, Timestamp as FirestoreTimestamp };
