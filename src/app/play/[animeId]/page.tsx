@@ -40,8 +40,6 @@ import type { ReportIssueType } from '@/types/report';
 import { addReportToFirestore } from '@/services/reportService';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
-// Removed Swiper modules that are not explicitly used for this setup
-// Minimal CSS for Swiper core
 import 'swiper/css'; 
 import CommentsSection from '@/components/comments/CommentsSection';
 
@@ -57,6 +55,18 @@ const reportFormSchema = z.object({
   description: z.string().min(10, "Please provide a detailed description (min 10 characters).").max(500, "Description is too long (max 500 characters)."),
 });
 type ReportFormValues = z.infer<typeof reportFormSchema>;
+
+// Moved placeholder definitions here
+const placeholderEpisode: Episode = {
+  id: 'placeholder-ep-1', title: 'Episode Title Placeholder', episodeNumber: 1, seasonNumber: 1,
+  thumbnail: `https://placehold.co/320x180.png`, overview: 'This is a placeholder overview for the episode.',
+  duration: '24min', sources: [{id: 'placeholder-src-1', url: '', type: 'mp4', label: 'Default Server', category: 'SUB' } as VideoSource]
+};
+const placeholderEpisodes: Episode[] = Array(10).fill(null).map((_, i) => ({
+  ...placeholderEpisode, id: `placeholder-ep-${i+1}`, episodeNumber: i + 1,
+  title: `Episode ${i + 1}: Placeholder`, thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
+}));
+
 
 export default function PlayerPage() {
   const router = useRouter();
@@ -146,7 +156,7 @@ export default function PlayerPage() {
     }
     
     setIsAnimatingSeasonText(true);
-    container.innerHTML = ''; // Clear previous content to avoid jumps
+    container.innerHTML = ''; 
 
     const oldChars = oldSeasonText.split('').map(char => {
       const span = document.createElement('span');
@@ -159,7 +169,7 @@ export default function PlayerPage() {
     const newChars = newSeasonText.split('').map(char => {
       const span = document.createElement('span');
       span.textContent = char === ' ' ? '\u00A0' : char;
-      const initialX = animationDirection === 'next' ? 50 : -50; // Enter from right if 'next', from left if 'prev'
+      const initialX = animationDirection === 'next' ? 50 : -50;
       gsap.set(span, { display: 'inline-block', opacity: 0, x: initialX, y: 0, filter: 'blur(8px)', willChange: 'transform, opacity, filter' });
       container.appendChild(span);
       return span;
@@ -167,10 +177,8 @@ export default function PlayerPage() {
     
     const masterTimeline = gsap.timeline({
         onComplete: () => {
-            // Set final text content directly to avoid issues with GSAP-controlled spans after animation.
-            // The container itself is text-aligned center.
-            container.innerHTML = ''; // Clear all GSAP spans
-            container.textContent = newSeasonText; // Set final static text
+            container.innerHTML = ''; 
+            container.textContent = newSeasonText;
             setIsAnimatingSeasonText(false);
             isInitialLoadRef.current = false;
             gsap.set([...oldChars, ...newChars], {clearProps: "all"});
@@ -178,31 +186,31 @@ export default function PlayerPage() {
     });
 
     if (oldChars.length > 0 && !isInitialLoadRef.current) {
-      const exitX = animationDirection === 'next' ? -50 : 50; // Exit to left if 'next', to right if 'prev'
+      const exitX = animationDirection === 'next' ? -50 : 50; 
       masterTimeline.to(oldChars, {
         opacity: 0,
         x: exitX,
         filter: 'blur(8px)',
         stagger: {
-          each: 0.03, // Fast stagger for exit
+          each: 0.03, 
           from: animationDirection === 'next' ? "start" : "end"
         },
-        duration: 0.35, // Quicker exit
+        duration: 0.35, 
         ease: 'power2.in',
       }, 0);
     }
     
     masterTimeline.to(newChars, {
       opacity: 1,
-      x: 0, // Animate to center (x=0 relative to their inline-block position)
+      x: 0, 
       filter: 'blur(0px)',
       stagger: {
         each: 0.04,
         from: animationDirection === 'next' ? "start" : "end"
       },
-      duration: 0.45, // Slightly longer entry for emphasis
+      duration: 0.45, 
       ease: 'power2.out',
-    }, (oldChars.length > 0 && !isInitialLoadRef.current) ? 0.15 : 0); // Start new animation slightly after old one starts or immediately if no old text
+    }, (oldChars.length > 0 && !isInitialLoadRef.current) ? 0.15 : 0); 
 
   }, []);
 
@@ -242,18 +250,18 @@ export default function PlayerPage() {
             }
         }
         
-        previousSeasonIndexRef.current = initialSeasonIdx; // Set ref before React state
-        setCurrentSeasonIndex(initialSeasonIdx); // This will trigger the useEffect for animation
+        previousSeasonIndexRef.current = initialSeasonIdx; 
+        setCurrentSeasonIndex(initialSeasonIdx); 
         
         if (swiperInstanceRef.current && !swiperInstanceRef.current.destroyed) {
-           swiperInstanceRef.current.slideToLoop(initialSeasonIdx, 0, false); // Use slideToLoop for consistency if loop is true later
+           swiperInstanceRef.current.slideToLoop(initialSeasonIdx, 0, false); 
         }
 
         if (seasonTextContainerRef.current && localAvailableSeasons.length > 0) {
             seasonTextContainerRef.current.textContent = `Season ${String(localAvailableSeasons[initialSeasonIdx] || 1).padStart(2, '0')}`;
         }
 
-        if (!epToSet) { // If no episode from URL, find first valid one for the initial season
+        if (!epToSet) { 
             epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumberForEpisodes && ep.sources && ep.sources.length > 0) ||
                       details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumberForEpisodes);
         }
@@ -288,25 +296,21 @@ export default function PlayerPage() {
       setPlayerError(`Failed to load anime details: ${e.message || "Unknown error"}`);
     } finally {
       setPageIsLoading(false);
-      // isInitialLoadRef.current will be set to false by the animation's onComplete
     }
-  }, [animeId, searchParams, router]); // Removed handleSeasonChangeAnimation
+  }, [animeId, searchParams, router]); 
 
   useEffect(() => {
     fetchDetails();
   }, [fetchDetails]);
   
   useEffect(() => {
-    if (pageIsLoading || !anime || availableSeasons.length === 0 || isAnimatingSeasonText || isInitialLoadRef.current) return;
+    if (pageIsLoading || !anime || availableSeasons.length === 0 || isInitialLoadRef.current) return;
 
     const oldIndex = previousSeasonIndexRef.current;
     const newIndex = currentSeasonIndex;
 
     if (newIndex === oldIndex) {
-        // If it's the same index but the initial load flag is false, it means user might be re-navigating or something
-        // For initial load, the text is set directly in fetchDetails
-        // If this effect runs AFTER initial load with same index, ensure text is set, but don't animate if not needed.
-        if (seasonTextContainerRef.current && !isInitialLoadRef.current) {
+        if (seasonTextContainerRef.current && !isAnimatingSeasonText) {
             seasonTextContainerRef.current.textContent = `Season ${String(availableSeasons[newIndex] || 1).padStart(2, '0')}`;
         }
         return;
@@ -375,9 +379,6 @@ export default function PlayerPage() {
     if (isAnimatingSeasonText || pageIsLoading) return;
     const newIndex = swiper.activeIndex; 
     if (newIndex !== currentSeasonIndex) {
-        // Update previousSeasonIndexRef *before* setting currentSeasonIndex
-        // This way, the useEffect watching currentSeasonIndex will have the correct 'old' index.
-        previousSeasonIndexRef.current = currentSeasonIndex;
         setCurrentSeasonIndex(newIndex);
     }
   };
@@ -517,17 +518,6 @@ export default function PlayerPage() {
     { value: 'buffering-lagging', label: 'Buffering / Lagging' },
     { value: 'other', label: 'Other' },
   ];
-
-  const placeholderEpisode = {
-    id: 'placeholder-ep-1', title: 'Episode Title Placeholder', episodeNumber: 1, seasonNumber: 1,
-    thumbnail: `https://placehold.co/320x180.png`, overview: 'This is a placeholder overview for the episode.',
-    duration: '24min', sources: [{id: 'placeholder-src-1', url: '', type: 'mp4', label: 'Default Server', category: 'SUB' } as VideoSource]
-  };
-  const placeholderEpisodes = Array(10).fill(null).map((_, i) => ({
-    ...placeholderEpisode, id: `placeholder-ep-${i+1}`, episodeNumber: i + 1,
-    title: `Episode ${i + 1}: Placeholder`, thumbnail: `https://placehold.co/320x180.png?text=Ep+${i+1}`,
-  }));
-
   
   if (pageIsLoading && !anime) {
     return (
@@ -568,9 +558,7 @@ export default function PlayerPage() {
       <Container className="py-4 md:py-6 flex-grow w-full">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           
-          {/* Main Content Column (Player & Comments) */}
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
-            {/* Video Player Section */}
             <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl mb-4 w-full relative">
               <div ref={plyrContainerRef} style={{ display: displayMode === 'plyr' ? 'block' : 'none', width: '100%', height: '100%' }}>
                 <PlyrComponent
@@ -619,7 +607,6 @@ export default function PlayerPage() {
               )}
             </div>
 
-            {/* Report Banner and Episode Title/Controls */}
             <div className="player-report-banner p-3 rounded-lg text-sm flex items-center gap-2 mb-4">
               <MessageSquareWarning className="w-5 h-5 flex-shrink-0"/>
               <span>If the video is not working or is the wrong episode, please report it using the button below.</span>
@@ -752,27 +739,28 @@ export default function PlayerPage() {
             )}
           </div>
 
-          {/* Right Column: Season Selector, Episode List, About Anime, More Like This */}
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
             {availableSeasons.length > 0 && (
                 <div className="relative group/season-selector bg-card/70 backdrop-blur-sm border border-primary/20 shadow-lg rounded-xl min-h-[80px] sm:min-h-[100px] overflow-hidden">
                     <Swiper
-                        key={animeId + (anime?.episodes?.length || 0)} // Re-key Swiper if anime data changes fundamentally
+                        key={animeId + (anime?.episodes?.length || 0)} 
                         modules={[]} 
                         onSwiper={handleSwiperInstance}
                         onSlideChangeTransitionEnd={handleSwiperSlideChange}
                         slidesPerView={1}
-                        loop={false}
+                        loop={false} 
                         allowTouchMove={!isAnimatingSeasonText && availableSeasons.length > 1}
                         className="h-full w-full"
-                        initialSlide={currentSeasonIndex} // Set initial slide
+                        initialSlide={currentSeasonIndex} 
                     >
                         {availableSeasons.map((seasonNum, index) => (
                             <SwiperSlide key={index} className="flex flex-col items-center justify-center text-center h-full p-4 select-none cursor-grab active:cursor-grabbing">
+                                {/* Hidden text for Swiper to calculate slide dimensions correctly */}
                                 <span className="opacity-0 pointer-events-none">Season {String(seasonNum).padStart(2, '0')}</span>
                             </SwiperSlide>
                         ))}
                     </Swiper>
+                    {/* Absolutely positioned div for GSAP text animation */}
                     <div 
                         ref={seasonTextContainerRef} 
                         className="absolute inset-0 flex items-center justify-center pointer-events-none p-2 text-center text-2xl sm:text-3xl font-bold text-primary select-none"
