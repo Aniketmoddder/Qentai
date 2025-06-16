@@ -21,20 +21,18 @@ import {
   arrayRemove,
   writeBatch,
   runTransaction,
-  Timestamp, // Import Timestamp for type checking if needed, but don't re-export it
+  Timestamp, 
 } from 'firebase/firestore';
 import { revalidatePath } from 'next/cache';
 import { convertCommentTimestampsForClient } from '@/lib/commentUtils';
 
 const commentsCollection = collection(db, 'comments');
 
-// Helper to convert Firestore Timestamps to ISO strings for client components - MOVED to commentUtils.ts
-
 export async function addComment(
   commentData: Omit<Comment, 'id' | 'createdAt' | 'updatedAt' | 'likes' | 'dislikes' | 'likedBy' | 'dislikedBy' | 'replyCount' | 'isEdited' | 'isDeleted'>
 ): Promise<Comment> {
   try {
-    const docRef = await addDoc(commentsCollection, {
+    const dataToSave = {
       ...commentData,
       likes: 0,
       dislikes: 0,
@@ -45,8 +43,10 @@ export async function addComment(
       isDeleted: false,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    };
+    const docRef = await addDoc(commentsCollection, dataToSave);
 
+    // Re-fetch the document to get server-generated timestamps and ID
     const newCommentSnap = await getDoc(docRef);
     if (!newCommentSnap.exists()) {
       throw new Error("Failed to create and retrieve comment.");
@@ -54,10 +54,9 @@ export async function addComment(
     
     const newComment = convertCommentTimestampsForClient({ id: newCommentSnap.id, ...newCommentSnap.data() } as Comment);
     
-    // Revalidate the player page path
-    revalidatePath(`/play/${commentData.animeId}`);
+    revalidatePath(`/play/${commentData.animeId}`, 'layout'); // Revalidate player pages more broadly
+    
     if (commentData.parentId) {
-        // If it's a reply, update the parent's replyCount
         const parentRef = doc(db, 'comments', commentData.parentId);
         await updateDoc(parentRef, {
             replyCount: increment(1),
@@ -68,7 +67,7 @@ export async function addComment(
     return newComment;
   } catch (error) {
     console.error('Error adding comment:', error);
-    throw error; // Re-throw to be handled by the caller
+    throw error; 
   }
 }
 
@@ -78,8 +77,8 @@ export async function getCommentsForEpisode(animeId: string, episodeId: string):
       commentsCollection,
       where('animeId', '==', animeId),
       where('episodeId', '==', episodeId),
-      where('parentId', '==', null), // Only fetch top-level comments
-      orderBy('createdAt', 'desc') // Or 'asc' depending on desired order
+      where('parentId', '==', null), 
+      orderBy('createdAt', 'desc') 
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnap =>
@@ -109,126 +108,119 @@ export async function getRepliesForComment(commentId: string): Promise<Comment[]
 }
 
 
-export async function toggleLikeComment(commentId: string, userId: string): Promise<{ likes: number; likedByCurrentUser: boolean }> {
+export async function toggleLikeComment(commentId: string, userId: string): Promise<Pick<Comment, 'likes' | 'dislikes' | 'likedBy' | 'dislikedBy'>> {
   const commentRef = doc(db, 'comments', commentId);
   try {
-    let newLikedByCurrentUser = false;
-    const finalLikesCount = await runTransaction(db, async (transaction) => {
+    const updatedInteractionState = await runTransaction(db, async (transaction) => {
       const commentSnap = await transaction.get(commentRef);
       if (!commentSnap.exists()) {
         throw new Error("Comment not found");
       }
       const commentData = commentSnap.data() as Comment;
-      const likedBy = commentData.likedBy || [];
-      const dislikedBy = commentData.dislikedBy || [];
+      
+      let likedBy = [...(commentData.likedBy || [])];
+      let dislikedBy = [...(commentData.dislikedBy || [])];
       let likes = commentData.likes || 0;
+      let dislikes = commentData.dislikes || 0;
 
-      if (likedBy.includes(userId)) {
-        // User already liked, so unlike
-        transaction.update(commentRef, {
-          likes: increment(-1),
-          likedBy: arrayRemove(userId),
-          updatedAt: serverTimestamp()
-        });
+      const updatePayload: any = { updatedAt: serverTimestamp() };
+
+      if (likedBy.includes(userId)) { // User wants to unlike
+        updatePayload.likes = increment(-1);
+        updatePayload.likedBy = arrayRemove(userId);
         likes--;
-        newLikedByCurrentUser = false;
-      } else {
-        // User has not liked, so like
-        transaction.update(commentRef, {
-          likes: increment(1),
-          likedBy: arrayUnion(userId),
-          updatedAt: serverTimestamp()
-        });
+        likedBy = likedBy.filter(id => id !== userId);
+      } else { // User wants to like
+        updatePayload.likes = increment(1);
+        updatePayload.likedBy = arrayUnion(userId);
         likes++;
-        newLikedByCurrentUser = true;
-        // If user had previously disliked, remove dislike
-        if (dislikedBy.includes(userId)) {
-          transaction.update(commentRef, {
-            dislikes: increment(-1),
-            dislikedBy: arrayRemove(userId)
-          });
+        likedBy.push(userId);
+        if (dislikedBy.includes(userId)) { // If previously disliked, remove dislike
+          updatePayload.dislikes = increment(-1);
+          updatePayload.dislikedBy = arrayRemove(userId);
+          dislikes--;
+          dislikedBy = dislikedBy.filter(id => id !== userId);
         }
       }
-      return likes;
+      transaction.update(commentRef, updatePayload);
+      return { likes, dislikes, likedBy, dislikedBy };
     });
-    revalidatePath(`/play/.*`, 'layout'); // Revalidate player pages
-    return { likes: finalLikesCount, likedByCurrentUser: newLikedByCurrentUser };
+    revalidatePath(`/play/.*`, 'layout'); 
+    return updatedInteractionState;
   } catch (error) {
     console.error("Error toggling like:", error);
     throw error;
   }
 }
 
-export async function toggleDislikeComment(commentId: string, userId: string): Promise<{ dislikes: number; dislikedByCurrentUser: boolean }> {
+export async function toggleDislikeComment(commentId: string, userId: string): Promise<Pick<Comment, 'likes' | 'dislikes' | 'likedBy' | 'dislikedBy'>> {
   const commentRef = doc(db, 'comments', commentId);
   try {
-    let newDislikedByCurrentUser = false;
-    const finalDislikesCount = await runTransaction(db, async (transaction) => {
+    const updatedInteractionState = await runTransaction(db, async (transaction) => {
       const commentSnap = await transaction.get(commentRef);
       if (!commentSnap.exists()) {
         throw new Error("Comment not found");
       }
       const commentData = commentSnap.data() as Comment;
-      const likedBy = commentData.likedBy || [];
-      const dislikedBy = commentData.dislikedBy || [];
-      let dislikes = commentData.dislikes || 0;
 
-      if (dislikedBy.includes(userId)) {
-        // User already disliked, so un-dislike
-        transaction.update(commentRef, {
-          dislikes: increment(-1),
-          dislikedBy: arrayRemove(userId),
-          updatedAt: serverTimestamp()
-        });
+      let likedBy = [...(commentData.likedBy || [])];
+      let dislikedBy = [...(commentData.dislikedBy || [])];
+      let likes = commentData.likes || 0;
+      let dislikes = commentData.dislikes || 0;
+      
+      const updatePayload: any = { updatedAt: serverTimestamp() };
+
+      if (dislikedBy.includes(userId)) { // User wants to un-dislike
+        updatePayload.dislikes = increment(-1);
+        updatePayload.dislikedBy = arrayRemove(userId);
         dislikes--;
-        newDislikedByCurrentUser = false;
-      } else {
-        // User has not disliked, so dislike
-        transaction.update(commentRef, {
-          dislikes: increment(1),
-          dislikedBy: arrayUnion(userId),
-          updatedAt: serverTimestamp()
-        });
+        dislikedBy = dislikedBy.filter(id => id !== userId);
+      } else { // User wants to dislike
+        updatePayload.dislikes = increment(1);
+        updatePayload.dislikedBy = arrayUnion(userId);
         dislikes++;
-        newDislikedByCurrentUser = true;
-        // If user had previously liked, remove like
-        if (likedBy.includes(userId)) {
-          transaction.update(commentRef, {
-            likes: increment(-1),
-            likedBy: arrayRemove(userId)
-          });
+        dislikedBy.push(userId);
+        if (likedBy.includes(userId)) { // If previously liked, remove like
+          updatePayload.likes = increment(-1);
+          updatePayload.likedBy = arrayRemove(userId);
+          likes--;
+          likedBy = likedBy.filter(id => id !== userId);
         }
       }
-      return dislikes;
+      transaction.update(commentRef, updatePayload);
+      return { likes, dislikes, likedBy, dislikedBy };
     });
     revalidatePath(`/play/.*`, 'layout');
-    return { dislikes: finalDislikesCount, dislikedByCurrentUser: newDislikedByCurrentUser };
+    return updatedInteractionState;
   } catch (error) {
     console.error("Error toggling dislike:", error);
     throw error;
   }
 }
 
-export async function editComment(commentId: string, userId: string, newText: string): Promise<void> {
+export async function editComment(commentId: string, userId: string, newText: string): Promise<Partial<Comment>> {
     const commentRef = doc(db, 'comments', commentId);
     try {
         const commentSnap = await getDoc(commentRef);
         if (!commentSnap.exists() || commentSnap.data().userId !== userId) {
             throw new Error("Comment not found or user not authorized to edit.");
         }
-        await updateDoc(commentRef, {
+        const updateData = {
             text: newText,
             isEdited: true,
             updatedAt: serverTimestamp()
-        });
+        };
+        await updateDoc(commentRef, updateData);
         revalidatePath(`/play/.*`, 'layout');
+        // Return the fields that changed along with an ISO timestamp for updatedAt
+        return { text: newText, isEdited: true, updatedAt: new Date().toISOString() };
     } catch (error) {
         console.error('Error editing comment:', error);
         throw error;
     }
 }
 
-export async function deleteComment(commentId: string, userId: string): Promise<void> {
+export async function deleteComment(commentId: string, userId: string, isAdminOrOwner: boolean = false): Promise<{ parentIdToUpdate?: string | null }> {
     const commentRef = doc(db, 'comments', commentId);
     try {
         const commentSnap = await getDoc(commentRef);
@@ -236,27 +228,23 @@ export async function deleteComment(commentId: string, userId: string): Promise<
             throw new Error("Comment not found.");
         }
         const commentData = commentSnap.data() as Comment;
-        // Add role check here if admins/owners can delete any comment
-        if (commentData.userId !== userId) {
+        
+        if (commentData.userId !== userId && !isAdminOrOwner) {
             throw new Error("User not authorized to delete this comment.");
         }
 
-        // If it's a parent comment with replies, consider soft-deleting
-        // or a more complex deletion strategy (e.g., anonymize, mark as deleted).
-        // For now, simple soft delete.
+        let parentIdToUpdate: string | null | undefined = commentData.parentId;
+
         if (commentData.replyCount && commentData.replyCount > 0) {
              await updateDoc(commentRef, {
-                text: "[This comment has been deleted]",
+                text: "[This comment has been deleted by user]",
                 isDeleted: true,
+                isEdited: true, // Mark as edited since content changed
                 updatedAt: serverTimestamp(),
-                // Optionally clear user info or keep it for context if needed
-                // userDisplayName: "Deleted User", 
-                // userPhotoURL: null,
+                // Keep userId, userDisplayName, userPhotoURL so context isn't entirely lost for replies
              });
         } else {
-             // If no replies, or if we decide to hard delete replies too eventually
             await deleteDoc(commentRef);
-            // If it was a reply, decrement parent's replyCount
             if (commentData.parentId) {
                 const parentRef = doc(db, 'comments', commentData.parentId);
                 await updateDoc(parentRef, {
@@ -266,16 +254,27 @@ export async function deleteComment(commentId: string, userId: string): Promise<
             }
         }
        revalidatePath(`/play/.*`, 'layout');
+       return { parentIdToUpdate };
     } catch (error) {
         console.error('Error deleting comment:', error);
         throw error;
     }
 }
 
-// Removed problematic export of Firestore utilities
-// export { doc as firestoreDoc, getDoc as firestoreGetDoc, db as firestoreDb, Timestamp as FirestoreTimestamp };
+export async function getCommentById(commentId: string): Promise<Comment | null> {
+  const commentRef = doc(db, 'comments', commentId);
+  try {
+    const commentSnap = await getDoc(commentRef);
+    if (!commentSnap.exists()) {
+      return null;
+    }
+    return convertCommentTimestampsForClient({ id: commentSnap.id, ...commentSnap.data() } as Comment);
+  } catch (error) {
+    console.error('Error fetching comment by ID:', error);
+    throw error;
+  }
+}
 
-// Note: Timestamp might still be needed for type definitions within this file, but it should not be re-exported.
-// If used for type annotations, it should be imported directly from 'firebase/firestore'.
-// However, for data being sent TO Firestore, `serverTimestamp()` is preferred for `createdAt` and `updatedAt`.
-// For data being READ, it will be a Firestore Timestamp object, which is then converted by `convertCommentTimestampsForClient`.
+// For Firestore specific utilities used ONLY within this service:
+// Keep `doc`, `getDoc`, `db` imports if needed for internal logic like above.
+// Do not re-export them.
