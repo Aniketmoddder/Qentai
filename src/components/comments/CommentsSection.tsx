@@ -144,9 +144,8 @@ export default function CommentsSection({ animeId, episodeId }: CommentsSectionP
 
         {!isLoading && !error && comments.length > 0 && (
           <div className="space-y-4">
-            {comments.map(comment => (
+            {comments.map(comment => ( // Explicitly use only 'comment' from map
               <div key={comment.id}>
-                {/* Ensure no stray rendering of index or other properties here */}
                 <CommentItem 
                     comment={comment} 
                     animeId={animeId} 
@@ -167,12 +166,12 @@ export default function CommentsSection({ animeId, episodeId }: CommentsSectionP
                 {visibleReplies[comment.id] && repliesMap[comment.id] && (
                   <div className="ml-8 mt-2 space-y-2 border-l-2 border-border/30 pl-3">
                     {repliesMap[comment.id].length === 0 && <p className="text-xs text-muted-foreground italic py-1">Loading replies...</p>}
-                    {repliesMap[comment.id].map(reply => (
+                    {repliesMap[comment.id].map(reply => ( // Explicitly use only 'reply' from map
                       <CommentItem 
                         key={reply.id} 
                         comment={reply} 
                         animeId={animeId}
-                        onReplyPosted={handleReplyPosted} // Replies can't be replied to for now
+                        onReplyPosted={handleReplyPosted}
                         onCommentUpdated={handleCommentUpdated}
                         onCommentDeleted={handleCommentDeleted}
                         isReply={true}
