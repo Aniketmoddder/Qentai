@@ -146,6 +146,7 @@ export default function CommentsSection({ animeId, episodeId }: CommentsSectionP
           <div className="space-y-4">
             {comments.map(comment => (
               <div key={comment.id}>
+                {/* Ensure no stray rendering of index or other properties here */}
                 <CommentItem 
                     comment={comment} 
                     animeId={animeId} 
