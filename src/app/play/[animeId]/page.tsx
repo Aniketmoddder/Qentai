@@ -153,73 +153,76 @@ export default function PlayerPage() {
     return availableSeasons.length > 0 ? availableSeasons[currentSeasonIndex] : 1;
   }, [availableSeasons, currentSeasonIndex]);
 
-  const handleSeasonChangeAnimation = useCallback((oldSeasonText: string, newSeasonText: string, animationDirection: 'next' | 'prev' | 'none') => {
-    const container = seasonTextContainerRef.current;
-    if (!container || animationDirection === 'none') {
-        if (container) container.textContent = newSeasonText;
-        return;
+  const setStaticText = useCallback((text: string) => {
+    if (seasonTextContainerRef.current) {
+        seasonTextContainerRef.current.innerHTML = ''; // Clear any leftover spans
+        seasonTextContainerRef.current.textContent = text;
+        gsap.set(seasonTextContainerRef.current, { opacity: 1, filter: 'blur(0px)', scale: 1 });
     }
-    
-    if (gsapTimelineRef.current && gsapTimelineRef.current.isActive()) {
-        gsapTimelineRef.current.kill(); 
-    }
-    setIsAnimatingSeasonText(true);
-
-    const masterTimeline = gsap.timeline({
-        onComplete: () => {
-            if (container) {
-                container.innerHTML = '';
-                container.textContent = newSeasonText;
-                gsap.set(container, { opacity: 1, x: 0, filter: 'blur(0px)', scale: 1 });
-            }
-            setIsAnimatingSeasonText(false);
-            gsapTimelineRef.current = null;
-            swiperInstanceRef.current?.update(); 
-        }
-    });
-    gsapTimelineRef.current = masterTimeline;
-    
-    const oldChars = oldSeasonText.split('').map(char => {
-        const span = document.createElement('span');
-        span.textContent = char === ' ' ? '\u00A0' : char;
-        gsap.set(span, { display: 'inline-block', willChange: 'transform, opacity, filter' });
-        return span;
-    });
-    
-    const newChars = newSeasonText.split('').map(char => {
-        const span = document.createElement('span');
-        span.textContent = char === ' ' ? '\u00A0' : char;
-        gsap.set(span, { display: 'inline-block', willChange: 'transform, opacity, filter' });
-        return span;
-    });
-
-    const exitX = animationDirection === 'next' ? -50 : 50;
-    const newCharsInitialX = animationDirection === 'next' ? 50 : -50;
-
-    if (oldChars.length > 0 && !isInitialLoadRef.current) {
-        container.innerHTML = ''; 
-        oldChars.forEach(span => container.appendChild(span));
-        masterTimeline.to(oldChars, {
-            opacity: 0, x: exitX, filter: 'blur(5px)', scale: 0.9,
-            stagger: { each: 0.025, from: animationDirection === 'next' ? 'start' : 'end' },
-            duration: 0.25, ease: 'power2.in',
-            onComplete: () => oldChars.forEach(span => span.remove())
-        });
-    }
-
-    masterTimeline.add(() => {
-        container.innerHTML = ''; 
-        newChars.forEach(span => container.appendChild(span));
-        gsap.set(newChars, { x: newCharsInitialX, opacity: 0, filter: 'blur(5px)', scale: 0.9 }); 
-    });
-
-    masterTimeline.to(newChars, {
-        opacity: 1, x: 0, filter: 'blur(0px)', scale: 1,
-        stagger: { each: 0.03, from: animationDirection === 'next' ? 'start' : 'end' },
-        duration: 0.3, ease: 'power2.out'
-    }, oldChars.length > 0 && !isInitialLoadRef.current ? "-=0.1" : "+=0");
-
   }, []);
+
+  const handleSeasonChangeAnimation = useCallback((newSeasonText: string, animationDirection: 'next' | 'prev') => {
+      const container = seasonTextContainerRef.current;
+      if (!container) return;
+
+      const oldSeasonText = container.textContent || '';
+      
+      if (gsapTimelineRef.current && gsapTimelineRef.current.isActive()) {
+          gsapTimelineRef.current.kill();
+      }
+      setIsAnimatingSeasonText(true);
+
+      const oldSpans = oldSeasonText.split('').map(char => {
+          const span = document.createElement('span');
+          span.textContent = char === ' ' ? '\u00A0' : char;
+          gsap.set(span, { display: 'inline-block', willChange: 'transform, opacity, filter' });
+          return span;
+      });
+
+      const newSpans = newSeasonText.split('').map(char => {
+          const span = document.createElement('span');
+          span.textContent = char === ' ' ? '\u00A0' : char;
+          gsap.set(span, { display: 'inline-block', willChange: 'transform, opacity, filter' });
+          return span;
+      });
+
+      container.innerHTML = '';
+      if (!isInitialLoadRef.current) {
+          oldSpans.forEach(s => container.appendChild(s));
+      }
+
+      const tl = gsap.timeline({
+          onComplete: () => {
+              setStaticText(newSeasonText);
+              setIsAnimatingSeasonText(false);
+              gsapTimelineRef.current = null;
+              swiperInstanceRef.current?.update();
+          }
+      });
+      gsapTimelineRef.current = tl;
+
+      const exitX = animationDirection === 'next' ? -50 : 50;
+      const entryX = animationDirection === 'next' ? 50 : -50;
+      
+      if (oldSpans.length > 0 && !isInitialLoadRef.current) {
+          tl.to(oldSpans, {
+              opacity: 0, x: exitX, filter: 'blur(5px)', scale: 0.9, duration: 0.25,
+              stagger: { each: 0.02, from: animationDirection === 'next' ? 'start' : 'end' }, ease: 'power2.in'
+          });
+      }
+
+      tl.add(() => {
+          container.innerHTML = '';
+          newSpans.forEach(s => container.appendChild(s));
+      });
+
+      tl.fromTo(newSpans, 
+          { x: entryX, opacity: 0, filter: 'blur(5px)', scale: 1.1 },
+          { x: 0, opacity: 1, filter: 'blur(0px)', scale: 1, duration: 0.35,
+            stagger: { each: 0.03, from: animationDirection === 'next' ? 'start' : 'end' }, ease: 'power2.out' },
+          oldSpans.length > 0 ? "-=0.15" : "+=0"
+      );
+  }, [setStaticText]);
 
   const fetchDetails = useCallback(async () => {
     if (!animeId) {
@@ -262,10 +265,8 @@ export default function PlayerPage() {
            swiperInstanceRef.current.slideToLoop(initialSeasonIdx, 0, false); 
         }
 
-        if (seasonTextContainerRef.current && localAvailableSeasons.length > 0) {
-            seasonTextContainerRef.current.textContent = `Season ${String(localAvailableSeasons[initialSeasonIdx] || 1).padStart(2, '0')}`;
-            gsap.set(seasonTextContainerRef.current, { opacity: 1, x: 0, filter: 'blur(0px)', scale: 1 }); 
-        }
+        const initialText = `Season ${String(localAvailableSeasons[initialSeasonIdx] || 1).padStart(2, '0')}`;
+        setStaticText(initialText);
 
         if (!epToSet) { 
             epToSet = details.episodes?.find(ep => (ep.seasonNumber || 1) === initialSeasonNumberForEpisodes && ep.sources && ep.sources.length > 0) ||
@@ -302,9 +303,9 @@ export default function PlayerPage() {
       setPlayerError(`Failed to load anime details: ${e.message || "Unknown error"}`);
     } finally {
       setPageIsLoading(false);
-      setTimeout(() => { isInitialLoadRef.current = false; }, 50); 
+      setTimeout(() => { isInitialLoadRef.current = false; }, 500); 
     }
-  }, [animeId, searchParams, router]); 
+  }, [animeId, searchParams, router, setStaticText]); 
 
   useEffect(() => {
     if (isMounted) {
@@ -313,29 +314,24 @@ export default function PlayerPage() {
   }, [isMounted, fetchDetails]);
   
   useEffect(() => {
-    if (!isMounted || pageIsLoading || isInitialLoadRef.current || availableSeasons.length === 0 || isAnimatingSeasonText) return;
-
-    const oldIndex = previousSeasonIndexRef.current;
-    const newIndex = currentSeasonIndex;
-
-    if (newIndex === oldIndex && !isInitialLoadRef.current) return; 
-    
-    const oldSeasonText = availableSeasons[oldIndex] !== undefined ? `Season ${String(availableSeasons[oldIndex]).padStart(2, '0')}` : '';
-    const newSeasonText = `Season ${String(availableSeasons[newIndex] || 1).padStart(2, '0')}`;
-    
-    let animationDirection: 'next' | 'prev' | 'none' = 'none';
-    if (newIndex > oldIndex) animationDirection = 'next';
-    else if (newIndex < oldIndex) animationDirection = 'prev';
-
-    if (oldSeasonText !== newSeasonText && animationDirection !== 'none') {
-        handleSeasonChangeAnimation(oldSeasonText, newSeasonText, animationDirection);
-    } else if (seasonTextContainerRef.current && seasonTextContainerRef.current.textContent !== newSeasonText) {
-        seasonTextContainerRef.current.textContent = newSeasonText;
-        gsap.set(seasonTextContainerRef.current, { opacity: 1, x: 0, filter: 'blur(0px)', scale: 1 });
-    }
-    previousSeasonIndexRef.current = newIndex;
-
-  }, [currentSeasonIndex, pageIsLoading, availableSeasons, handleSeasonChangeAnimation, isMounted]);
+      if (!isMounted || pageIsLoading || isInitialLoadRef.current || availableSeasons.length === 0 || isAnimatingSeasonText) return;
+  
+      const oldIndex = previousSeasonIndexRef.current;
+      const newIndex = currentSeasonIndex;
+  
+      if (newIndex === oldIndex) return;
+      
+      const newSeasonText = `Season ${String(availableSeasons[newIndex] || 1).padStart(2, '0')}`;
+      
+      let animationDirection: 'next' | 'prev' | 'none' = 'none';
+      if (newIndex > oldIndex) animationDirection = 'next';
+      else if (newIndex < oldIndex) animationDirection = 'prev';
+  
+      if (animationDirection !== 'none') {
+          handleSeasonChangeAnimation(newSeasonText, animationDirection);
+          previousSeasonIndexRef.current = newIndex;
+      }
+  }, [currentSeasonIndex, pageIsLoading, availableSeasons, handleSeasonChangeAnimation, isMounted, isAnimatingSeasonText]);
 
   const handleEpisodeSelect = useCallback(
     (ep: Episode) => {
@@ -764,18 +760,16 @@ export default function PlayerPage() {
               </div>
             </div>
             
-            {displayAnime && displayEpisode && (
-              <Suspense fallback={<Skeleton className="h-48 w-full rounded-lg mt-6 bg-muted" />}>
-                <CommentsSection animeId={displayAnime.id} episodeId={displayEpisode.id} />
-              </Suspense>
-            )}
+            <Suspense fallback={<Skeleton className="h-48 w-full rounded-lg mt-6 bg-muted" />}>
+              {displayAnime && displayEpisode && <CommentsSection animeId={displayAnime.id} episodeId={displayEpisode.id} />}
+            </Suspense>
           </div>
 
           <div className="lg:col-span-4 xl:col-span-3 space-y-6">
              {availableSeasons.length > 0 && (
                 <div 
-                  className="relative group/season-selector kinetic-season-title-container bg-card/80 backdrop-blur-sm border border-primary/20 shadow-lg rounded-xl min-h-[80px] sm:min-h-[100px] overflow-hidden flex items-center justify-center"
-                  style={{ perspective: '1000px', touchAction: 'pan-y' }}
+                  className="relative group/season-selector kinetic-season-title-container bg-card/80 backdrop-blur-sm border border-primary/20 shadow-lg rounded-xl min-h-[80px] sm:min-h-[100px] overflow-hidden flex items-center justify-center w-full"
+                  style={{ perspective: '1000px', touchAction: 'pan-y', willChange: 'transform, opacity, filter' }}
                 >
                     <Swiper
                         key={animeId + (anime?.episodes?.length || 0) + (availableSeasons.length)} 
