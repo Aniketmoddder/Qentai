@@ -219,7 +219,7 @@ export default function HomeClient({
   return (
     <>
       {heroAnime && (
-        <section className="relative h-[65vh] md:h-[80vh] w-full flex items-end overflow-hidden">
+        <section className="relative h-[55vh] md:h-[70vh] w-full flex items-end overflow-hidden">
           <div className="absolute inset-0">
             {playTrailer && youtubeVideoId ? (
               <div className="absolute inset-0 w-full h-full pointer-events-none">
@@ -257,28 +257,28 @@ export default function HomeClient({
                     #1 Trending
                 </Badge>
               )}
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3 leading-tight font-zen-dots">
+              <h1 className="text-3xl md:text-4xl font-bold mb-2 leading-tight font-zen-dots">
                 {heroAnime.title}
               </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mb-5">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mb-4">
                 {heroAnime.type && <span className="flex items-center"><Tv className="w-4 h-4 mr-1.5" /> {heroAnime.type}</span>}
                 {heroAnime.episodes && heroAnime.episodes.length > 0 &&
                   <span className="flex items-center"><ListVideo className="w-4 h-4 mr-1.5" /> {heroAnime.episodes.length} Episodes</span>
                 }
                  <span className="flex items-center"><Calendar className="w-4 h-4 mr-1.5" /> {heroAnime.year}</span>
               </div>
-              <p className="text-base md:text-lg text-muted-foreground mb-6 line-clamp-3 font-poppins">
+              <p className="text-sm md:text-base text-muted-foreground mb-5 line-clamp-2 font-poppins">
                 {heroAnime.synopsis}
               </p>
               <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
-                <Button asChild size="lg" className="btn-primary-gradient rounded-full px-8 py-3 text-base">
+                <Button asChild size="default" className="btn-primary-gradient rounded-full px-6 text-sm">
                   <Link href={`/play/${heroAnime.id}${heroAnime.episodes && heroAnime.episodes.length > 0 ? `?episode=${heroAnime.episodes[0].id}` : ''}`}>
-                    <Play className="mr-2 h-5 w-5 fill-current" /> Watch Now
+                    <Play className="mr-2 h-4 w-4 fill-current" /> Watch Now
                   </Link>
                 </Button>
-                 <Button asChild variant="outline" size="lg" className="rounded-full px-8 py-3 text-base border-foreground/30 text-foreground hover:bg-foreground/10 hover:border-foreground/50">
+                 <Button asChild variant="outline" size="default" className="rounded-full px-6 text-sm border-foreground/30 text-foreground hover:bg-foreground/10 hover:border-foreground/50">
                   <Link href={`/anime/${heroAnime.id}`}>
-                    <Plus className="mr-2 h-5 w-5" /> More Info
+                    <Plus className="mr-2 h-4 w-4" /> More Info
                   </Link>
                 </Button>
                 {playTrailer && youtubeVideoId && (
