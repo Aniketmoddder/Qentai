@@ -9,6 +9,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from '@/context/auth-context';
 import AuthStatusGuard from '@/components/layout/AuthStatusGuard';
 import { ThemeProvider } from '@/context/ThemeContext'; 
+import { cn } from '@/lib/utils';
 
 // Font imports
 import { Zen_Dots, Orbitron, Poppins } from 'next/font/google';
@@ -57,11 +58,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`h-full overflow-x-hidden ${zenDots.variable} ${orbitron.variable} ${poppins.variable}`}>
+    <html lang="en" className="h-full overflow-x-hidden">
       <head>
         {/* Preconnect to Google Fonts - handled by next/font */}
       </head>
-      <body className="font-sans antialiased flex flex-col min-h-full bg-background text-foreground overflow-x-hidden">
+      <body className={cn(
+          "font-sans antialiased flex flex-col min-h-full bg-background text-foreground overflow-x-hidden",
+          poppins.variable, 
+          zenDots.variable, 
+          orbitron.variable
+        )}>
         <ThemeProvider> 
           <QueryProvider>
             <AuthProvider>
