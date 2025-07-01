@@ -13,7 +13,7 @@ import type { Anime } from '@/types/anime';
 import FeaturedAnimeCard from '@/components/anime/FeaturedAnimeCard';
 import TopAnimeListItem from '@/components/anime/TopAnimeListItem';
 import { Badge } from '@/components/ui/badge';
-import HeroSkeleton from '@/components/home/HeroSkeleton';
+import SpotlightSkeleton from './HeroSkeleton';
 import AnimeCardSkeleton from '@/components/anime/AnimeCardSkeleton';
 import HomePageGenreSection from './HomePageGenreSection';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
@@ -126,7 +126,7 @@ export default function HomeClient({
     return allAnime.length > 0
     ? [...allAnime].sort((a,b) => {
         const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
         return dateB - dateA;
       }).slice(0,15)
     : [];
@@ -144,7 +144,7 @@ export default function HomeClient({
   if (showSkeleton) {
     return (
       <>
-        <HeroSkeleton />
+        <SpotlightSkeleton />
         <Container className="py-8">
           {/* Featured section skeleton */}
           <div className="mb-8">
@@ -219,7 +219,7 @@ export default function HomeClient({
   return (
     <>
       {heroAnime && (
-        <section className="relative h-[65vh] md:h-[80vh] w-full flex items-end -mt-16 overflow-hidden">
+        <section className="relative h-[65vh] md:h-[80vh] w-full flex items-end overflow-hidden">
           <div className="absolute inset-0">
             {playTrailer && youtubeVideoId ? (
               <div className="absolute inset-0 w-full h-full pointer-events-none">
@@ -246,7 +246,7 @@ export default function HomeClient({
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
           </div>
 
-          <Container className="relative z-10 pb-12 md:pb-20 text-foreground">
+          <Container className="relative z-10 pb-8 md:pb-12 text-foreground">
             <div className="max-w-2xl">
               {heroAnime.isFeatured ? (
                 <Badge className="bg-yellow-500/90 text-background text-xs font-semibold px-2.5 py-1 rounded-md mb-3">

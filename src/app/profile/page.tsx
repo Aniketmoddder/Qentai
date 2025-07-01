@@ -160,7 +160,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen">
-      <section className="relative h-[30vh] md:h-[40vh] w-full bg-card -mt-16">
+      <section className="relative h-[30vh] md:h-[40vh] w-full bg-card">
         <Image
           src={appUser.bannerImageUrl || defaultBanner}
           alt={`${appUser.displayName || 'User'}'s banner`}

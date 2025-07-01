@@ -104,7 +104,7 @@ export default async function AnimeDetailsPage({ params }: AnimeDetailsPageProps
   return (
     <div className="min-h-screen text-foreground">
       <section 
-        className="relative h-[40vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] w-full -mt-16 bg-card"
+        className="relative h-[40vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] w-full bg-card"
       >
         <Image
           src={primaryImageSrc}

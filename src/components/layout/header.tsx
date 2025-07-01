@@ -20,7 +20,6 @@ import LiveSearchDialog from '@/components/search/LiveSearchDialog';
 import { cn } from '@/lib/utils';
 
 export default function Header() {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLiveSearchOpen, setIsLiveSearchOpen] = useState(false);
   
@@ -30,14 +29,6 @@ export default function Header() {
   const { user, appUser, loading: authLoading } = useAuth(); 
   const { toast } = useToast();
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-  
   useEffect(() => {
     if (isMobileMenuOpen) setIsMobileMenuOpen(false);
     if (isLiveSearchOpen) setIsLiveSearchOpen(false);
@@ -93,12 +84,7 @@ export default function Header() {
   return (
     <>
       <header 
-        className={cn(
-          "sticky top-0 z-50 h-16 transition-all duration-300 ease-in-out",
-          isScrolled 
-            ? 'bg-background/80 backdrop-blur-lg border-b border-border/50 shadow-md' 
-            : 'bg-gradient-to-b from-black/50 to-transparent'
-        )}
+        className="sticky top-0 z-50 h-16 bg-background/90 backdrop-blur-sm border-b border-border/40 shadow-sm"
       >
         <Container className="flex h-full items-center justify-between">
           <div className="flex items-center gap-4">

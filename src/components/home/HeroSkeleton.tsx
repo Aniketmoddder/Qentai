@@ -1,15 +1,16 @@
-// src/components/home/HeroSkeleton.tsx
+
+// src/components/home/SpotlightSkeleton.tsx
 import { Skeleton } from '@/components/ui/skeleton';
 import Container from '@/components/layout/container';
 
-export default function HeroSkeleton() {
+export default function SpotlightSkeleton() {
   return (
-    <section className="relative h-[65vh] md:h-[80vh] w-full flex items-end -mt-[calc(var(--header-height,4rem)+1px)] bg-card/30 animate-pulse">
+    <section className="relative h-[65vh] md:h-[80vh] w-full flex items-end bg-card/30 animate-pulse">
       <div className="absolute inset-0">
         <Skeleton className="w-full h-full opacity-50 bg-muted/50" /> {/* Banner Placeholder */}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
       </div>
-      <Container className="relative z-10 pb-12 md:pb-20 text-foreground">
+      <Container className="relative z-10 pb-8 md:pb-12 text-foreground">
         <div className="max-w-2xl space-y-3 md:space-y-4">
           <Skeleton className="h-6 w-28 mb-2 rounded-md bg-muted/50" /> {/* Badge Placeholder */}
           <Skeleton className="h-10 md:h-14 w-4/5 rounded-md bg-muted/50" /> {/* Title Placeholder */}
@@ -30,4 +31,3 @@ export default function HeroSkeleton() {
     </section>
   );
 }
-
