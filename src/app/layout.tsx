@@ -11,30 +11,7 @@ import AuthStatusGuard from '@/components/layout/AuthStatusGuard';
 import { ThemeProvider } from '@/context/ThemeContext'; 
 import { cn } from '@/lib/utils';
 
-// Font imports
-import { Zen_Dots, Orbitron, Poppins } from 'next/font/google';
-
-const zenDots = Zen_Dots({
-  weight: ['400'],
-  subsets: ['latin'],
-  variable: '--font-zen-dots',
-  display: 'swap',
-});
-
-const orbitron = Orbitron({
-  weight: ['400', '500', '700'],
-  subsets: ['latin'],
-  variable: '--font-orbitron',
-  display: 'swap',
-});
-
-const poppins = Poppins({
-  weight: ['300', '400', '500', '600', '700'],
-  subsets: ['latin'],
-  variable: '--font-poppins',
-  display: 'swap',
-});
-
+// next/font imports and initializations are removed to switch to CSS @import method.
 
 export const metadata: Metadata = {
   title: 'Qentai - Your Gateway to Anime',
@@ -60,14 +37,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full overflow-x-hidden">
       <head>
-        {/* Preconnect to Google Fonts - handled by next/font */}
+        {/* Fonts are now imported directly in globals.css */}
       </head>
-      <body className={cn(
-          "font-sans antialiased flex flex-col min-h-full bg-background text-foreground overflow-x-hidden",
-          poppins.variable, 
-          zenDots.variable, 
-          orbitron.variable
-        )}>
+      <body className="font-sans antialiased flex flex-col min-h-full bg-background text-foreground overflow-x-hidden">
         <ThemeProvider> 
           <QueryProvider>
             <AuthProvider>
