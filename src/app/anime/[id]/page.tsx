@@ -222,7 +222,7 @@ export default async function AnimeDetailsPage({ params }: AnimeDetailsPageProps
                             <div className="flex items-center gap-x-2">
                                <Logo iconSize={20} className="opacity-70 hover:opacity-100 transition-opacity"/>
                                 {anime.trailerUrl && (
-                                    <Button variant="outline" size="sm" asChild className="text-xs hover:border-primary hover:text-primary">
+                                    <Button variant="outline" size="sm" asChild className="text-xs">
                                         <Link href={anime.trailerUrl} target="_blank" rel="noopener noreferrer" className="flex items-center">
                                              Trailer <ExternalLink size={12} className="ml-1.5 opacity-70"/>
                                         </Link>
