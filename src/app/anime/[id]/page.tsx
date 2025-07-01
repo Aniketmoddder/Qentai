@@ -104,7 +104,7 @@ export default async function AnimeDetailsPage({ params }: AnimeDetailsPageProps
   return (
     <div className="min-h-screen text-foreground">
       <section 
-        className="relative h-[40vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] w-full -mt-[calc(var(--header-height,4rem)+1px)] bg-card"
+        className="relative h-[40vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] w-full -mt-16 bg-card"
       >
         <Image
           src={primaryImageSrc}
@@ -121,7 +121,7 @@ export default async function AnimeDetailsPage({ params }: AnimeDetailsPageProps
       <Container className="relative z-10 -mt-[20vh] sm:-mt-[180px] md:-mt-[200px] lg:-mt-[220px] pb-16">
         <div className="md:grid md:grid-cols-12 md:gap-6 lg:gap-8">
           <div className="md:col-span-4 lg:col-span-3">
-             <div className="sticky top-[calc(var(--header-height,4rem)+1.5rem)] max-w-[200px] sm:max-w-[220px] mx-auto md:mx-0">
+             <div className="sticky top-24 max-w-[200px] sm:max-w-[220px] mx-auto md:mx-0">
               {/* Replace direct Image with AnimatedPoster */}
               <AnimatedPoster
                 src={coverImageSrc}

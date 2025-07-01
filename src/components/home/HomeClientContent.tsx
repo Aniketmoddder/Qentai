@@ -219,7 +219,7 @@ export default function HomeClient({
   return (
     <>
       {heroAnime && (
-        <section className="relative h-[65vh] md:h-[80vh] w-full flex items-end -mt-[calc(var(--header-height,4rem)+1px)] overflow-hidden">
+        <section className="relative h-[65vh] md:h-[80vh] w-full flex items-end -mt-16 overflow-hidden">
           <div className="absolute inset-0">
             {playTrailer && youtubeVideoId ? (
               <div className="absolute inset-0 w-full h-full pointer-events-none">
@@ -312,7 +312,7 @@ export default function HomeClient({
         )}
 
         {featuredAnimesList.length > 0 && (
-          <section className="pt-2 pb-8 md:pt-4 md:pb-12"> {/* Adjusted padding */}
+          <section className="pt-2 pb-8 md:pt-4 md:pb-12">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron">Featured Anime</h2>
               <Button variant="link" asChild className="text-primary hover:text-primary/80 font-poppins">

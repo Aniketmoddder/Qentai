@@ -413,7 +413,7 @@ export default function PlayerPage() {
   
   if (!isMounted || (pageIsLoading && !anime)) {
     return (
-      <Container className="py-4 md:py-6 flex-grow w-full">
+      <Container className="py-4 md:py-6 flex-grow w-full mt-16">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           <div className="lg:col-span-8 xl:col-span-9 mb-6 lg:mb-0 h-full flex flex-col">
             <Skeleton className="aspect-video w-full rounded-lg bg-muted" />
@@ -431,7 +431,7 @@ export default function PlayerPage() {
   
   if (!anime && !pageIsLoading && playerError) { 
     return ( 
-      <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-1px)] py-12 text-center">
+      <Container className="flex flex-col items-center justify-center min-h-screen py-12 text-center -mt-16">
          <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
          <h1 className="text-2xl font-bold text-destructive">Error Loading Anime</h1>
          <p className="text-muted-foreground">{playerError || `Could not find details for anime ID: ${animeId}`}</p>
@@ -455,7 +455,7 @@ export default function PlayerPage() {
   const iframeKey = activeSource ? `iframe-${activeSource.id}-${activeSource.url}` : 'no-iframe-source';
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground -mt-[calc(var(--header-height,4rem)+1px)] pt-[calc(var(--header-height,4rem)+1px)]">
+    <div className="min-h-screen flex flex-col bg-background text-foreground -mt-16 pt-16">
       <Container className="py-4 md:py-6 flex-grow w-full">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6 xl:gap-8 h-full">
           

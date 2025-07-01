@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -158,8 +159,8 @@ export default function ProfilePage() {
   const defaultAvatar = `https://avatar.vercel.sh/${appUser.username || appUser.email || appUser.uid}.png?size=128`;
 
   return (
-    <div className="min-h-[calc(100vh-var(--header-height,4rem)-var(--footer-height,0px)-1px)]">
-      <section className="relative h-[30vh] md:h-[40vh] w-full bg-card -mt-[calc(var(--header-height,4rem)+1px)]">
+    <div className="min-h-screen">
+      <section className="relative h-[30vh] md:h-[40vh] w-full bg-card -mt-16">
         <Image
           src={appUser.bannerImageUrl || defaultBanner}
           alt={`${appUser.displayName || 'User'}'s banner`}
