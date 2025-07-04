@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -10,12 +11,11 @@ import Image from 'next/image';
 import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Tv, Film, ListVideo } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Tv, Film, ListVideo, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
-import { Loader2 } from 'lucide-react';
 import PlyrComponent from 'plyr-react';
 import type Plyr from 'plyr';
 import 'plyr/dist/plyr.css';
@@ -56,7 +56,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     setIsMuted(newMuteState);
      try {
       localStorage.setItem('qentai-spotlight-muted', JSON.stringify(newMuteState));
-    } catch (error) {
+    } catch (error)       {
        console.warn("Could not save mute state to localStorage", error)
     }
   };
@@ -158,7 +158,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden">
       <Swiper
         onSwiper={setSwiper}
-        onActiveIndexChange={handleSlideChange}
+        onSlideChangeTransitionEnd={handleSlideChange}
         spaceBetween={0}
         slidesPerView={1}
         loop={slides.length > 1}
