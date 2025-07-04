@@ -94,53 +94,6 @@ export default function HomeClient({
   
   const showSkeleton = isArtificiallyLoading || (isDataActuallyLoading && !fetchError);
 
-  if (showSkeleton) {
-    return (
-      <>
-        <SpotlightSlider slides={[]} /> 
-        <Container className="py-8">
-          {/* Skeletons for AnimeCarousels */}
-          {[...Array(2)].map((_, i) => (
-            <div key={`carousel-skeleton-${i}`} className="mb-8">
-              <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
-              <div className="flex overflow-x-auto pb-4 gap-3 sm:gap-4 scrollbar-hide">
-                {[...Array(5)].map((_, j) => (
-                  <div key={`card-skeleton-${i}-${j}`} className="flex-shrink-0">
-                    <AnimeCardSkeleton />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-           <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-6 rounded bg-muted/50" />
-            <div className="space-y-3">
-                {[...Array(5)].map((_, k) => (
-                    <Skeleton key={`top-item-skeleton-${k}`} className="h-28 w-full rounded-lg bg-muted/50" />
-                ))}
-            </div>
-          </div>
-           <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
-                {[...Array(6)].map((_, l) => (
-                    <Skeleton key={`genre-skeleton-${l}`} className="h-[100px] md:h-[120px] rounded-lg bg-muted/50" />
-                ))}
-            </div>
-          </div>
-           <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3 place-items-center sm:place-items-stretch">
-                {[...Array(5)].map((_, m) => (
-                  <AnimeCardSkeleton key={`reco-skeleton-${m}`} />
-                ))}
-            </div>
-          </div>
-        </Container>
-      </>
-    );
-  }
-
   if (fetchError) {
     return (
       <Container className="flex flex-col items-center justify-center min-h-[calc(100vh-var(--header-height,4rem)-var(--footer-height,0px)-1px)] py-12 text-center">
@@ -162,8 +115,8 @@ export default function HomeClient({
 
   return (
     <>
-      <SpotlightSlider slides={spotlightSlides} />
-
+      <SpotlightSlider slides={spotlightSlides} isLoading={showSkeleton} /> 
+      
       <Container className="py-8">
         {noContentAvailable && (
            <div className="my-8 p-6 bg-card border border-border rounded-lg text-center">

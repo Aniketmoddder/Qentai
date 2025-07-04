@@ -11,10 +11,11 @@ import Image from 'next/image';
 import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Presentation } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Presentation, Tv, Film, ListVideo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
+import { Skeleton } from '../ui/skeleton';
 
 // This is an "enriched" slide type that combines SpotlightSlide with its corresponding Anime data.
 // It's created in page.tsx and passed down to this component.
@@ -22,9 +23,10 @@ type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
 interface SpotlightSliderProps {
   slides: EnrichedSpotlightSlide[];
+  isLoading: boolean;
 }
 
-const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
+const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) => {
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -83,11 +85,11 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
     // Animate background
     if (currentBackground) {
         gsap.fromTo(currentBackground,
-            { opacity: 0, scale: 1.1 },
+            { opacity: 0.3, scale: 1.1 },
             {
                 opacity: 1,
                 scale: 1,
-                duration: 0.8,
+                duration: 1.2,
                 ease: 'power2.out'
             }
         );
@@ -118,21 +120,19 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
     }
   }, [isMuted, activeIndex]);
   
-  if (!slides || slides.length === 0) {
+  if (isLoading) {
     return (
-      <section className="relative h-[65vh] md:h-[80vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 w-full h-full">
-          <Image
-            src="https://placehold.co/1600x900/0e0e0e/0e0e0e.png"
-            alt="Placeholder background"
-            fill
-            className="object-cover opacity-10"
-            data-ai-hint="dark abstract background"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/60 via-transparent to-transparent"></div>
-        </div>
+      <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] flex items-center justify-center">
+        <Skeleton className="absolute inset-0" />
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
+      </section>
+    );
+  }
+  
+  if (slides.length === 0) {
+    return (
+      <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent"></div>
         <Container className="relative z-10 text-center">
           <Presentation className="mx-auto h-16 w-16 text-primary/50 mb-4" />
           <h1 className="text-3xl md:text-4xl font-bold font-orbitron">Spotlight</h1>
@@ -143,15 +143,23 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
     );
   }
 
+  const typeIconMap: Record<string, JSX.Element> = {
+    TV: <Tv className="w-4 h-4" />,
+    Movie: <Film className="w-4 h-4" />,
+    OVA: <ListVideo className="w-4 h-4" />,
+    Special: <ListVideo className="w-4 h-4" />,
+    Default: <Info className="w-4 h-4"/>
+  };
+
   return (
-    <section className="relative h-[65vh] md:h-[80vh] w-full bg-[#0e0e0e] text-white overflow-hidden">
+    <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden">
       <Swiper
         onSwiper={setSwiper}
         onActiveIndexChange={handleSlideChange}
         spaceBetween={0}
         slidesPerView={1}
         loop={slides.length > 1}
-        allowTouchMove={true} // Enables swipe on mobile
+        allowTouchMove={true}
         className="w-full h-full"
       >
         {slides.map((slide, index) => {
@@ -160,6 +168,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
           const moreInfoUrl = `/anime/${slide.id}`;
           const videoUrl = slide.trailerUrl;
           const backgroundUrl = slide.backgroundImageUrl;
+          const Icon = typeIconMap[slide.type || 'Default'] || typeIconMap.Default;
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
@@ -167,15 +176,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
                 ref={el => slideBackgroundRefs.current[index] = el}
                 className="absolute inset-0 w-full h-full"
               >
-                <Image 
-                  src={backgroundUrl}
-                  alt={slide.title}
-                  fill
-                  className="object-cover opacity-30"
-                  data-ai-hint="anime background scene"
-                  priority={index === 0}
-                />
-                {videoUrl && (
+                {videoUrl ? (
                   <video
                     ref={el => videoRefs.current[index] = el}
                     src={videoUrl}
@@ -183,34 +184,41 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
                     loop
                     playsInline
                     preload="metadata"
-                    className="w-full h-full object-cover opacity-50 absolute inset-0"
+                    className="w-full h-full object-cover opacity-30"
+                  />
+                ) : (
+                  <Image 
+                    src={backgroundUrl}
+                    alt={slide.title}
+                    fill
+                    className="object-cover opacity-30"
+                    data-ai-hint="anime background scene"
+                    priority={index === 0}
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent"></div>
-                 <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/60 via-transparent to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/70 via-transparent to-transparent"></div>
               </div>
               <Container className="relative z-10 h-full flex flex-col justify-end pb-12 md:pb-20">
-                <div ref={el => slideContentRefs.current[index] = el} className="max-w-xl space-y-4">
+                <div ref={el => slideContentRefs.current[index] = el} className="max-w-xl space-y-3">
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-orbitron leading-tight" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>
                     {slide.title}
                   </h1>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-300">
-                    <span>{slide.year}</span>
-                    <span>•</span>
-                    <span>{slide.type}</span>
-                    <span>•</span>
-                    <span>{slide.episodes?.length || 'N/A'} Episodes</span>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-300 font-medium">
+                    <span className="flex items-center gap-1.5">{slide.year}</span>
+                    <span className="flex items-center gap-1.5">{Icon} {slide.type}</span>
+                    <span className="flex items-center gap-1.5">{slide.episodesCount || slide.episodes?.length || 'N/A'} Episodes</span>
                   </div>
                   <p className="text-sm md:text-base text-neutral-300 line-clamp-3 font-light leading-relaxed">
                     {slide.synopsis}
                   </p>
                   <div className="flex items-center gap-3 pt-2">
-                    <Button asChild className="btn-spotlight-gradient rounded-full px-6 py-3 h-auto text-sm md:text-base">
+                    <Button asChild className="btn-spotlight-gradient rounded-full px-5 h-11 text-sm md:text-base">
                         <Link href={watchNowUrl}>
                             <Play className="mr-2 h-5 w-5 fill-current" /> Watch Now
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="rounded-full px-6 py-3 h-auto text-sm md:text-base bg-transparent text-white border-primary hover:bg-primary/10 hover:text-white">
+                    <Button asChild variant="outline" className="rounded-full px-5 h-11 text-sm md:text-base bg-transparent text-white border-primary hover:bg-primary/10 hover:text-white">
                         <Link href={moreInfoUrl}>
                             <Info className="mr-2 h-5 w-5" /> More Info
                         </Link>
@@ -237,7 +245,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
       
       {/* Audio Toggle */}
       <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 z-20">
-        <Button variant="ghost" size="icon" onClick={toggleMute} className="w-11 h-11 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-primary transition-colors">
+        <Button variant="ghost" size="icon" onClick={toggleMute} className="w-11 h-11 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-primary transition-colors backdrop-blur-sm">
           {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
         </Button>
       </div>
