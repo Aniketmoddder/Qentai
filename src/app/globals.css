@@ -54,22 +54,6 @@
     --foreground-raw-hsl: 220 15% 96%;
     --ranking-number-stroke-color-raw-hsl: 230 8% 20%; 
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-    /* Plyr Player Theme Variables */
-    --plyr-color-main: hsl(var(--primary));
-    --plyr-color-focus: hsl(var(--ring));
-    --plyr-tooltip-background: hsl(var(--popover));
-    --plyr-tooltip-color: hsl(var(--popover-foreground));
-    --plyr-menu-background: hsl(var(--popover));
-    --plyr-menu-color: hsl(var(--popover-foreground));
-    --plyr-menu-item-hover-background: hsl(var(--accent));
-    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
-    --plyr-control-radius: var(--radius);
-    --plyr-font-family: var(--font-poppins), sans-serif;
-    --plyr-font-size-time: 13px;
-    --plyr-font-size-menu: 13px;
-    --plyr-control-icon-size: 18px;
-    --plyr-range-track-background: hsl(var(--muted) / 0.5);
-    --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="light-pale-purple"] {
@@ -86,7 +70,6 @@
     --chart-1: 250 66% 62%; --chart-2: 173 78% 40%; --chart-3: 173 70% 50%; --chart-4: 270 85% 77%; --chart-5: 220 10% 65%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.1); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
     --primary-raw-hsl: 250 66% 62%; --secondary-raw-hsl: 173 78% 40%; --accent-raw-hsl: 173 70% 50%; --highlight-raw-hsl: 270 85% 77%; --border-raw-hsl: 220 13% 91%; --background-raw-hsl: 220 60% 98%; --foreground-raw-hsl: 222 47% 11%; --ranking-number-stroke-color-raw-hsl: 220 10% 45%; --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
-    --plyr-color-main: hsl(var(--primary)); --plyr-color-focus: hsl(var(--ring)); --plyr-tooltip-background: hsl(var(--popover)); --plyr-tooltip-color: hsl(var(--popover-foreground)); --plyr-menu-background: hsl(var(--popover)); --plyr-menu-color: hsl(var(--popover-foreground)); --plyr-menu-item-hover-background: hsl(var(--accent)); --plyr-menu-item-hover-color: hsl(var(--accent-foreground)); --plyr-control-radius: var(--radius); --plyr-font-family: var(--font-poppins), sans-serif; --plyr-font-size-time: 13px; --plyr-font-size-menu: 13px; --plyr-control-icon-size: 18px; --plyr-range-track-background: hsl(var(--muted)); --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -103,7 +86,6 @@
     --chart-1: 327 82% 60%; --chart-2: 352 96% 71%; --chart-3: 170 80% 55%; --chart-4: 337 88% 70%; --chart-5: 287 30% 60%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.2); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
     --primary-raw-hsl: 327 82% 60%; --secondary-raw-hsl: 352 96% 71%; --accent-raw-hsl: 170 80% 55%; --highlight-raw-hsl: 337 88% 70%; --border-raw-hsl: 287 67% 18%; --background-raw-hsl: 287 50% 8%; --foreground-raw-hsl: 287 100% 98%; --ranking-number-stroke-color-raw-hsl: 287 67% 18%; --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-    --plyr-color-main: hsl(var(--primary)); --plyr-color-focus: hsl(var(--ring)); --plyr-tooltip-background: hsl(var(--popover)); --plyr-tooltip-color: hsl(var(--popover-foreground)); --plyr-menu-background: hsl(var(--popover)); --plyr-menu-color: hsl(var(--popover-foreground)); --plyr-menu-item-hover-background: hsl(var(--accent)); --plyr-menu-item-hover-color: hsl(var(--accent-foreground)); --plyr-control-radius: var(--radius); --plyr-font-family: var(--font-poppins), sans-serif; --plyr-font-size-time: 13px; --plyr-font-size-menu: 13px; --plyr-control-icon-size: 18px; --plyr-range-track-background: hsl(var(--muted) / 0.5); --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -120,7 +102,6 @@
     --chart-1: 180 100% 50%; --chart-2: 300 100% 50%; --chart-3: 70 100% 50%; --chart-4: 157 100% 50%; --chart-5: 220 10% 70%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.25); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
     --primary-raw-hsl: 180 100% 50%; --secondary-raw-hsl: 300 100% 50%; --accent-raw-hsl: 70 100% 50%; --highlight-raw-hsl: 157 100% 50%; --border-raw-hsl: 231 25% 20%; --background-raw-hsl: 231 25% 8%; --foreground-raw-hsl: 220 13% 91%; --ranking-number-stroke-color-raw-hsl: 231 25% 20%; --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-    --plyr-color-main: hsl(var(--primary)); --plyr-color-focus: hsl(var(--ring)); --plyr-tooltip-background: hsl(var(--popover)); --plyr-tooltip-color: hsl(var(--popover-foreground)); --plyr-menu-background: hsl(var(--popover)); --plyr-menu-color: hsl(var(--popover-foreground)); --plyr-menu-item-hover-background: hsl(var(--accent)); --plyr-menu-item-hover-color: hsl(var(--accent-foreground)); --plyr-control-radius: var(--radius); --plyr-font-family: var(--font-poppins), sans-serif; --plyr-font-size-time: 13px; --plyr-font-size-menu: 13px; --plyr-control-icon-size: 18px; --plyr-range-track-background: hsl(var(--muted) / 0.5); --plyr-range-thumb-height: 12px;
   }
 
   /* Global styles that apply to all themes */

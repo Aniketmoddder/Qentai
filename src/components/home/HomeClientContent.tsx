@@ -19,7 +19,7 @@ const RecommendationsSection = lazy(() => import('../anime/recommendations-secti
 
 export interface HomeClientProps {
   initialAllAnimeData: Anime[];
-  initialSpotlightData: any[]; // Changed from initialFeaturedAnimes
+  initialSpotlightData: any[];
   fetchError: string | null;
 }
 
@@ -34,14 +34,15 @@ export default function HomeClient({
   const [spotlightSlides, setSpotlightSlides] = useState<any[]>(() => initialSpotlightData);
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError);
 
-  const [isArtificiallyLoading, setIsArtificiallyLoading] = useState(true);
+  const [isClientSide, setIsClientSide] = useState(false);
   const [isDataActuallyLoading, setIsDataActuallyLoading] = useState(
     !rawInitialAllAnimeData || rawInitialAllAnimeData.length === 0
   );
 
   useEffect(() => {
+    // This helps in delaying the render of certain components until the client has hydrated.
     const timer = setTimeout(() => {
-      setIsArtificiallyLoading(false);
+      setIsClientSide(true);
     }, ARTIFICIAL_SKELETON_DELAY);
 
     return () => clearTimeout(timer);
@@ -92,7 +93,7 @@ export default function HomeClient({
     .slice(0, 10) : [];
   }, [allAnime]);
   
-  const showSkeleton = isArtificiallyLoading || (isDataActuallyLoading && !fetchError);
+  const showSkeleton = !isClientSide || (isDataActuallyLoading && !fetchError);
 
   if (fetchError) {
     return (
@@ -111,7 +112,7 @@ export default function HomeClient({
     );
   }
 
-  const noContentAvailable = !isDataActuallyLoading && !fetchError && !isArtificiallyLoading && allAnime.length === 0 && spotlightSlides.length === 0;
+  const noContentAvailable = !isDataActuallyLoading && !fetchError && isClientSide && allAnime.length === 0 && spotlightSlides.length === 0;
 
   return (
     <>

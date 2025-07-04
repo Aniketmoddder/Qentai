@@ -25,34 +25,24 @@ interface SpotlightSliderProps {
   isLoading: boolean;
 }
 
-function getYouTubeEmbedUrl(url: string): string | null {
-  let videoId: string | null = null;
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.hostname === 'youtu.be') {
-      videoId = urlObj.pathname.slice(1);
-    } else if (urlObj.hostname.includes('youtube.com')) {
-      videoId = urlObj.searchParams.get('v');
+// Helper to correctly parse YouTube URLs and get the Video ID
+function getYouTubeVideoId(url: string): string | null {
+    if (!url) return null;
+    let videoId: string | null = null;
+    try {
+        const urlObj = new URL(url);
+        if (urlObj.hostname === 'youtu.be') {
+            videoId = urlObj.pathname.slice(1);
+        } else if (urlObj.hostname.includes('youtube.com') && urlObj.pathname.includes('watch')) {
+            videoId = urlObj.searchParams.get('v');
+        } else if (urlObj.hostname.includes('youtube.com') && urlObj.pathname.includes('embed')) {
+            videoId = urlObj.pathname.split('/')[2];
+        }
+    } catch (e) {
+        console.error("Invalid URL for YouTube parsing:", url, e);
+        return null;
     }
-  } catch (e) {
-    console.error("Invalid URL for YouTube parsing:", url, e);
-    return null;
-  }
-  if (!videoId) return null;
-  
-  const params = new URLSearchParams({
-    autoplay: '1',
-    mute: '1',
-    loop: '1',
-    playlist: videoId, // loop=1 requires playlist
-    controls: '0',
-    showinfo: '0',
-    rel: '0',
-    iv_load_policy: '3',
-    modestbranding: '1',
-    playsinline: '1',
-  });
-  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+    return videoId;
 }
 
 
@@ -64,7 +54,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]); 
   const slideContentRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const slideBackgroundRefs = useRef<(HTMLDivElement | null)[]>([]);
   const activeIndexRef = useRef(0);
 
   const handleSlideChange = useCallback((swiperInstance: SwiperInstance) => {
@@ -81,8 +70,8 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       );
     }
     
-    // Animate new slide background
-    const currentBackground = slideBackgroundRefs.current[newIndex];
+    // Animate new slide background (poster image)
+    const currentBackground = currentSlideContent?.parentElement?.previousElementSibling?.querySelector('img');
     if (currentBackground) {
         gsap.fromTo(currentBackground, { scale: 1.15 }, { scale: 1, duration: 8, ease: 'power1.inOut' });
     }
@@ -95,7 +84,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
     const newVideo = videoRefs.current[newIndex];
     if (newVideo) {
-      newVideo.muted = isMuted;
+      newVideo.muted = true; // Always start muted on slide change
       setTimeout(() => {
         if (activeIndexRef.current === newIndex) {
           const playPromise = newVideo.play();
@@ -108,7 +97,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
     setActiveIndex(newIndex);
     activeIndexRef.current = newIndex;
-  }, [isMuted]);
+  }, []);
 
   useEffect(() => {
     try {
@@ -123,9 +112,10 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
   const toggleMute = () => {
     const newMuteState = !isMuted;
+    
     const currentSlide = slides[activeIndex];
     const currentVideoUrl = currentSlide?.trailerUrl;
-    const isYouTube = currentVideoUrl && (currentVideoUrl.includes('youtube.com') || currentVideoUrl.includes('youtu.be'));
+    const isYouTube = currentVideoUrl && (getYouTubeVideoId(currentVideoUrl) !== null);
     
     if (isYouTube) {
         toast({ title: "Mute control is unavailable for YouTube trailers.", variant: 'default' });
@@ -156,7 +146,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   if (slides.length === 0) {
     return (
       <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent"></div>
         <Container className="relative z-10 text-center">
           <Tv className="mx-auto h-16 w-16 text-primary/50 mb-4" />
           <h1 className="text-3xl md:text-4xl font-bold font-orbitron">Spotlight</h1>
@@ -192,21 +181,29 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const videoUrl = slide.trailerUrl;
           const backgroundUrl = slide.backgroundImageUrl;
           const Icon = typeIconMap[slide.type || 'Default'] || typeIconMap.Default;
-          const isYouTube = videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
-          const youTubeEmbedUrl = isYouTube ? getYouTubeEmbedUrl(videoUrl) : null;
+          const youTubeVideoId = getYouTubeVideoId(videoUrl);
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
               <div 
-                ref={el => slideBackgroundRefs.current[index] = el}
                 className="absolute inset-0 w-full h-full overflow-hidden"
               >
-                 {youTubeEmbedUrl ? (
+                {/* Background Poster Image - always present */}
+                 <Image 
+                    src={backgroundUrl}
+                    alt={slide.title}
+                    fill
+                    className="w-full h-full object-cover opacity-40" // More visible than before
+                    data-ai-hint="anime background scene"
+                    priority={index === 0}
+                  />
+
+                {/* Conditional Video Player */}
+                {youTubeVideoId ? (
                     <iframe
-                        key={slide.spotlightId}
-                        src={youTubeEmbedUrl}
+                        src={`https://www.youtube.com/embed/${youTubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youTubeVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
                         title={slide.title}
-                        className="w-full h-full object-cover opacity-30 pointer-events-none"
+                        className="w-full h-full absolute inset-0 object-cover pointer-events-none"
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
@@ -219,21 +216,15 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                       loop
                       playsInline
                       preload="metadata"
-                      className="w-full h-full object-cover opacity-30"
+                      className="w-full h-full absolute inset-0 object-cover"
                     />
-                ) : (
-                  <Image 
-                    src={backgroundUrl}
-                    alt={slide.title}
-                    fill
-                    className="object-cover opacity-30"
-                    data-ai-hint="anime background scene"
-                    priority={index === 0}
-                  />
-                )}
+                ) : null}
+
+                {/* Gradient Overlay for Text Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/70 via-transparent to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/60 to-transparent"></div>
               </div>
+
               <Container className="relative z-10 h-full flex flex-col justify-end pb-12 md:pb-20">
                 <div ref={el => slideContentRefs.current[index] = el} className="max-w-xl space-y-3">
                   <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-orbitron leading-tight" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>
