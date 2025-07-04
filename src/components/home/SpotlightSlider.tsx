@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -11,14 +10,17 @@ import Image from 'next/image';
 import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Presentation, Tv, Film, ListVideo, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Tv, Film, ListVideo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
+import { Loader2 } from 'lucide-react';
+import PlyrComponent from 'plyr-react';
+import type Plyr from 'plyr';
+import 'plyr/dist/plyr.css';
 
-// This is an "enriched" slide type that combines SpotlightSlide with its corresponding Anime data.
-// It's created in page.tsx and passed down to this component.
+
 type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
 interface SpotlightSliderProps {
@@ -30,7 +32,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const videoRefs = useRef<(HTMLVideoElement | Plyr | null)[]>([]);
   const slideContentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const slideBackgroundRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -64,8 +66,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
     const currentSlideContent = slideContentRefs.current[activeIndex];
     const currentBackground = slideBackgroundRefs.current[activeIndex];
-    const currentVideo = videoRefs.current[activeIndex];
-
+    
     // Animate content
     if (currentSlideContent) {
       const contentElements = currentSlideContent.children;
@@ -85,12 +86,11 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     // Animate background
     if (currentBackground) {
         gsap.fromTo(currentBackground,
-            { opacity: 0.3, scale: 1.1 },
+            { scale: 1.15 },
             {
-                opacity: 1,
                 scale: 1,
-                duration: 1.2,
-                ease: 'power2.out'
+                duration: 8, // Slow pan/zoom effect
+                ease: 'power1.inOut'
             }
         );
     }
@@ -100,7 +100,10 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       if (video) {
         if (index === activeIndex) {
           setTimeout(() => {
-            video.play().catch(err => console.warn("Video autoplay was prevented:", err));
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
+            }
           }, 1500); // 1.5 second delay
         } else {
           video.pause();
@@ -134,7 +137,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent"></div>
         <Container className="relative z-10 text-center">
-          <Presentation className="mx-auto h-16 w-16 text-primary/50 mb-4" />
+          <Tv className="mx-auto h-16 w-16 text-primary/50 mb-4" />
           <h1 className="text-3xl md:text-4xl font-bold font-orbitron">Spotlight</h1>
           <p className="mt-2 text-muted-foreground">No featured content has been added yet.</p>
           <p className="text-sm text-muted-foreground/70">An administrator can add slides in the Spotlight Manager.</p>
@@ -169,23 +172,46 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const videoUrl = slide.trailerUrl;
           const backgroundUrl = slide.backgroundImageUrl;
           const Icon = typeIconMap[slide.type || 'Default'] || typeIconMap.Default;
+          const isYoutubeVideo = videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
               <div 
                 ref={el => slideBackgroundRefs.current[index] = el}
-                className="absolute inset-0 w-full h-full"
+                className="absolute inset-0 w-full h-full overflow-hidden"
               >
-                {videoUrl ? (
-                  <video
-                    ref={el => videoRefs.current[index] = el}
-                    src={videoUrl}
-                    muted={isMuted}
-                    loop
-                    playsInline
-                    preload="metadata"
-                    className="w-full h-full object-cover opacity-30"
-                  />
+                 {videoUrl ? (
+                    isYoutubeVideo ? (
+                        <div className="youtube-background-player w-full h-full opacity-30">
+                            <PlyrComponent
+                                ref={(r) => { if (r) videoRefs.current[index] = r.plyr; }}
+                                source={{
+                                    type: 'video',
+                                    sources: [{ src: videoUrl, provider: 'youtube' }],
+                                }}
+                                options={{
+                                    autoplay: false, // handled by useEffect
+                                    muted: isMuted,
+                                    loop: { active: true },
+                                    controls: [],
+                                    clickToPlay: false,
+                                    fullscreen: { enabled: false, fallback: false, iosNative: false },
+                                    tooltips: { controls: false, seek: false },
+                                    youtube: { noCookie: true, rel: 0, showinfo: 0, iv_load_policy: 3, modestbranding: 1 }
+                                }}
+                            />
+                        </div>
+                    ) : (
+                        <video
+                            ref={el => videoRefs.current[index] = el}
+                            src={videoUrl}
+                            muted={isMuted}
+                            loop
+                            playsInline
+                            preload="metadata"
+                            className="w-full h-full object-cover opacity-30"
+                        />
+                    )
                 ) : (
                   <Image 
                     src={backgroundUrl}
