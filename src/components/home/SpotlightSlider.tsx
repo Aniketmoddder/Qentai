@@ -11,7 +11,7 @@ import Image from 'next/image';
 import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Presentation, Tv, Film, ListVideo } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Presentation, Tv, Film, ListVideo, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
@@ -60,7 +60,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   };
 
   useEffect(() => {
-    if (!swiper) return;
+    if (!swiper || isLoading) return;
 
     const currentSlideContent = slideContentRefs.current[activeIndex];
     const currentBackground = slideBackgroundRefs.current[activeIndex];
@@ -109,7 +109,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       }
     });
 
-  }, [activeIndex, swiper]);
+  }, [activeIndex, swiper, isLoading]);
 
   useEffect(() => {
     // Mute/unmute the current video when isMuted state changes
