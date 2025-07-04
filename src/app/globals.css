@@ -18,13 +18,13 @@
 @layer base {
   /* Default Theme (Qentai Premium Dark - Revamped) */
   :root, html[data-theme="dark-purple-premium"] {
-    --background: 230 10% 6%; /* #0A0A13 - Rich Night Black */
+    --background: 0 0% 6%;      /* #0F0F0F - Deep Dark from prompt */
     --foreground: 220 15% 96%; /* #F4F4F5 - Soft Light Gray */
     --card: 230 10% 10%; /* #12121A - Slightly Lighter Card Base */
     --card-foreground: 220 15% 96%;
     --popover: 230 12% 5%; /* #0A0A0F - Even Darker Popover */
     --popover-foreground: 220 15% 96%;
-    --primary: 262 89% 66%; /* #8B5CF6 - Premium Neon Violet */
+    --primary: 245 83% 65%;   /* #6B5BF1 - New accent from prompt */
     --primary-foreground: 0 0% 100%; /* Pure White */
     --secondary: 200 90% 60%; /* #38BDF8 - Electric Cyan Blue */
     --secondary-foreground: 230 20% 7%; /* Darker for contrast on secondary */
@@ -36,7 +36,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 230 8% 20%; /* #2A2E3B - Muted Divider Gray */
     --input: 230 10% 9%; /* #101015 - Slightly darker input */
-    --ring: 200 90% 65%; /* #38BDF8 with slightly more pop for rings */
+    --ring: 245 83% 70%; /* Ring color based on new primary */
     --highlight: 337 88% 70%; /* #F472B6 - Modern Candy Pink (Original accent becomes highlight) */
     --surface: 230 12% 11%; /* #1E1B2E - Deep UI Card Color (used for card-like surfaces) */
     --text-heading: hsl(var(--foreground));
@@ -45,12 +45,12 @@
     --chart-1: hsl(var(--primary)); --chart-2: hsl(var(--secondary)); --chart-3: hsl(var(--accent)); --chart-4: hsl(var(--highlight)); --chart-5: 220 12% 75%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.15); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
     /* Raw HSL for GSAP & Gradients */
-    --primary-raw-hsl: 262 89% 66%;
+    --primary-raw-hsl: 245 83% 65%;
     --secondary-raw-hsl: 200 90% 60%;
-    --accent-raw-hsl: 188 82% 57%; /* UPDATED */
-    --highlight-raw-hsl: 337 88% 70%; /* UPDATED */
+    --accent-raw-hsl: 188 82% 57%;
+    --highlight-raw-hsl: 337 88% 70%;
     --border-raw-hsl: 230 8% 20%;
-    --background-raw-hsl: 230 10% 6%;
+    --background-raw-hsl: 0 0% 6%;
     --foreground-raw-hsl: 220 15% 96%;
     --ranking-number-stroke-color-raw-hsl: 230 8% 20%; 
     --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
@@ -77,40 +77,16 @@
     --primary: 250 66% 62%; --primary-foreground: 0 0% 100%;
     --secondary: 173 78% 40%; --secondary-foreground: 0 0% 100%;
     --muted: 220 14% 93%; --muted-foreground: 220 10% 45%;
-    --accent: 173 70% 50%; /* #29B9A3 - Vibrant Teal (NEW ACCENT) */
-    --accent-foreground: 0 0% 100%; /* White text for new accent */
+    --accent: 173 70% 50%; 
+    --accent-foreground: 0 0% 100%; 
     --destructive: 0 84% 60%; --destructive-foreground: 0 0% 100%;
     --border: 220 13% 91%; --input: 0 0% 100%; --ring: 250 66% 67%;
-    --highlight: 270 85% 77%; /* Original accent #C084FC becomes highlight */
+    --highlight: 270 85% 77%; 
     --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
     --chart-1: 250 66% 62%; --chart-2: 173 78% 40%; --chart-3: 173 70% 50%; --chart-4: 270 85% 77%; --chart-5: 220 10% 65%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.1); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
-    /* Raw HSL */
-    --primary-raw-hsl: 250 66% 62%;
-    --secondary-raw-hsl: 173 78% 40%;
-    --accent-raw-hsl: 173 70% 50%; /* UPDATED */
-    --highlight-raw-hsl: 270 85% 77%; /* UPDATED */
-    --border-raw-hsl: 220 13% 91%;
-    --background-raw-hsl: 220 60% 98%;
-    --foreground-raw-hsl: 222 47% 11%;
-    --ranking-number-stroke-color-raw-hsl: 220 10% 45%;
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
-     /* Plyr Player Theme Variables */
-    --plyr-color-main: hsl(var(--primary));
-    --plyr-color-focus: hsl(var(--ring));
-    --plyr-tooltip-background: hsl(var(--popover));
-    --plyr-tooltip-color: hsl(var(--popover-foreground));
-    --plyr-menu-background: hsl(var(--popover));
-    --plyr-menu-color: hsl(var(--popover-foreground));
-    --plyr-menu-item-hover-background: hsl(var(--accent));
-    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
-    --plyr-control-radius: var(--radius);
-    --plyr-font-family: var(--font-poppins), sans-serif;
-    --plyr-font-size-time: 13px;
-    --plyr-font-size-menu: 13px;
-    --plyr-control-icon-size: 18px;
-    --plyr-range-track-background: hsl(var(--muted));
-    --plyr-range-thumb-height: 12px;
+    --primary-raw-hsl: 250 66% 62%; --secondary-raw-hsl: 173 78% 40%; --accent-raw-hsl: 173 70% 50%; --highlight-raw-hsl: 270 85% 77%; --border-raw-hsl: 220 13% 91%; --background-raw-hsl: 220 60% 98%; --foreground-raw-hsl: 222 47% 11%; --ranking-number-stroke-color-raw-hsl: 220 10% 45%; --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.6);
+    --plyr-color-main: hsl(var(--primary)); --plyr-color-focus: hsl(var(--ring)); --plyr-tooltip-background: hsl(var(--popover)); --plyr-tooltip-color: hsl(var(--popover-foreground)); --plyr-menu-background: hsl(var(--popover)); --plyr-menu-color: hsl(var(--popover-foreground)); --plyr-menu-item-hover-background: hsl(var(--accent)); --plyr-menu-item-hover-color: hsl(var(--accent-foreground)); --plyr-control-radius: var(--radius); --plyr-font-family: var(--font-poppins), sans-serif; --plyr-font-size-time: 13px; --plyr-font-size-menu: 13px; --plyr-control-icon-size: 18px; --plyr-range-track-background: hsl(var(--muted)); --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="kawaii-pink-vibe"] {
@@ -118,40 +94,16 @@
     --primary: 327 82% 60%; --primary-foreground: 287 100% 98%;
     --secondary: 352 96% 71%; --secondary-foreground: 287 50% 8%;
     --muted: 287 60% 11%; --muted-foreground: 287 30% 60%;
-    --accent: 170 80% 55%; /* #33D6A9 - Bright Aqua/Teal (NEW ACCENT) */
-    --accent-foreground: 287 50% 8%; /* Dark text for new accent */
+    --accent: 170 80% 55%; 
+    --accent-foreground: 287 50% 8%; 
     --destructive: 0 70% 55%; --destructive-foreground: 0 0% 98%;
     --border: 287 67% 18%; --input: 287 67% 11%; --ring: 327 82% 65%;
-    --highlight: 337 88% 70%; /* Original accent #F472B6 becomes highlight */
+    --highlight: 337 88% 70%; 
     --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.75rem;
     --chart-1: 327 82% 60%; --chart-2: 352 96% 71%; --chart-3: 170 80% 55%; --chart-4: 337 88% 70%; --chart-5: 287 30% 60%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.2); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
-    /* Raw HSL */
-    --primary-raw-hsl: 327 82% 60%;
-    --secondary-raw-hsl: 352 96% 71%;
-    --accent-raw-hsl: 170 80% 55%; /* UPDATED */
-    --highlight-raw-hsl: 337 88% 70%; /* UPDATED */
-    --border-raw-hsl: 287 67% 18%;
-    --background-raw-hsl: 287 50% 8%;
-    --foreground-raw-hsl: 287 100% 98%;
-    --ranking-number-stroke-color-raw-hsl: 287 67% 18%;
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-     /* Plyr Player Theme Variables */
-    --plyr-color-main: hsl(var(--primary));
-    --plyr-color-focus: hsl(var(--ring));
-    --plyr-tooltip-background: hsl(var(--popover));
-    --plyr-tooltip-color: hsl(var(--popover-foreground));
-    --plyr-menu-background: hsl(var(--popover));
-    --plyr-menu-color: hsl(var(--popover-foreground));
-    --plyr-menu-item-hover-background: hsl(var(--accent));
-    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
-    --plyr-control-radius: var(--radius);
-    --plyr-font-family: var(--font-poppins), sans-serif;
-    --plyr-font-size-time: 13px;
-    --plyr-font-size-menu: 13px;
-    --plyr-control-icon-size: 18px;
-    --plyr-range-track-background: hsl(var(--muted) / 0.5);
-    --plyr-range-thumb-height: 12px;
+    --primary-raw-hsl: 327 82% 60%; --secondary-raw-hsl: 352 96% 71%; --accent-raw-hsl: 170 80% 55%; --highlight-raw-hsl: 337 88% 70%; --border-raw-hsl: 287 67% 18%; --background-raw-hsl: 287 50% 8%; --foreground-raw-hsl: 287 100% 98%; --ranking-number-stroke-color-raw-hsl: 287 67% 18%; --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    --plyr-color-main: hsl(var(--primary)); --plyr-color-focus: hsl(var(--ring)); --plyr-tooltip-background: hsl(var(--popover)); --plyr-tooltip-color: hsl(var(--popover-foreground)); --plyr-menu-background: hsl(var(--popover)); --plyr-menu-color: hsl(var(--popover-foreground)); --plyr-menu-item-hover-background: hsl(var(--accent)); --plyr-menu-item-hover-color: hsl(var(--accent-foreground)); --plyr-control-radius: var(--radius); --plyr-font-family: var(--font-poppins), sans-serif; --plyr-font-size-time: 13px; --plyr-font-size-menu: 13px; --plyr-control-icon-size: 18px; --plyr-range-track-background: hsl(var(--muted) / 0.5); --plyr-range-thumb-height: 12px;
   }
 
   html[data-theme="futuristic-cyberpunk"] {
@@ -159,40 +111,16 @@
     --primary: 180 100% 50%; --primary-foreground: 231 25% 8%;
     --secondary: 300 100% 50%; --secondary-foreground: 231 25% 8%;
     --muted: 231 25% 10%; --muted-foreground: 220 10% 55%;
-    --accent: 70 100% 50%; /* #D4FF00 - Acid Yellow/Lime (NEW ACCENT) */
-    --accent-foreground: 231 25% 8%; /* Dark text for new accent */
+    --accent: 70 100% 50%; 
+    --accent-foreground: 231 25% 8%; 
     --destructive: 0 100% 60%; --destructive-foreground: 0 0% 98%;
     --border: 231 25% 20%; --input: 231 25% 10%; --ring: 180 100% 55%;
-    --highlight: 157 100% 50%; /* Original accent #34D399 becomes highlight */
+    --highlight: 157 100% 50%; 
     --surface: hsl(var(--card)); --text-heading: hsl(var(--foreground)); --text-body: hsl(var(--foreground)); --radius: 0.5rem;
     --chart-1: 180 100% 50%; --chart-2: 300 100% 50%; --chart-3: 70 100% 50%; --chart-4: 157 100% 50%; --chart-5: 220 10% 70%;
     --sidebar-background: hsl(var(--background)); --sidebar-foreground: hsl(var(--foreground)); --sidebar-border: hsl(var(--border)); --sidebar-accent: hsl(var(--primary) / 0.25); --sidebar-accent-foreground: hsl(var(--primary)); --sidebar-ring: hsl(var(--ring));
-    /* Raw HSL */
-    --primary-raw-hsl: 180 100% 50%;
-    --secondary-raw-hsl: 300 100% 50%;
-    --accent-raw-hsl: 70 100% 50%; /* UPDATED */
-    --highlight-raw-hsl: 157 100% 50%; /* UPDATED */
-    --border-raw-hsl: 231 25% 20%;
-    --background-raw-hsl: 231 25% 8%;
-    --foreground-raw-hsl: 220 13% 91%;
-    --ranking-number-stroke-color-raw-hsl: 231 25% 20%;
-    --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
-    /* Plyr Player Theme Variables */
-    --plyr-color-main: hsl(var(--primary));
-    --plyr-color-focus: hsl(var(--ring));
-    --plyr-tooltip-background: hsl(var(--popover));
-    --plyr-tooltip-color: hsl(var(--popover-foreground));
-    --plyr-menu-background: hsl(var(--popover));
-    --plyr-menu-color: hsl(var(--popover-foreground));
-    --plyr-menu-item-hover-background: hsl(var(--accent));
-    --plyr-menu-item-hover-color: hsl(var(--accent-foreground));
-    --plyr-control-radius: var(--radius);
-    --plyr-font-family: var(--font-poppins), sans-serif;
-    --plyr-font-size-time: 13px;
-    --plyr-font-size-menu: 13px;
-    --plyr-control-icon-size: 18px;
-    --plyr-range-track-background: hsl(var(--muted) / 0.5);
-    --plyr-range-thumb-height: 12px;
+    --primary-raw-hsl: 180 100% 50%; --secondary-raw-hsl: 300 100% 50%; --accent-raw-hsl: 70 100% 50%; --highlight-raw-hsl: 157 100% 50%; --border-raw-hsl: 231 25% 20%; --background-raw-hsl: 231 25% 8%; --foreground-raw-hsl: 220 13% 91%; --ranking-number-stroke-color-raw-hsl: 231 25% 20%; --ranking-number-stroke-color: hsla(var(--ranking-number-stroke-color-raw-hsl), 0.7);
+    --plyr-color-main: hsl(var(--primary)); --plyr-color-focus: hsl(var(--ring)); --plyr-tooltip-background: hsl(var(--popover)); --plyr-tooltip-color: hsl(var(--popover-foreground)); --plyr-menu-background: hsl(var(--popover)); --plyr-menu-color: hsl(var(--popover-foreground)); --plyr-menu-item-hover-background: hsl(var(--accent)); --plyr-menu-item-hover-color: hsl(var(--accent-foreground)); --plyr-control-radius: var(--radius); --plyr-font-family: var(--font-poppins), sans-serif; --plyr-font-size-time: 13px; --plyr-font-size-menu: 13px; --plyr-control-icon-size: 18px; --plyr-range-track-background: hsl(var(--muted) / 0.5); --plyr-range-thumb-height: 12px;
   }
 
   /* Global styles that apply to all themes */
@@ -231,6 +159,13 @@
     background: hsl(var(--primary)); /* Fallback */
     background-size: 150% auto;
   }
+  /* Spotlight button gradient */
+  .btn-spotlight-gradient {
+    background: linear-gradient(135deg, #6b5bf1, #9d74ff);
+    box-shadow: 0 4px 12px rgba(107, 91, 241, 0.4);
+    @apply text-white font-bold transition-all duration-300 ease-in-out hover:shadow-lg hover:shadow-[#6b5bf1]/50 hover:scale-105;
+  }
+
   /* Theme specific gradients for buttons */
   html[data-theme="dark-purple-premium"] .btn-primary-gradient {
     background-image: linear-gradient(135deg, hsl(var(--primary-raw-hsl)) 0%, hsl(var(--secondary-raw-hsl)) 100%);

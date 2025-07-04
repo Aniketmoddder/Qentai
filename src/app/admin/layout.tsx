@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter, usePathname } from 'next/navigation';
-import { Loader2, AlertCircle, GaugeCircle, UsersRound, DownloadCloud, LibraryBig, ListVideo, FilePlus2, Palette, Settings as SettingsIcon, Menu, Home, MessageSquareWarning } from 'lucide-react';
+import { Loader2, AlertCircle, GaugeCircle, UsersRound, DownloadCloud, LibraryBig, ListVideo, FilePlus2, Palette, Settings as SettingsIcon, Menu, Home, MessageSquareWarning, Presentation } from 'lucide-react';
 import Container from '@/components/layout/container'; 
 import { Toaster } from '@/components/ui/toaster';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'ninjax.desi@gmail.co
 
 export const adminNavItems: AdminNavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: GaugeCircle, exactMatch: true, isAdminOrOwner: true },
+  { name: 'Spotlight Mgt.', href: '/admin/spotlight-manager', icon: Presentation, isAdminOrOwner: true },
   { name: 'Content Lib.', href: '/admin/content-management', icon: LibraryBig, isAdminOrOwner: true },
   { name: 'Episode Editor', href: '/admin/episode-editor', icon: ListVideo, isAdminOrOwner: true },
   { name: 'TMDB Import', href: '/admin/tmdb-import', icon: DownloadCloud, isAdminOrOwner: true },

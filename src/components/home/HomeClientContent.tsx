@@ -7,41 +7,17 @@ import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import Image from 'next/image';
-import { ChevronRight, AlertTriangle, Play, Plus, Tv, Calendar, ListVideo, Star as StarIcon, Volume2, VolumeX, Loader2 } from 'lucide-react';
+import { ChevronRight, AlertTriangle, Loader2 } from 'lucide-react';
 import type { Anime } from '@/types/anime';
 import FeaturedAnimeCard from '@/components/anime/FeaturedAnimeCard';
 import TopAnimeListItem from '@/components/anime/TopAnimeListItem';
-import { Badge } from '@/components/ui/badge';
-import SpotlightSkeleton from './HeroSkeleton';
+import SpotlightSlider from './SpotlightSlider'; // New Spotlight Slider
 import AnimeCardSkeleton from '@/components/anime/AnimeCardSkeleton';
 import HomePageGenreSection from './HomePageGenreSection';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const RecommendationsSection = lazy(() => import('../anime/recommendations-section'));
-
-
-const getYouTubeVideoId = (url?: string): string | null => {
-  if (!url) return null;
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.hostname === 'youtu.be') {
-      return urlObj.pathname.slice(1);
-    }
-    if (urlObj.hostname === 'www.youtube.com' || urlObj.hostname === 'youtube.com') {
-      if (urlObj.pathname === '/watch') {
-        return urlObj.searchParams.get('v');
-      }
-      if (urlObj.pathname.startsWith('/embed/')) {
-        return urlObj.pathname.split('/embed/')[1].split('?')[0];
-      }
-    }
-  } catch (e) {
-    return null;
-  }
-  return null;
-};
 
 export interface HomeClientProps {
   initialAllAnimeData: Anime[];
@@ -65,9 +41,6 @@ export default function HomeClient({
     !rawInitialAllAnimeData || rawInitialAllAnimeData.length === 0
   );
 
-  const [playTrailer, setPlayTrailer] = useState(false);
-  const [isTrailerMuted, setIsTrailerMuted] = useState(true);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsArtificiallyLoading(false);
@@ -90,24 +63,9 @@ export default function HomeClient({
     }
   }, [rawInitialAllAnimeData, rawInitialFeaturedAnimes, initialFetchError]);
 
-
-  const heroAnime = useMemo(() => {
-    return featuredAnimesList[0] || (allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0))[0] : undefined);
-  }, [featuredAnimesList, allAnime]);
-
-  const youtubeVideoId = useMemo(() => {
-    return heroAnime?.trailerUrl ? getYouTubeVideoId(heroAnime.trailerUrl) : null;
-  }, [heroAnime]);
-
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (heroAnime && youtubeVideoId && !playTrailer && !fetchError && !isDataActuallyLoading && !isArtificiallyLoading) {
-      timer = setTimeout(() => {
-        setPlayTrailer(true);
-      }, 3000);
-    }
-    return () => clearTimeout(timer);
-  }, [heroAnime, youtubeVideoId, playTrailer, fetchError, isDataActuallyLoading, isArtificiallyLoading]);
+  const spotlightSlides = useMemo(() => {
+    return featuredAnimesList.slice(0, 8);
+  }, [featuredAnimesList]);
 
   const trendingAnime = useMemo(() => {
     return allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15) : [];
@@ -138,24 +96,15 @@ export default function HomeClient({
     .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
     .slice(0, 10) : [];
   }, [allAnime]);
-
+  
   const showSkeleton = isArtificiallyLoading || (isDataActuallyLoading && !fetchError);
 
   if (showSkeleton) {
     return (
       <>
-        <SpotlightSkeleton />
+        <Skeleton className="h-[70vh] w-full bg-muted/50" />
         <Container className="py-8">
-          {/* Featured section skeleton */}
-          <div className="mb-8">
-            <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50" />
-                <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl bg-muted/50 hidden md:block" />
-            </div>
-          </div>
-
-          {/* Skeletons for other AnimeCarousels */}
+          {/* Skeletons for AnimeCarousels */}
           {[...Array(2)].map((_, i) => (
             <div key={`carousel-skeleton-${i}`} className="mb-8">
               <Skeleton className="h-8 w-1/3 mb-4 rounded bg-muted/50" />
@@ -214,94 +163,11 @@ export default function HomeClient({
     );
   }
 
-  const noContentAvailable = !isDataActuallyLoading && !fetchError && !isArtificiallyLoading && allAnime.length === 0 && featuredAnimesList.length === 0 && !heroAnime;
+  const noContentAvailable = !isDataActuallyLoading && !fetchError && !isArtificiallyLoading && allAnime.length === 0 && spotlightSlides.length === 0;
 
   return (
     <>
-      {heroAnime && (
-        <section className="relative h-[55vh] md:h-[70vh] w-full flex items-end overflow-hidden">
-          <div className="absolute inset-0">
-            {playTrailer && youtubeVideoId ? (
-              <div className="absolute inset-0 w-full h-full pointer-events-none">
-                <iframe
-                  src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1&mute=${isTrailerMuted ? 1 : 0}&controls=0&showinfo=0&loop=1&playlist=${youtubeVideoId}&modestbranding=1&iv_load_policy=3&fs=0&disablekb=1&vq=hd1080`}
-                  title="YouTube video player"
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full scale-[2] sm:scale-[1.8] md:scale-[1.5] object-cover"
-                ></iframe>
-              </div>
-            ) : (
-              <Image
-                src={heroAnime.bannerImage || `https://placehold.co/1600x900.png`}
-                alt={`${heroAnime.title} banner`}
-                fill
-                style={{ objectFit: 'cover' }}
-                className="opacity-40"
-                priority
-                data-ai-hint="anime landscape epic"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
-          </div>
-
-          <Container className="relative z-10 pb-8 md:pb-12 text-foreground">
-            <div className="max-w-2xl">
-              {heroAnime.isFeatured ? (
-                <Badge className="bg-yellow-500/90 text-background text-xs font-semibold px-2.5 py-1 rounded-md mb-3">
-                  <StarIcon className="w-3 h-3 mr-1.5 fill-current"/> Featured Pick
-                </Badge>
-              ) : (
-                 <Badge className="bg-primary text-primary-foreground text-xs font-semibold px-2.5 py-1 rounded-md mb-3">
-                    #1 Trending
-                </Badge>
-              )}
-              <h1 className="text-3xl md:text-4xl font-bold mb-2 leading-tight font-zen-dots">
-                {heroAnime.title}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mb-4">
-                {heroAnime.type && <span className="flex items-center"><Tv className="w-4 h-4 mr-1.5" /> {heroAnime.type}</span>}
-                {heroAnime.episodes && heroAnime.episodes.length > 0 &&
-                  <span className="flex items-center"><ListVideo className="w-4 h-4 mr-1.5" /> {heroAnime.episodes.length} Episodes</span>
-                }
-                 <span className="flex items-center"><Calendar className="w-4 h-4 mr-1.5" /> {heroAnime.year}</span>
-              </div>
-              <p className="text-sm md:text-base text-muted-foreground mb-5 line-clamp-2 font-poppins">
-                {heroAnime.synopsis}
-              </p>
-              <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
-                <Button asChild size="default" className="btn-primary-gradient rounded-full px-6 text-sm">
-                  <Link href={`/play/${heroAnime.id}${heroAnime.episodes && heroAnime.episodes.length > 0 ? `?episode=${heroAnime.episodes[0].id}` : ''}`}>
-                    <Play className="mr-2 h-4 w-4 fill-current" /> Watch Now
-                  </Link>
-                </Button>
-                 <Button asChild variant="outline" size="default" className="rounded-full px-6 text-sm border-foreground/30 text-foreground hover:bg-foreground/10 hover:border-foreground/50">
-                  <Link href={`/anime/${heroAnime.id}`}>
-                    <Plus className="mr-2 h-4 w-4" /> More Info
-                  </Link>
-                </Button>
-                {playTrailer && youtubeVideoId && (
-                  <div className="ml-auto sm:ml-0 mt-2 sm:mt-0 sm:ml-auto self-center">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                        e.stopPropagation();
-                        setIsTrailerMuted(!isTrailerMuted);
-                        }}
-                        className="text-white/70 hover:text-white hover:bg-black/30 rounded-full w-10 h-10"
-                        aria-label={isTrailerMuted ? "Unmute trailer" : "Mute trailer"}
-                    >
-                        {isTrailerMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Container>
-        </section>
-      )}
+      <SpotlightSlider slides={spotlightSlides} />
 
       <Container className="py-8">
         {noContentAvailable && (
@@ -309,22 +175,6 @@ export default function HomeClient({
             <h3 className="font-semibold text-xl font-orbitron">No Anime Found</h3>
             <p className="text-muted-foreground font-poppins">It looks like there's no anime in the database yet. An admin can add some via the admin panel.</p>
           </div>
-        )}
-
-        {featuredAnimesList.length > 0 && (
-          <section className="pt-2 pb-8 md:pt-4 md:pb-12">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron">Featured Anime</h2>
-              <Button variant="link" asChild className="text-primary hover:text-primary/80 font-poppins">
-                <Link href="/browse?filter=featured">View More <ChevronRight className="w-4 h-4 ml-1"/></Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-              {featuredAnimesList.slice(0, 2).map(anime => (
-                <FeaturedAnimeCard key={anime.id} anime={anime} />
-              ))}
-            </div>
-          </section>
         )}
 
         {trendingAnime.length > 0 && <AnimeCarousel title="Trending Now" animeList={trendingAnime} />}
