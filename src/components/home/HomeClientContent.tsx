@@ -1,4 +1,3 @@
-
 // src/components/home/HomeClientContent.tsx
 'use client';
 
@@ -9,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ChevronRight, AlertTriangle, Loader2 } from 'lucide-react';
 import type { Anime } from '@/types/anime';
-import FeaturedAnimeCard from '@/components/anime/FeaturedAnimeCard';
 import TopAnimeListItem from '@/components/anime/TopAnimeListItem';
 import SpotlightSlider from './SpotlightSlider'; // New Spotlight Slider
 import AnimeCardSkeleton from '@/components/anime/AnimeCardSkeleton';
