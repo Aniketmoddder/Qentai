@@ -11,12 +11,11 @@ import Image from 'next/image';
 import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Tv, Film, ListVideo, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Tv, Film, ListVideo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
 
 type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
@@ -50,15 +49,21 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
-  const { toast } = useToast();
   
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]); 
   const slideContentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const activeIndexRef = useRef(0);
+  const autoplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   const handleSlideChange = useCallback((swiperInstance: SwiperInstance) => {
     const newIndex = swiperInstance.realIndex;
     const oldIndex = activeIndexRef.current;
+    
+    // Clear any pending autoplay from the previous slide
+    if (autoplayTimeoutRef.current) {
+      clearTimeout(autoplayTimeoutRef.current);
+    }
     
     // Animate new slide content
     const currentSlideContent = slideContentRefs.current[newIndex];
@@ -84,20 +89,23 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
     const newVideo = videoRefs.current[newIndex];
     if (newVideo) {
-      newVideo.muted = true; // Always start muted on slide change
-      setTimeout(() => {
-        if (activeIndexRef.current === newIndex) {
+      newVideo.muted = isMuted; // Set mute state according to the global toggle
+      newVideo.currentTime = 0;
+      
+      // Set a timeout to play the video after 8 seconds
+      autoplayTimeoutRef.current = setTimeout(() => {
+        if (activeIndexRef.current === newIndex) { // Check if we are still on the same slide
           const playPromise = newVideo.play();
           if (playPromise !== undefined) {
             playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
           }
         }
-      }, 1500); 
+      }, 8000); // 8-second delay
     }
 
     setActiveIndex(newIndex);
     activeIndexRef.current = newIndex;
-  }, []);
+  }, [isMuted]);
 
   useEffect(() => {
     try {
@@ -112,16 +120,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
   const toggleMute = () => {
     const newMuteState = !isMuted;
-    
-    const currentSlide = slides[activeIndex];
-    const currentVideoUrl = currentSlide?.trailerUrl;
-    const isYouTube = currentVideoUrl && (getYouTubeVideoId(currentVideoUrl) !== null);
-    
-    if (isYouTube) {
-        toast({ title: "Mute control is unavailable for YouTube trailers.", variant: 'default' });
-        return;
-    }
-
     setIsMuted(newMuteState);
      try {
       localStorage.setItem('qentai-spotlight-muted', JSON.stringify(newMuteState));
@@ -138,7 +136,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     return (
       <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] flex items-center justify-center">
         <Skeleton className="absolute inset-0" />
-        <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </section>
     );
   }
@@ -185,42 +182,38 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
-              <div 
-                className="absolute inset-0 w-full h-full overflow-hidden"
-              >
-                {/* Background Poster Image - always present */}
-                 <Image 
-                    src={backgroundUrl}
-                    alt={slide.title}
-                    fill
-                    className="w-full h-full object-cover opacity-40" // More visible than before
-                    data-ai-hint="anime background scene"
-                    priority={index === 0}
-                  />
-
+              <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <Image 
+                  src={backgroundUrl}
+                  alt={slide.title}
+                  fill
+                  className="w-full h-full object-cover"
+                  data-ai-hint="anime background scene"
+                  priority={index === 0}
+                />
+                
                 {/* Conditional Video Player */}
                 {youTubeVideoId ? (
-                    <iframe
-                        src={`https://www.youtube.com/embed/${youTubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youTubeVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
-                        title={slide.title}
-                        className="w-full h-full absolute inset-0 object-cover pointer-events-none"
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                    />
+                  <iframe
+                      src={`https://www.youtube.com/embed/${youTubeVideoId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${youTubeVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
+                      title={slide.title}
+                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                  />
                 ) : videoUrl ? (
-                    <video
-                      ref={el => videoRefs.current[index] = el}
-                      src={videoUrl}
-                      muted
-                      loop
-                      playsInline
-                      preload="metadata"
-                      className="w-full h-full absolute inset-0 object-cover"
-                    />
+                  <video
+                    ref={el => videoRefs.current[index] = el}
+                    src={videoUrl}
+                    muted={isMuted}
+                    loop
+                    playsInline
+                    preload="metadata"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                 ) : null}
 
-                {/* Gradient Overlay for Text Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/60 to-transparent"></div>
               </div>
@@ -244,7 +237,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                             <Play className="mr-2 h-5 w-5 fill-current" /> Watch Now
                         </Link>
                     </Button>
-                    <Button asChild variant="outline" className="rounded-full px-5 h-11 text-sm md:text-base bg-transparent text-white border-primary hover:bg-primary/10 hover:text-white">
+                    <Button asChild variant="outline" className="rounded-full px-5 h-11 text-sm md:text-base bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white">
                         <Link href={moreInfoUrl}>
                             <Info className="mr-2 h-5 w-5" /> More Info
                         </Link>
