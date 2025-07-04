@@ -16,10 +16,6 @@ import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
-import PlyrComponent from 'plyr-react';
-import type Plyr from 'plyr';
-import 'plyr/dist/plyr.css';
-
 
 type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
@@ -32,24 +28,25 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
-  const videoRefs = useRef<(Plyr | null)[]>([]);
+  
+  // This will store direct references to the <video> elements
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]); 
+  
   const slideContentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const slideBackgroundRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Using a ref for the active index helps avoid stale closures in callbacks.
   const activeIndexRef = useRef(0);
 
   const handleSlideChange = useCallback((swiperInstance: SwiperInstance) => {
     const newIndex = swiperInstance.realIndex;
     const oldIndex = activeIndexRef.current;
 
-    // Pause the old video
+    // Pause the old video safely
     const oldVideo = videoRefs.current[oldIndex];
-    if (oldVideo && typeof oldVideo.pause === 'function') {
-      try {
-        oldVideo.pause();
-        oldVideo.currentTime = 0;
-      } catch (e) {
-        console.warn(`Could not pause video at index ${oldIndex}`, e);
-      }
+    if (oldVideo) {
+      oldVideo.pause();
+      oldVideo.currentTime = 0; // Reset video to the beginning
     }
     
     // Animate new slide content
@@ -71,24 +68,26 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     // Play the new video after a delay
     const newVideo = videoRefs.current[newIndex];
     if (newVideo) {
+      // Ensure the video's muted state is correct before playing
+      newVideo.muted = isMuted; 
       setTimeout(() => {
         // Re-check the current active index before playing, to avoid playing on a stale slide
-        if (activeIndexRef.current === newIndex && typeof newVideo.play === 'function') {
+        if (activeIndexRef.current === newIndex) {
           const playPromise = newVideo.play();
           if (playPromise !== undefined) {
             playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
           }
         }
-      }, 1500);
+      }, 1500); // 1.5 second delay before autoplay
     }
 
     // Update active index state and ref
     setActiveIndex(newIndex);
     activeIndexRef.current = newIndex;
-  }, []);
+  }, [isMuted]); // Add isMuted dependency to ensure the correct mute state is used
 
+  // This effect runs once to set the initial mute state from localStorage
   useEffect(() => {
-    // This effect runs once to set the initial mute state from localStorage
     try {
       const storedMuteState = localStorage.getItem('qentai-spotlight-muted');
       if (storedMuteState !== null) {
@@ -104,19 +103,15 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     setIsMuted(newMuteState);
      try {
       localStorage.setItem('qentai-spotlight-muted', JSON.stringify(newMuteState));
-    } catch (error)       {
+    } catch (error) {
        console.warn("Could not save mute state to localStorage", error)
     }
-  };
-
-  useEffect(() => {
-    // This effect now ONLY handles muting the current video when isMuted state changes
+    // Mute/unmute the currently active video
     const currentVideo = videoRefs.current[activeIndex];
     if (currentVideo) {
-      currentVideo.muted = isMuted;
-      gsap.to(currentVideo, { volume: isMuted ? 0 : 1, duration: 0.5 });
+      currentVideo.muted = newMuteState;
     }
-  }, [isMuted, activeIndex]);
+  };
   
   if (isLoading) {
     return (
@@ -167,7 +162,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const videoUrl = slide.trailerUrl;
           const backgroundUrl = slide.backgroundImageUrl;
           const Icon = typeIconMap[slide.type || 'Default'] || typeIconMap.Default;
-          const isYoutubeVideo = videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
@@ -176,37 +170,16 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                 className="absolute inset-0 w-full h-full overflow-hidden"
               >
                  {videoUrl ? (
-                    isYoutubeVideo ? (
-                        <div className="youtube-background-player w-full h-full opacity-30">
-                            <PlyrComponent
-                                ref={(r) => { if (r) videoRefs.current[index] = r.plyr; }}
-                                source={{
-                                    type: 'video',
-                                    sources: [{ src: videoUrl, provider: 'youtube' }],
-                                }}
-                                options={{
-                                    autoplay: false, // handled by useEffect
-                                    muted: isMuted,
-                                    loop: { active: true },
-                                    controls: [],
-                                    clickToPlay: false,
-                                    fullscreen: { enabled: false, fallback: false, iosNative: false },
-                                    tooltips: { controls: false, seek: false },
-                                    youtube: { noCookie: true, rel: 0, showinfo: 0, iv_load_policy: 3, modestbranding: 1 }
-                                }}
-                            />
-                        </div>
-                    ) : (
-                        <video
-                            ref={el => videoRefs.current[index] = el}
-                            src={videoUrl}
-                            muted={isMuted}
-                            loop
-                            playsInline
-                            preload="metadata"
-                            className="w-full h-full object-cover opacity-30"
-                        />
-                    )
+                   // Use standard video tag now
+                    <video
+                      ref={el => videoRefs.current[index] = el}
+                      src={videoUrl}
+                      muted={isMuted}
+                      loop
+                      playsInline
+                      preload="metadata"
+                      className="w-full h-full object-cover opacity-30"
+                    />
                 ) : (
                   <Image 
                     src={backgroundUrl}
