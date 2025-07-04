@@ -356,11 +356,12 @@ function SpotlightFormDialog({ isOpen, onOpenChange, onSubmit, isSaving, existin
 function FormFieldItem({ name, label, form, Icon, ...props }: { name: keyof SpotlightFormData; label: string; form: ReturnType<typeof useForm<SpotlightFormData>>, Icon?: React.ElementType } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="space-y-1">
-      <Label htmlFor={name} className="flex items-center"><Icon className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" /> {label}</Label>
+      <Label htmlFor={name} className="flex items-center">
+        {Icon && <Icon className="w-3.5 h-3.5 mr-1.5 text-muted-foreground" />}
+        {label}
+      </Label>
       <Input id={name} {...form.register(name)} {...props} className="bg-input" />
       {form.formState.errors[name] && <p className="text-xs text-destructive mt-1">{form.formState.errors[name]?.message}</p>}
     </div>
   );
 }
-
-    
