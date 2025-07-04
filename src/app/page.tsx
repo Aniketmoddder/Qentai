@@ -1,62 +1,54 @@
 // src/app/page.tsx
 import HomeClient from '@/components/home/HomeClientContent';
 import type { Anime } from '@/types/anime';
-import { getAllAnimes, getFeaturedAnimes } from '@/services/animeService';
+import { getAllAnimes, getAnimesByIds } from '@/services/animeService';
+import { getSpotlightSlides } from '@/services/spotlightService';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 import { FirestoreError } from 'firebase/firestore';
+import type { SpotlightSlide } from '@/types/spotlight';
 
 
 export default async function HomePageWrapper() {
   let allAnimeData: Anime[] = [];
-  let featuredAnimesData: Anime[] = [];
+  let spotlightData: any[] = [];
   let fetchError: string | null = null;
 
   try {
     // Fetch all data concurrently
-    const [allAnimesRaw, featuredAnimesRawInitial] = await Promise.all([
+    const [allAnimesRaw, spotlightSlidesRaw] = await Promise.all([
       getAllAnimes({ count: 100, filters: { sortBy: 'updatedAt', sortOrder: 'desc' } }),
-      getFeaturedAnimes({ count: 10, sortBy: 'popularity', sortOrder: 'desc' })
+      getSpotlightSlides()
     ]);
 
     // Process all anime data
     allAnimeData = allAnimesRaw.map(a => convertAnimeTimestampsForClient(a));
 
-    // Process featured animes
-    let tempFeaturedAnimes = featuredAnimesRawInitial.map(a => convertAnimeTimestampsForClient(a));
+    // Process spotlight slides
+    const liveSlides = spotlightSlidesRaw.filter(s => s.status === 'live');
+    if (liveSlides.length > 0) {
+      const animeIds = liveSlides.map(s => s.animeId);
+      const animesForSpotlight = await getAnimesByIds(animeIds);
+      const animesMap = new Map(animesForSpotlight.map(a => [a.id, a]));
 
-    if (tempFeaturedAnimes.length > 0) {
-        // Already sorted by popularity from service
-        featuredAnimesData = tempFeaturedAnimes.slice(0,5); // Take top 5 for featured section
-    }
+      spotlightData = liveSlides
+        .map(slide => {
+          const anime = animesMap.get(slide.animeId);
+          if (!anime) return null;
 
-    // Fallback for hero section if no explicit featured animes, but other anime exist
-    // This ensures the hero section always tries to show something if content is available.
-    if (featuredAnimesData.length === 0 && allAnimeData.length > 0) {
-      // Sort all anime by popularity and pick the top one for hero banner
-      // Ensure we are creating a new array for sorting to avoid mutating allAnimeData
-      const sortedForHeroFallback = [...allAnimeData].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-      if (sortedForHeroFallback.length > 0) {
-        // If featuredAnimesData was previously empty, it's now populated with the hero.
-        // If it wasn't (e.g., had less than 2 items for the FeaturedAnimeCard grid),
-        // this doesn't strictly replace it but rather provides the hero logic.
-        // The HomeClient will use featuredAnimesData[0] for the hero.
-        // Ensure featuredAnimesData for the FeaturedAnimeCard section is correctly handled.
-        // If featuredAnimesData is used for BOTH hero AND the grid, ensure this logic is sound.
-        // For now, let's assume `featuredAnimesData` is primarily for the hero if it's derived here.
-        // The actual "Featured Anime" section in HomeClient will use its own slice of this or a separate prop if needed.
-        // This current logic prioritizes `getFeaturedAnimes` results, then picks a hero.
-        // Re-check HomeClient: it takes `initialFeaturedAnimes` which becomes `featuredAnimesList`.
-        // `heroAnime` is `featuredAnimesList[0]`.
-        // The "Featured Anime" carousel/grid in HomeClient uses `featuredAnimesList.slice(0, 2)`.
-        // So, if featuredAnimesData is populated by this fallback, it'll only have 1 item for the grid.
-
-        // If `getFeaturedAnimes` returned some, but less than 2, and we want a different hero:
-        // This logic ensures `featuredAnimesData` is set for the hero.
-        // The `FeaturedAnimeCard` grid in `HomeClient` might show this single hero again.
-        // This is acceptable if `featuredAnimesData` is the source for both.
-
-        featuredAnimesData = [sortedForHeroFallback[0]];
-      }
+          return {
+            ...anime, // Base anime data
+            spotlightId: slide.id,
+            order: slide.order,
+            // Overrides from spotlight slide document
+            title: slide.overrideTitle || anime.title,
+            synopsis: slide.overrideDescription || anime.synopsis,
+            // Custom URLs from spotlight slide document
+            trailerUrl: slide.trailerUrl,
+            backgroundImageUrl: slide.backgroundImageUrl,
+          };
+        })
+        .filter((s): s is (Anime & SpotlightSlide) => s !== null) // Type guard to filter out nulls
+        .sort((a, b) => a.order - b.order);
     }
 
 
@@ -71,13 +63,13 @@ export default async function HomePageWrapper() {
     }
     // Ensure data arrays are empty on error
     allAnimeData = [];
-    featuredAnimesData = [];
+    spotlightData = [];
   }
 
   return (
     <HomeClient
       initialAllAnimeData={allAnimeData}
-      initialFeaturedAnimes={featuredAnimesData}
+      initialSpotlightData={spotlightData}
       fetchError={fetchError}
     />
   );

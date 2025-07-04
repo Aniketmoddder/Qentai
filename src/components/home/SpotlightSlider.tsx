@@ -6,16 +6,22 @@ import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
 import 'swiper/css';
 import { gsap } from 'gsap';
+import Image from 'next/image';
 
+import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Presentation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
 
+// This is an "enriched" slide type that combines SpotlightSlide with its corresponding Anime data.
+// It's created in page.tsx and passed down to this component.
+type EnrichedSpotlightSlide = Anime & SpotlightSlide;
+
 interface SpotlightSliderProps {
-  slides: Anime[];
+  slides: EnrichedSpotlightSlide[];
 }
 
 const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
@@ -113,7 +119,28 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
   }, [isMuted, activeIndex]);
   
   if (!slides || slides.length === 0) {
-    return null; // Or a skeleton loader
+    return (
+      <section className="relative h-[65vh] md:h-[80vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 w-full h-full">
+          <Image
+            src="https://placehold.co/1600x900/0e0e0e/0e0e0e.png"
+            alt="Placeholder background"
+            fill
+            className="object-cover opacity-10"
+            data-ai-hint="dark abstract background"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/60 via-transparent to-transparent"></div>
+        </div>
+        <Container className="relative z-10 text-center">
+          <Presentation className="mx-auto h-16 w-16 text-primary/50 mb-4" />
+          <h1 className="text-3xl md:text-4xl font-bold font-orbitron">Spotlight</h1>
+          <p className="mt-2 text-muted-foreground">No featured content has been added yet.</p>
+          <p className="text-sm text-muted-foreground/70">An administrator can add slides in the Spotlight Manager.</p>
+        </Container>
+      </section>
+    );
   }
 
   return (
@@ -131,24 +158,34 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides }) => {
           const firstEpisodeId = slide.episodes?.[0]?.id || '';
           const watchNowUrl = `/play/${slide.id}${firstEpisodeId ? `?episode=${firstEpisodeId}` : ''}`;
           const moreInfoUrl = `/anime/${slide.id}`;
-          // Use a placeholder if trailerUrl is missing
-          const videoUrl = slide.trailerUrl || "https://cdn.plyr.io/static/demo/View_From_A_Blue_Moon_Trailer-1080p.mp4";
+          const videoUrl = slide.trailerUrl;
+          const backgroundUrl = slide.backgroundImageUrl;
 
           return (
-            <SwiperSlide key={slide.id} className="relative">
+            <SwiperSlide key={slide.spotlightId} className="relative">
               <div 
                 ref={el => slideBackgroundRefs.current[index] = el}
                 className="absolute inset-0 w-full h-full"
               >
-                <video
-                  ref={el => videoRefs.current[index] = el}
-                  src={videoUrl}
-                  muted={isMuted}
-                  loop
-                  playsInline
-                  preload="metadata"
-                  className="w-full h-full object-cover opacity-30"
+                <Image 
+                  src={backgroundUrl}
+                  alt={slide.title}
+                  fill
+                  className="object-cover opacity-30"
+                  data-ai-hint="anime background scene"
+                  priority={index === 0}
                 />
+                {videoUrl && (
+                  <video
+                    ref={el => videoRefs.current[index] = el}
+                    src={videoUrl}
+                    muted={isMuted}
+                    loop
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full object-cover opacity-50 absolute inset-0"
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/70 to-transparent"></div>
                  <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/60 via-transparent to-transparent"></div>
               </div>

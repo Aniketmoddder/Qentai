@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { ChevronRight, AlertTriangle, Loader2 } from 'lucide-react';
 import type { Anime } from '@/types/anime';
 import TopAnimeListItem from '@/components/anime/TopAnimeListItem';
-import SpotlightSlider from './SpotlightSlider'; // New Spotlight Slider
+import SpotlightSlider from './SpotlightSlider';
 import AnimeCardSkeleton from '@/components/anime/AnimeCardSkeleton';
 import HomePageGenreSection from './HomePageGenreSection';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
@@ -19,7 +19,7 @@ const RecommendationsSection = lazy(() => import('../anime/recommendations-secti
 
 export interface HomeClientProps {
   initialAllAnimeData: Anime[];
-  initialFeaturedAnimes: Anime[];
+  initialSpotlightData: any[]; // Changed from initialFeaturedAnimes
   fetchError: string | null;
 }
 
@@ -27,11 +27,11 @@ const ARTIFICIAL_SKELETON_DELAY = 750;
 
 export default function HomeClient({
     initialAllAnimeData: rawInitialAllAnimeData,
-    initialFeaturedAnimes: rawInitialFeaturedAnimes,
+    initialSpotlightData,
     fetchError: initialFetchError
 }: HomeClientProps) {
   const [allAnime, setAllAnime] = useState<Anime[]>(() => rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
-  const [featuredAnimesList, setFeaturedAnimesList] = useState<Anime[]>(() => rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
+  const [spotlightSlides, setSpotlightSlides] = useState<any[]>(() => initialSpotlightData);
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError);
 
   const [isArtificiallyLoading, setIsArtificiallyLoading] = useState(true);
@@ -51,19 +51,16 @@ export default function HomeClient({
     if (initialFetchError) {
       setFetchError(initialFetchError);
       setAllAnime([]);
-      setFeaturedAnimesList([]);
+      setSpotlightSlides([]);
       setIsDataActuallyLoading(false);
     } else {
       setAllAnime(rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
-      setFeaturedAnimesList(rawInitialFeaturedAnimes.map(convertAnimeTimestampsForClient));
+      setSpotlightSlides(initialSpotlightData);
       setFetchError(null);
-      setIsDataActuallyLoading(rawInitialAllAnimeData.length === 0 && rawInitialFeaturedAnimes.length === 0 && !initialFetchError);
+      setIsDataActuallyLoading(rawInitialAllAnimeData.length === 0 && initialSpotlightData.length === 0 && !initialFetchError);
     }
-  }, [rawInitialAllAnimeData, rawInitialFeaturedAnimes, initialFetchError]);
+  }, [rawInitialAllAnimeData, initialSpotlightData, initialFetchError]);
 
-  const spotlightSlides = useMemo(() => {
-    return featuredAnimesList.slice(0, 8);
-  }, [featuredAnimesList]);
 
   const trendingAnime = useMemo(() => {
     return allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15) : [];
@@ -100,7 +97,7 @@ export default function HomeClient({
   if (showSkeleton) {
     return (
       <>
-        <Skeleton className="h-[70vh] w-full bg-muted/50" />
+        <SpotlightSlider slides={[]} /> 
         <Container className="py-8">
           {/* Skeletons for AnimeCarousels */}
           {[...Array(2)].map((_, i) => (
