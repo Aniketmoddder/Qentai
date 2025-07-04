@@ -32,15 +32,63 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
-  const videoRefs = useRef<(HTMLVideoElement | Plyr | null)[]>([]);
+  const videoRefs = useRef<(Plyr | null)[]>([]);
   const slideContentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const slideBackgroundRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const activeIndexRef = useRef(0);
 
   const handleSlideChange = useCallback((swiperInstance: SwiperInstance) => {
-    setActiveIndex(swiperInstance.realIndex);
+    const newIndex = swiperInstance.realIndex;
+    const oldIndex = activeIndexRef.current;
+
+    // Pause the old video
+    const oldVideo = videoRefs.current[oldIndex];
+    if (oldVideo && typeof oldVideo.pause === 'function') {
+      try {
+        oldVideo.pause();
+        oldVideo.currentTime = 0;
+      } catch (e) {
+        console.warn(`Could not pause video at index ${oldIndex}`, e);
+      }
+    }
+    
+    // Animate new slide content
+    const currentSlideContent = slideContentRefs.current[newIndex];
+    if (currentSlideContent) {
+      const contentElements = currentSlideContent.children;
+      gsap.fromTo(contentElements, 
+        { opacity: 0, y: 30 },
+        { opacity: 1, y: 0, stagger: 0.15, duration: 0.6, delay: 0.2, ease: "power3.out" }
+      );
+    }
+    
+    // Animate new slide background
+    const currentBackground = slideBackgroundRefs.current[newIndex];
+    if (currentBackground) {
+        gsap.fromTo(currentBackground, { scale: 1.15 }, { scale: 1, duration: 8, ease: 'power1.inOut' });
+    }
+
+    // Play the new video after a delay
+    const newVideo = videoRefs.current[newIndex];
+    if (newVideo) {
+      setTimeout(() => {
+        // Re-check the current active index before playing, to avoid playing on a stale slide
+        if (activeIndexRef.current === newIndex && typeof newVideo.play === 'function') {
+          const playPromise = newVideo.play();
+          if (playPromise !== undefined) {
+            playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
+          }
+        }
+      }, 1500);
+    }
+
+    // Update active index state and ref
+    setActiveIndex(newIndex);
+    activeIndexRef.current = newIndex;
   }, []);
-  
+
   useEffect(() => {
+    // This effect runs once to set the initial mute state from localStorage
     try {
       const storedMuteState = localStorage.getItem('qentai-spotlight-muted');
       if (storedMuteState !== null) {
@@ -62,60 +110,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   };
 
   useEffect(() => {
-    if (!swiper || isLoading) return;
-
-    const currentSlideContent = slideContentRefs.current[activeIndex];
-    const currentBackground = slideBackgroundRefs.current[activeIndex];
-    
-    // Animate content
-    if (currentSlideContent) {
-      const contentElements = currentSlideContent.children;
-      gsap.fromTo(contentElements, 
-        { opacity: 0, y: 30 },
-        {
-          opacity: 1,
-          y: 0,
-          stagger: 0.15,
-          duration: 0.6,
-          delay: 0.2,
-          ease: "power3.out"
-        }
-      );
-    }
-    
-    // Animate background
-    if (currentBackground) {
-        gsap.fromTo(currentBackground,
-            { scale: 1.15 },
-            {
-                scale: 1,
-                duration: 8, // Slow pan/zoom effect
-                ease: 'power1.inOut'
-            }
-        );
-    }
-
-    // Handle videos
-    videoRefs.current.forEach((video, index) => {
-      if (video) {
-        if (index === activeIndex) {
-          setTimeout(() => {
-            const playPromise = video.play();
-            if (playPromise !== undefined) {
-                playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
-            }
-          }, 1500); // 1.5 second delay
-        } else {
-          video.pause();
-          video.currentTime = 0;
-        }
-      }
-    });
-
-  }, [activeIndex, swiper, isLoading]);
-
-  useEffect(() => {
-    // Mute/unmute the current video when isMuted state changes
+    // This effect now ONLY handles muting the current video when isMuted state changes
     const currentVideo = videoRefs.current[activeIndex];
     if (currentVideo) {
       currentVideo.muted = isMuted;
