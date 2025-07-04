@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import Container from '../layout/container';
 import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
@@ -24,30 +25,51 @@ interface SpotlightSliderProps {
   isLoading: boolean;
 }
 
+function getYouTubeEmbedUrl(url: string): string | null {
+  let videoId: string | null = null;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'youtu.be') {
+      videoId = urlObj.pathname.slice(1);
+    } else if (urlObj.hostname.includes('youtube.com')) {
+      videoId = urlObj.searchParams.get('v');
+    }
+  } catch (e) {
+    console.error("Invalid URL for YouTube parsing:", url, e);
+    return null;
+  }
+  if (!videoId) return null;
+  
+  const params = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    loop: '1',
+    playlist: videoId, // loop=1 requires playlist
+    controls: '0',
+    showinfo: '0',
+    rel: '0',
+    iv_load_policy: '3',
+    modestbranding: '1',
+    playsinline: '1',
+  });
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+}
+
+
 const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) => {
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
+  const { toast } = useToast();
   
-  // This will store direct references to the <video> elements
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]); 
-  
   const slideContentRefs = useRef<(HTMLDivElement | null)[]>([]);
   const slideBackgroundRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Using a ref for the active index helps avoid stale closures in callbacks.
   const activeIndexRef = useRef(0);
 
   const handleSlideChange = useCallback((swiperInstance: SwiperInstance) => {
     const newIndex = swiperInstance.realIndex;
     const oldIndex = activeIndexRef.current;
-
-    // Pause the old video safely
-    const oldVideo = videoRefs.current[oldIndex];
-    if (oldVideo) {
-      oldVideo.pause();
-      oldVideo.currentTime = 0; // Reset video to the beginning
-    }
     
     // Animate new slide content
     const currentSlideContent = slideContentRefs.current[newIndex];
@@ -65,28 +87,29 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
         gsap.fromTo(currentBackground, { scale: 1.15 }, { scale: 1, duration: 8, ease: 'power1.inOut' });
     }
 
-    // Play the new video after a delay
+    const oldVideo = videoRefs.current[oldIndex];
+    if (oldVideo) {
+      oldVideo.pause();
+      oldVideo.currentTime = 0;
+    }
+
     const newVideo = videoRefs.current[newIndex];
     if (newVideo) {
-      // Ensure the video's muted state is correct before playing
-      newVideo.muted = isMuted; 
+      newVideo.muted = isMuted;
       setTimeout(() => {
-        // Re-check the current active index before playing, to avoid playing on a stale slide
         if (activeIndexRef.current === newIndex) {
           const playPromise = newVideo.play();
           if (playPromise !== undefined) {
             playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
           }
         }
-      }, 1500); // 1.5 second delay before autoplay
+      }, 1500); 
     }
 
-    // Update active index state and ref
     setActiveIndex(newIndex);
     activeIndexRef.current = newIndex;
-  }, [isMuted]); // Add isMuted dependency to ensure the correct mute state is used
+  }, [isMuted]);
 
-  // This effect runs once to set the initial mute state from localStorage
   useEffect(() => {
     try {
       const storedMuteState = localStorage.getItem('qentai-spotlight-muted');
@@ -100,13 +123,21 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
   const toggleMute = () => {
     const newMuteState = !isMuted;
+    const currentSlide = slides[activeIndex];
+    const currentVideoUrl = currentSlide?.trailerUrl;
+    const isYouTube = currentVideoUrl && (currentVideoUrl.includes('youtube.com') || currentVideoUrl.includes('youtu.be'));
+    
+    if (isYouTube) {
+        toast({ title: "Mute control is unavailable for YouTube trailers.", variant: 'default' });
+        return;
+    }
+
     setIsMuted(newMuteState);
      try {
       localStorage.setItem('qentai-spotlight-muted', JSON.stringify(newMuteState));
     } catch (error) {
        console.warn("Could not save mute state to localStorage", error)
     }
-    // Mute/unmute the currently active video
     const currentVideo = videoRefs.current[activeIndex];
     if (currentVideo) {
       currentVideo.muted = newMuteState;
@@ -130,7 +161,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           <Tv className="mx-auto h-16 w-16 text-primary/50 mb-4" />
           <h1 className="text-3xl md:text-4xl font-bold font-orbitron">Spotlight</h1>
           <p className="mt-2 text-muted-foreground">No featured content has been added yet.</p>
-          <p className="text-sm text-muted-foreground/70">An administrator can add slides in the Spotlight Manager.</p>
         </Container>
       </section>
     );
@@ -162,6 +192,8 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const videoUrl = slide.trailerUrl;
           const backgroundUrl = slide.backgroundImageUrl;
           const Icon = typeIconMap[slide.type || 'Default'] || typeIconMap.Default;
+          const isYouTube = videoUrl && (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be'));
+          const youTubeEmbedUrl = isYouTube ? getYouTubeEmbedUrl(videoUrl) : null;
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
@@ -169,12 +201,21 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                 ref={el => slideBackgroundRefs.current[index] = el}
                 className="absolute inset-0 w-full h-full overflow-hidden"
               >
-                 {videoUrl ? (
-                   // Use standard video tag now
+                 {youTubeEmbedUrl ? (
+                    <iframe
+                        key={slide.spotlightId}
+                        src={youTubeEmbedUrl}
+                        title={slide.title}
+                        className="w-full h-full object-cover opacity-30 pointer-events-none"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    />
+                ) : videoUrl ? (
                     <video
                       ref={el => videoRefs.current[index] = el}
                       src={videoUrl}
-                      muted={isMuted}
+                      muted
                       loop
                       playsInline
                       preload="metadata"
