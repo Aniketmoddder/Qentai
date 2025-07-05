@@ -4,18 +4,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
+import { EffectFade, Navigation } from 'swiper/modules';
 import 'swiper/css';
-import { gsap } from 'gsap';
-import Image from 'next/image';
+import 'swiper/css/effect-fade';
+import 'swiper/css/navigation';
 
-import type { SpotlightSlide } from '@/types/spotlight';
-import type { Anime } from '@/types/anime';
+import Image from 'next/image';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Volume2, VolumeX, Play, Info, Tv, Film, ListVideo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Container from '../layout/container';
-import Link from 'next/link';
 import { Skeleton } from '../ui/skeleton';
+import type { SpotlightSlide } from '@/types/spotlight';
+import type { Anime } from '@/types/anime';
 
 type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
@@ -24,114 +26,97 @@ interface SpotlightSliderProps {
   isLoading: boolean;
 }
 
-// Helper to correctly parse YouTube URLs and get the Video ID
 function getYouTubeVideoId(url: string): string | null {
-    if (!url) return null;
-    let videoId: string | null = null;
-    try {
-        const urlObj = new URL(url);
-        if (urlObj.hostname === 'youtu.be') {
-            videoId = urlObj.pathname.slice(1);
-        } else if (urlObj.hostname.includes('youtube.com') && urlObj.pathname.includes('watch')) {
-            videoId = urlObj.searchParams.get('v');
-        } else if (urlObj.hostname.includes('youtube.com') && urlObj.pathname.includes('embed')) {
-            videoId = urlObj.pathname.split('/')[2];
-        }
-    } catch (e) {
-        console.error("Invalid URL for YouTube parsing:", url, e);
-        return null;
+  if (!url) return null;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'youtu.be') {
+      return urlObj.pathname.slice(1);
     }
-    return videoId;
+    if (urlObj.hostname.includes('youtube.com')) {
+      if (urlObj.pathname.includes('watch')) return urlObj.searchParams.get('v');
+      if (urlObj.pathname.includes('embed')) return urlObj.pathname.split('/')[2];
+    }
+  } catch (e) {
+    console.error("Invalid URL for YouTube parsing:", url, e);
+  }
+  return null;
 }
-
 
 const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) => {
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
-  
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]); 
-  const slideContentRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const activeIndexRef = useRef(0);
-  const autoplayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [videoVisibility, setVideoVisibility] = useState<Record<number, boolean>>({});
 
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const slideChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Mute state persistence
+  useEffect(() => {
+    try {
+      const storedMuteState = localStorage.getItem('qentai-spotlight-muted');
+      if (storedMuteState !== null) setIsMuted(JSON.parse(storedMuteState));
+    } catch (error) {
+      console.warn("Could not read mute state from localStorage", error);
+    }
+  }, []);
+
+  // Initial 6-second poster display for the first slide
+  useEffect(() => {
+    if (slides.length > 0 && !isLoading) {
+      const initialLoadTimeout = setTimeout(() => {
+        setVideoVisibility(prev => ({ ...prev, 0: true }));
+      }, 6000);
+      return () => clearTimeout(initialLoadTimeout);
+    }
+  }, [slides.length, isLoading]);
 
   const handleSlideChange = useCallback((swiperInstance: SwiperInstance) => {
     const newIndex = swiperInstance.realIndex;
-    const oldIndex = activeIndexRef.current;
+    const oldIndex = activeIndex;
     
-    // Clear any pending autoplay from the previous slide
-    if (autoplayTimeoutRef.current) {
-      clearTimeout(autoplayTimeoutRef.current);
-    }
-    
-    // Animate new slide content
-    const currentSlideContent = slideContentRefs.current[newIndex];
-    if (currentSlideContent) {
-      const contentElements = currentSlideContent.children;
-      gsap.fromTo(contentElements, 
-        { opacity: 0, y: 30 },
-        { opacity: 1, y: 0, stagger: 0.15, duration: 0.6, delay: 0.2, ease: "power3.out" }
-      );
-    }
-    
-    // Animate new slide background (poster image)
-    const currentBackground = currentSlideContent?.parentElement?.previousElementSibling?.querySelector('img');
-    if (currentBackground) {
-        gsap.fromTo(currentBackground, { scale: 1.15 }, { scale: 1, duration: 8, ease: 'power1.inOut' });
-    }
+    if (slideChangeTimeoutRef.current) clearTimeout(slideChangeTimeoutRef.current);
 
     const oldVideo = videoRefs.current[oldIndex];
     if (oldVideo) {
       oldVideo.pause();
       oldVideo.currentTime = 0;
     }
-
-    const newVideo = videoRefs.current[newIndex];
-    if (newVideo) {
-      newVideo.muted = isMuted; // Set mute state according to the global toggle
-      newVideo.currentTime = 0;
-      
-      // Set a timeout to play the video after 8 seconds
-      autoplayTimeoutRef.current = setTimeout(() => {
-        if (activeIndexRef.current === newIndex) { // Check if we are still on the same slide
-          const playPromise = newVideo.play();
-          if (playPromise !== undefined) {
-            playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
-          }
-        }
-      }, 8000); // 8-second delay
-    }
+    
+    // Show new video after a short, responsive delay
+    slideChangeTimeoutRef.current = setTimeout(() => {
+      setVideoVisibility(prev => ({ ...prev, [newIndex]: true }));
+    }, 1500);
 
     setActiveIndex(newIndex);
-    activeIndexRef.current = newIndex;
-  }, [isMuted]);
+  }, [activeIndex]);
 
+  // Effect to play the video when its visibility becomes true
   useEffect(() => {
-    try {
-      const storedMuteState = localStorage.getItem('qentai-spotlight-muted');
-      if (storedMuteState !== null) {
-        setIsMuted(JSON.parse(storedMuteState));
+    const currentVideo = videoRefs.current[activeIndex];
+    if (currentVideo && videoVisibility[activeIndex]) {
+      currentVideo.muted = isMuted;
+      currentVideo.currentTime = 0;
+      const playPromise = currentVideo.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
       }
-    } catch (error) {
-      console.warn("Could not read mute state from localStorage", error)
     }
-  }, []);
+  }, [videoVisibility, activeIndex, isMuted]);
 
   const toggleMute = () => {
     const newMuteState = !isMuted;
     setIsMuted(newMuteState);
-     try {
+    try {
       localStorage.setItem('qentai-spotlight-muted', JSON.stringify(newMuteState));
     } catch (error) {
-       console.warn("Could not save mute state to localStorage", error)
+      console.warn("Could not save mute state to localStorage", error);
     }
     const currentVideo = videoRefs.current[activeIndex];
-    if (currentVideo) {
-      currentVideo.muted = newMuteState;
-    }
+    if (currentVideo) currentVideo.muted = newMuteState;
   };
-  
+
   if (isLoading) {
     return (
       <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] flex items-center justify-center">
@@ -139,7 +124,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       </section>
     );
   }
-  
+
   if (slides.length === 0) {
     return (
       <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
@@ -157,12 +142,15 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     Movie: <Film className="w-4 h-4" />,
     OVA: <ListVideo className="w-4 h-4" />,
     Special: <ListVideo className="w-4 h-4" />,
-    Default: <Info className="w-4 h-4"/>
+    Default: <Info className="w-4 h-4" />
   };
 
   return (
     <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden">
       <Swiper
+        modules={[Navigation, EffectFade]}
+        effect="fade"
+        fadeEffect={{ crossFade: true }}
         onSwiper={setSwiper}
         onSlideChangeTransitionEnd={handleSlideChange}
         spaceBetween={0}
@@ -179,48 +167,51 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const backgroundUrl = slide.backgroundImageUrl;
           const Icon = typeIconMap[slide.type || 'Default'] || typeIconMap.Default;
           const youTubeVideoId = getYouTubeVideoId(videoUrl);
+          const shouldShowVideo = videoVisibility[index] === true;
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
               <div className="absolute inset-0 w-full h-full overflow-hidden">
-                <Image 
+                <Image
                   src={backgroundUrl}
                   alt={slide.title}
                   fill
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-opacity duration-500"
+                  style={{ opacity: shouldShowVideo ? 0 : 1 }}
                   data-ai-hint="anime background scene"
                   priority={index === 0}
                 />
-                
-                {/* Conditional Video Player */}
-                {youTubeVideoId ? (
-                  <iframe
-                      src={`https://www.youtube.com/embed/${youTubeVideoId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${youTubeVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
+
+                {shouldShowVideo && (
+                  youTubeVideoId ? (
+                    <iframe
+                      src={`https://www.youtube.com/embed/${youTubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youTubeVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
                       title={slide.title}
                       className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                      frameBorder="0"
+                      style={{ border: 0 }}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
-                  />
-                ) : videoUrl ? (
-                  <video
-                    ref={el => videoRefs.current[index] = el}
-                    src={videoUrl}
-                    muted={isMuted}
-                    loop
-                    playsInline
-                    preload="metadata"
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                ) : null}
+                    />
+                  ) : videoUrl ? (
+                    <video
+                      ref={el => videoRefs.current[index] = el}
+                      src={videoUrl}
+                      muted
+                      loop
+                      playsInline
+                      autoPlay
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  ) : null
+                )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-[#0e0e0e]/50 to-transparent"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/60 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/70 via-[#0e0e0e]/30 to-transparent"></div>
               </div>
 
               <Container className="relative z-10 h-full flex flex-col justify-end pb-12 md:pb-20">
-                <div ref={el => slideContentRefs.current[index] = el} className="max-w-xl space-y-3">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-orbitron leading-tight" style={{textShadow: '0 2px 10px rgba(0,0,0,0.5)'}}>
+                <div className="max-w-xl space-y-3">
+                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-orbitron leading-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
                     {slide.title}
                   </h1>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-300 font-medium">
@@ -233,14 +224,14 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                   </p>
                   <div className="flex items-center gap-3 pt-2">
                     <Button asChild className="btn-spotlight-gradient rounded-full px-5 h-11 text-sm md:text-base">
-                        <Link href={watchNowUrl}>
-                            <Play className="mr-2 h-5 w-5 fill-current" /> Watch Now
-                        </Link>
+                      <Link href={watchNowUrl}>
+                        <Play className="mr-2 h-5 w-5 fill-current" /> Watch Now
+                      </Link>
                     </Button>
                     <Button asChild variant="outline" className="rounded-full px-5 h-11 text-sm md:text-base bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white">
-                        <Link href={moreInfoUrl}>
-                            <Info className="mr-2 h-5 w-5" /> More Info
-                        </Link>
+                      <Link href={moreInfoUrl}>
+                        <Info className="mr-2 h-5 w-5" /> More Info
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -250,7 +241,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
         })}
       </Swiper>
 
-      {/* Desktop Chevrons */}
       <div className="hidden md:flex absolute inset-y-0 left-4 z-20 items-center">
         <Button variant="ghost" size="icon" onClick={() => swiper?.slidePrev()} className="w-12 h-12 rounded-full bg-white/10 text-white hover:bg-white/20 hover:text-primary transition-colors">
           <ChevronLeft className="h-6 w-6" />
@@ -261,8 +251,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           <ChevronRight className="h-6 w-6" />
         </Button>
       </div>
-      
-      {/* Audio Toggle */}
+
       <div className="absolute bottom-6 right-6 md:bottom-8 md:right-8 z-20">
         <Button variant="ghost" size="icon" onClick={toggleMute} className="w-11 h-11 rounded-full bg-black/30 text-white hover:bg-black/50 hover:text-primary transition-colors backdrop-blur-sm">
           {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}

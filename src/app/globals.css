@@ -8,6 +8,7 @@
 @import 'swiper/css/effect-coverflow'; /* For ShowsCarousel */
 @import 'swiper/css/autoplay'; /* For ShowsCarousel */
 @import 'swiper/css/keyboard'; /* For Keyboard control */
+@import 'swiper/css/effect-fade';
 
 
 @tailwind base;

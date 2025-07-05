@@ -1,3 +1,4 @@
+
 // src/components/home/HomeClientContent.tsx
 'use client';
 
@@ -6,11 +7,10 @@ import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ChevronRight, AlertTriangle, Loader2 } from 'lucide-react';
+import { ChevronRight, AlertTriangle } from 'lucide-react';
 import type { Anime } from '@/types/anime';
 import TopAnimeListItem from '@/components/anime/TopAnimeListItem';
 import SpotlightSlider from './SpotlightSlider';
-import AnimeCardSkeleton from '@/components/anime/AnimeCardSkeleton';
 import HomePageGenreSection from './HomePageGenreSection';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,7 +23,7 @@ export interface HomeClientProps {
   fetchError: string | null;
 }
 
-const ARTIFICIAL_SKELETON_DELAY = 750;
+const ARTIFICIAL_SKELETON_DELAY = 1000; // Increased delay
 
 export default function HomeClient({
     initialAllAnimeData: rawInitialAllAnimeData,
@@ -40,7 +40,6 @@ export default function HomeClient({
   );
 
   useEffect(() => {
-    // This helps in delaying the render of certain components until the client has hydrated.
     const timer = setTimeout(() => {
       setIsClientSide(true);
     }, ARTIFICIAL_SKELETON_DELAY);
@@ -116,7 +115,7 @@ export default function HomeClient({
 
   return (
     <>
-      <SpotlightSlider slides={spotlightSlides} isLoading={showSkeleton} /> 
+      <SpotlightSlider slides={spotlightSlides} isLoading={showSkeleton} />
       
       <Container className="py-8">
         {noContentAvailable && (
