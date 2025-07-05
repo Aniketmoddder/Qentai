@@ -1,4 +1,3 @@
-
 // src/components/home/HomeClientContent.tsx
 'use client';
 
@@ -15,6 +14,7 @@ import HomePageGenreSection from './HomePageGenreSection';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 import { Skeleton } from '@/components/ui/skeleton';
 import FeaturedAnimeCard from '../anime/FeaturedAnimeCard';
+import AnimeCardSkeleton from '../anime/AnimeCardSkeleton';
 
 const RecommendationsSection = lazy(() => import('../anime/recommendations-section'));
 
@@ -25,7 +25,42 @@ export interface HomeClientProps {
   fetchError: string | null;
 }
 
-const ARTIFICIAL_SKELETON_DELAY = 1000;
+function HomePageSkeleton() {
+  return (
+    <>
+      <Skeleton className="relative h-[55vh] md:h-[70vh] w-full" />
+      <Container className="py-8">
+        <div className="py-6 md:py-8 space-y-4">
+          <Skeleton className="h-8 w-48" />
+          <div className="flex space-x-4 overflow-hidden">
+            {[...Array(6)].map((_, i) => (
+              <AnimeCardSkeleton key={i} className="w-[140px] flex-shrink-0" />
+            ))}
+          </div>
+        </div>
+
+        <div className="py-6 md:py-8 space-y-6">
+          <Skeleton className="h-8 w-56" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl" />
+            <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl hidden lg:block" />
+            <Skeleton className="aspect-[16/10] sm:aspect-[16/9] rounded-xl hidden md:block" />
+          </div>
+        </div>
+        
+        <div className="py-6 md:py-8 space-y-4">
+          <Skeleton className="h-8 w-64" />
+          <div className="flex space-x-4 overflow-hidden">
+            {[...Array(6)].map((_, i) => (
+              <AnimeCardSkeleton key={i} className="w-[140px] flex-shrink-0" />
+            ))}
+          </div>
+        </div>
+      </Container>
+    </>
+  );
+}
+
 
 export default function HomeClient({
     initialAllAnimeData: rawInitialAllAnimeData,
@@ -37,17 +72,17 @@ export default function HomeClient({
   const [spotlightSlides, setSpotlightSlides] = useState<any[]>(() => initialSpotlightData);
   const [featuredAnime, setFeaturedAnime] = useState<Anime[]>(() => initialFeaturedAnimeData);
   const [fetchError, setFetchError] = useState<string | null>(initialFetchError);
-
-  const [isClientSide, setIsClientSide] = useState(false);
-  const [isDataActuallyLoading, setIsDataActuallyLoading] = useState(
-    !rawInitialAllAnimeData || rawInitialAllAnimeData.length === 0
-  );
+  
+  const [isClientReady, setIsClientReady] = useState(false);
+  
+  const isDataActuallyLoading = useMemo(() => 
+      !rawInitialAllAnimeData || rawInitialAllAnimeData.length === 0
+  , [rawInitialAllAnimeData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsClientSide(true);
-    }, ARTIFICIAL_SKELETON_DELAY);
-
+      setIsClientReady(true);
+    }, 2500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -57,16 +92,13 @@ export default function HomeClient({
       setAllAnime([]);
       setSpotlightSlides([]);
       setFeaturedAnime([]);
-      setIsDataActuallyLoading(false);
     } else {
       setAllAnime(rawInitialAllAnimeData.map(convertAnimeTimestampsForClient));
       setSpotlightSlides(initialSpotlightData);
       setFeaturedAnime(initialFeaturedAnimeData);
       setFetchError(null);
-      setIsDataActuallyLoading(rawInitialAllAnimeData.length === 0 && initialSpotlightData.length === 0 && !initialFetchError);
     }
   }, [rawInitialAllAnimeData, initialSpotlightData, initialFeaturedAnimeData, initialFetchError]);
-
 
   const trendingAnime = useMemo(() => {
     return allAnime.length > 0 ? [...allAnime].sort((a,b) => (b.popularity || 0) - (a.popularity || 0)).slice(0, 15) : [];
@@ -98,7 +130,11 @@ export default function HomeClient({
     .slice(0, 10) : [];
   }, [allAnime]);
   
-  const showSkeleton = !isClientSide || (isDataActuallyLoading && !fetchError);
+  const showSkeleton = !isClientReady || (isDataActuallyLoading && !fetchError);
+
+  if (showSkeleton && !fetchError) {
+    return <HomePageSkeleton />;
+  }
 
   if (fetchError) {
     return (
@@ -117,7 +153,7 @@ export default function HomeClient({
     );
   }
 
-  const noContentAvailable = !isDataActuallyLoading && !fetchError && isClientSide && allAnime.length === 0 && spotlightSlides.length === 0;
+  const noContentAvailable = !isDataActuallyLoading && !fetchError && isClientReady && allAnime.length === 0 && spotlightSlides.length === 0;
 
   return (
     <>

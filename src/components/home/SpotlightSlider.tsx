@@ -36,7 +36,6 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   const videoRefs = useRef<(HTMLVideoElement | HTMLIFrameElement | null)[]>([]);
   const slideChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Mute state persistence
   useEffect(() => {
     try {
       const storedMuteState = localStorage.getItem('qentai-spotlight-muted');
@@ -46,12 +45,11 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     }
   }, []);
 
-  // Initial 6-second poster display for the first slide
   useEffect(() => {
     if (slides.length > 0 && !isLoading) {
       const initialLoadTimeout = setTimeout(() => {
         setVideoVisibility(prev => ({ ...prev, 0: true }));
-      }, 6000);
+      }, 6000); // 6-second poster display for first slide
       return () => clearTimeout(initialLoadTimeout);
     }
   }, [slides.length, isLoading]);
@@ -67,15 +65,15 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       if ('pause' in oldVideo) (oldVideo as HTMLVideoElement).pause();
     }
     
-    // Show new video after a short delay
+    setVideoVisibility(prev => ({ [newIndex]: false }));
+    
     slideChangeTimeoutRef.current = setTimeout(() => {
       setVideoVisibility(prev => ({ ...prev, [newIndex]: true }));
-    }, 1500);
+    }, 3500); // 3.5-second delay for subsequent slides
 
     setActiveIndex(newIndex);
   }, [activeIndex]);
 
-  // Effect to play the video when its visibility becomes true
   useEffect(() => {
     const currentVideo = videoRefs.current[activeIndex];
     if (currentVideo && videoVisibility[activeIndex]) {
@@ -106,16 +104,15 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
   if (isLoading) {
     return (
-      <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] flex items-center justify-center">
+      <section className="relative h-[55vh] md:h-[70vh] w-full bg-[#0e0e0e] flex items-center justify-center">
         <Skeleton className="absolute inset-0" />
-        <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </section>
     );
   }
 
   if (slides.length === 0) {
     return (
-      <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
+      <section className="relative h-[55vh] md:h-[70vh] w-full bg-[#0e0e0e] text-white overflow-hidden flex items-center justify-center">
         <Container className="relative z-10 text-center">
           <Tv className="mx-auto h-16 w-16 text-primary/50 mb-4" />
           <h1 className="text-3xl md:text-4xl font-bold font-orbitron">Spotlight</h1>
@@ -134,7 +131,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   };
 
   return (
-    <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] text-white overflow-hidden">
+    <section className="relative h-[55vh] md:h-[70vh] w-full bg-[#0e0e0e] text-white overflow-hidden">
       <Swiper
         modules={[Navigation, EffectFade]}
         effect="fade"
@@ -184,9 +181,9 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                   isYouTube && youtubeId ? (
                     <iframe
                       ref={el => videoRefs.current[index] = el}
-                      src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
+                      src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1`}
                       title={slide.title}
-                      className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                      className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 scale-[1.7]"
                       style={{ border: 0 }}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -199,13 +196,13 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                       loop
                       playsInline
                       autoPlay
-                      className="absolute inset-0 w-full h-full object-cover"
+                      className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 object-cover"
                     />
                   ) : null
                 )}
 
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e] via-transparent to-transparent"></div>
-                <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/70 via-[#0e0e0e]/30 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/90 via-[#0e0e0e]/30 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/50 via-transparent to-transparent"></div>
               </div>
 
               <Container className="relative z-10 h-full flex flex-col justify-end pb-12 md:pb-20">
