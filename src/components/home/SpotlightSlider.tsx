@@ -18,6 +18,7 @@ import Container from '../layout/container';
 import { Skeleton } from '../ui/skeleton';
 import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
+import { Loader2 } from 'lucide-react';
 
 type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
@@ -26,30 +27,13 @@ interface SpotlightSliderProps {
   isLoading: boolean;
 }
 
-function getYouTubeVideoId(url: string): string | null {
-  if (!url) return null;
-  try {
-    const urlObj = new URL(url);
-    if (urlObj.hostname === 'youtu.be') {
-      return urlObj.pathname.slice(1);
-    }
-    if (urlObj.hostname.includes('youtube.com')) {
-      if (urlObj.pathname.includes('watch')) return urlObj.searchParams.get('v');
-      if (urlObj.pathname.includes('embed')) return urlObj.pathname.split('/')[2];
-    }
-  } catch (e) {
-    console.error("Invalid URL for YouTube parsing:", url, e);
-  }
-  return null;
-}
-
 const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) => {
   const [swiper, setSwiper] = useState<SwiperInstance | null>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [videoVisibility, setVideoVisibility] = useState<Record<number, boolean>>({});
 
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const videoRefs = useRef<(HTMLVideoElement | HTMLIFrameElement | null)[]>([]);
   const slideChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Mute state persistence
@@ -80,11 +64,10 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
     const oldVideo = videoRefs.current[oldIndex];
     if (oldVideo) {
-      oldVideo.pause();
-      oldVideo.currentTime = 0;
+      if ('pause' in oldVideo) (oldVideo as HTMLVideoElement).pause();
     }
     
-    // Show new video after a short, responsive delay
+    // Show new video after a short delay
     slideChangeTimeoutRef.current = setTimeout(() => {
       setVideoVisibility(prev => ({ ...prev, [newIndex]: true }));
     }, 1500);
@@ -96,12 +79,14 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   useEffect(() => {
     const currentVideo = videoRefs.current[activeIndex];
     if (currentVideo && videoVisibility[activeIndex]) {
-      currentVideo.muted = isMuted;
-      currentVideo.currentTime = 0;
-      const playPromise = currentVideo.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
-      }
+        if ('play' in currentVideo) {
+            (currentVideo as HTMLVideoElement).muted = isMuted;
+            (currentVideo as HTMLVideoElement).currentTime = 0;
+            const playPromise = (currentVideo as HTMLVideoElement).play();
+            if (playPromise !== undefined) {
+                playPromise.catch(err => console.warn("Video autoplay was prevented:", err));
+            }
+        }
     }
   }, [videoVisibility, activeIndex, isMuted]);
 
@@ -114,13 +99,16 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       console.warn("Could not save mute state to localStorage", error);
     }
     const currentVideo = videoRefs.current[activeIndex];
-    if (currentVideo) currentVideo.muted = newMuteState;
+    if (currentVideo && 'muted' in currentVideo) {
+        (currentVideo as HTMLVideoElement).muted = newMuteState;
+    }
   };
 
   if (isLoading) {
     return (
       <section className="relative h-[60vh] md:h-[75vh] w-full bg-[#0e0e0e] flex items-center justify-center">
         <Skeleton className="absolute inset-0" />
+        <Loader2 className="w-12 h-12 text-primary animate-spin" />
       </section>
     );
   }
@@ -166,8 +154,18 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const videoUrl = slide.trailerUrl;
           const backgroundUrl = slide.backgroundImageUrl;
           const Icon = typeIconMap[slide.type || 'Default'] || typeIconMap.Default;
-          const youTubeVideoId = getYouTubeVideoId(videoUrl);
+          const isYouTube = videoUrl?.includes('youtube.com') || videoUrl?.includes('youtu.be');
           const shouldShowVideo = videoVisibility[index] === true;
+
+          const getYouTubeVideoId = (url: string) => {
+              try {
+                  const urlObj = new URL(url);
+                  if (urlObj.hostname === 'youtu.be') return urlObj.pathname.slice(1);
+                  if (urlObj.hostname.includes('youtube.com')) return urlObj.searchParams.get('v');
+              } catch (e) { /* ignore */ }
+              return null;
+          }
+          const youtubeId = isYouTube ? getYouTubeVideoId(videoUrl) : null;
 
           return (
             <SwiperSlide key={slide.spotlightId} className="relative">
@@ -183,9 +181,10 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                 />
 
                 {shouldShowVideo && (
-                  youTubeVideoId ? (
+                  isYouTube && youtubeId ? (
                     <iframe
-                      src={`https://www.youtube.com/embed/${youTubeVideoId}?autoplay=1&mute=1&loop=1&playlist=${youTubeVideoId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
+                      ref={el => videoRefs.current[index] = el}
+                      src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1`}
                       title={slide.title}
                       className="absolute inset-0 w-full h-full object-cover pointer-events-none"
                       style={{ border: 0 }}

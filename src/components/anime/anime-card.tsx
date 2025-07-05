@@ -1,3 +1,4 @@
+
 // src/components/anime/anime-card.tsx
 'use client';
 

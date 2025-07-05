@@ -1,3 +1,4 @@
+
 // src/components/anime/AnimeCardSkeleton.tsx
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -11,7 +12,7 @@ export default function AnimeCardSkeleton({ className }: AnimeCardSkeletonProps)
     <div
       className={cn(
         "group block",
-        "w-[45vw] max-w-[180px] sm:w-auto sm:max-w-[200px] md:max-w-[220px]", 
+        "w-[140px]", // Use carousel width as default for skeleton
         className
       )}
     >
@@ -32,4 +33,3 @@ export default function AnimeCardSkeleton({ className }: AnimeCardSkeletonProps)
     </div>
   );
 }
-

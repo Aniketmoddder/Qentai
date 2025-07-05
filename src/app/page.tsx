@@ -1,7 +1,8 @@
+
 // src/app/page.tsx
 import HomeClient from '@/components/home/HomeClientContent';
 import type { Anime } from '@/types/anime';
-import { getAllAnimes, getAnimesByIds } from '@/services/animeService';
+import { getAllAnimes, getAnimesByIds, getFeaturedAnimes } from '@/services/animeService';
 import { getSpotlightSlides } from '@/services/spotlightService';
 import { convertAnimeTimestampsForClient } from '@/lib/animeUtils';
 import { FirestoreError } from 'firebase/firestore';
@@ -11,17 +12,21 @@ import type { SpotlightSlide } from '@/types/spotlight';
 export default async function HomePageWrapper() {
   let allAnimeData: Anime[] = [];
   let spotlightData: any[] = [];
+  let featuredAnimeData: Anime[] = [];
   let fetchError: string | null = null;
 
   try {
     // Fetch all data concurrently
-    const [allAnimesRaw, spotlightSlidesRaw] = await Promise.all([
+    const [allAnimesRaw, spotlightSlidesRaw, featuredAnimesRaw] = await Promise.all([
       getAllAnimes({ count: 100, filters: { sortBy: 'updatedAt', sortOrder: 'desc' } }),
-      getSpotlightSlides()
+      getSpotlightSlides(),
+      getFeaturedAnimes({ count: 6, sortBy: 'popularity' }),
     ]);
 
     // Process all anime data
     allAnimeData = allAnimesRaw.map(a => convertAnimeTimestampsForClient(a));
+    featuredAnimeData = featuredAnimesRaw.map(a => convertAnimeTimestampsForClient(a));
+
 
     // Process spotlight slides
     const liveSlides = spotlightSlidesRaw.filter(s => s.status === 'live');
@@ -64,12 +69,14 @@ export default async function HomePageWrapper() {
     // Ensure data arrays are empty on error
     allAnimeData = [];
     spotlightData = [];
+    featuredAnimeData = [];
   }
 
   return (
     <HomeClient
       initialAllAnimeData={allAnimeData}
       initialSpotlightData={spotlightData}
+      initialFeaturedAnimeData={featuredAnimeData}
       fetchError={fetchError}
     />
   );
