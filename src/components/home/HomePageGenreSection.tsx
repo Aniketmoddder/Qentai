@@ -104,7 +104,7 @@ export default function HomePageGenreSection() {
       <section className="py-6 md:py-8">
         <div className="flex justify-between items-center mb-5">
           <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron flex items-center">
-            <Tag className="w-6 h-6 mr-2 text-primary" /> Explore by Genre
+            <Tag className="w-6 h-6 mr-3 text-primary" /> Explore by Genre
           </h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4">
@@ -124,7 +124,7 @@ export default function HomePageGenreSection() {
     <section className="py-6 md:py-8">
       <div className="flex justify-between items-center mb-5">
         <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron flex items-center">
-          <Tag className="w-6 h-6 mr-2 text-primary" /> Explore by Genre
+          <Tag className="w-6 h-6 mr-3 text-primary" /> Explore by Genre
         </h2>
         <Button variant="link" asChild className="text-primary hover:text-primary/80 font-poppins">
           <Link href="/genres">View All Genres <ChevronRight className="w-4 h-4 ml-1"/></Link>

@@ -6,7 +6,7 @@ import Container from '@/components/layout/container';
 import AnimeCarousel from '@/components/anime/anime-carousel';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ChevronRight, AlertTriangle, Star } from 'lucide-react';
+import { ChevronRight, AlertTriangle, Star, BarChart3 } from 'lucide-react';
 import type { Anime } from '@/types/anime';
 import TopAnimeListItem from '@/components/anime/TopAnimeListItem';
 import SpotlightSlider from './SpotlightSlider';
@@ -173,7 +173,7 @@ export default function HomeClient({
           <section className="py-6 md:py-8">
              <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron flex items-center">
-                <Star className="w-6 h-6 mr-2 text-yellow-400 fill-current" /> Featured Picks
+                <Star className="w-6 h-6 mr-3 text-primary" /> Featured Picks
               </h2>
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -192,7 +192,9 @@ export default function HomeClient({
         {topAnimeList.length > 0 && (
           <section className="py-6 md:py-8">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron">Top Anime</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground section-title-bar font-orbitron flex items-center">
+                <BarChart3 className="w-6 h-6 mr-3 text-primary" />Top Anime
+              </h2>
               <div className="flex items-center gap-2">
                 <Button variant="link" asChild className="text-primary hover:text-primary/80 font-poppins">
                   <Link href="/browse?sort=top">View More <ChevronRight className="w-4 h-4 ml-1"/></Link>

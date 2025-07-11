@@ -6,7 +6,7 @@ import type { Anime } from '@/types/anime';
 import AnimeCard from './anime-card';
 import AnimeCardSkeleton from './AnimeCardSkeleton'; 
 import { Button } from '@/components/ui/button';
-import { Loader2, Wand2, AlertTriangle } from 'lucide-react';
+import { Loader2, Wand2, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getAllAnimes } from '@/services/animeService'; 
 import { getUniqueGenres } from '@/services/animeService';
@@ -118,7 +118,7 @@ export default function RecommendationsSection({ allAnimesCache: initialAllAnime
     <section className="py-6 md:py-8">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl md:text-3xl font-bold text-foreground flex items-center section-title-bar">
-          <Wand2 className="w-7 h-7 mr-2 text-primary" />
+          <Lightbulb className="w-6 h-6 mr-3 text-primary" />
           Recommended For You
         </h2>
         <Button 

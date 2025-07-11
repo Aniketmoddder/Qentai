@@ -4,8 +4,8 @@
 import type { Anime } from '@/types/anime';
 import AnimeCard from './anime-card';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import React, { useState, useRef } from 'react';
+import { ChevronLeft, ChevronRight, TrendingUp, Sparkles, Clock } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
 import { Navigation } from 'swiper/modules';
@@ -20,12 +20,21 @@ interface AnimeCarouselProps {
 
 const MAX_CARDS_TO_SHOW = 15;
 
+const titleToIconMap: Record<string, React.ElementType> = {
+  "Trending Now": TrendingUp,
+  "Popular This Season": Sparkles,
+  "Latest Additions": Clock,
+};
+
+
 export default function AnimeCarousel({ title, animeList }: AnimeCarouselProps) {
   const swiperRef = useRef<SwiperInstance | null>(null);
   const [isBeginning, setIsBeginning] = useState(true);
   const [isEnd, setIsEnd] = useState(false);
 
   const displayedAnime = animeList.slice(0, MAX_CARDS_TO_SHOW);
+
+  const Icon = useMemo(() => titleToIconMap[title] || null, [title]);
 
   if (!displayedAnime || displayedAnime.length === 0) {
     return null;
@@ -44,7 +53,10 @@ export default function AnimeCarousel({ title, animeList }: AnimeCarouselProps) 
   return (
     <section className="py-6 md:py-8 relative group/carousel mt-2">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl md:text-2xl font-bold text-foreground section-title-bar">{title}</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-foreground section-title-bar flex items-center">
+            {Icon && <Icon className="w-6 h-6 mr-3 text-primary" />}
+            {title}
+        </h2>
       </div>
       
       <div className="relative"> 
@@ -112,4 +124,3 @@ export default function AnimeCarousel({ title, animeList }: AnimeCarouselProps) 
     </section>
   );
 }
-
