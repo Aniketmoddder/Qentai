@@ -69,17 +69,17 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     const prevSlide = slidesElements[swiperInstance.previousIndex];
 
     // ** FIX: Reset all slides to a default state before animating **
-    // This prevents glitches from leftover properties on looped slides.
-    gsap.set(slidesElements, { xPercent: 0, rotationY: 0, filter: 'blur(0px)', zIndex: 1 });
+    gsap.set(slidesElements, { xPercent: 0, rotationY: 0, filter: 'blur(0px) brightness(1)', scale: 1, zIndex: 1 });
     gsap.set(currentSlide, { zIndex: 2 });
     gsap.set(prevSlide, { zIndex: 1 });
 
 
     // Animate the PREVIOUS slide out of view
     gsap.to(prevSlide, {
-        xPercent: isNext ? -100 : 100, // Move out to the left if next, right if prev
+        xPercent: isNext ? -100 : 100,
         rotationY: isNext ? 45 : -45,
-        filter: 'blur(10px)',
+        filter: 'blur(10px) brightness(0.7)',
+        scale: 0.9,
         duration: 1.2,
         ease: 'expo.inOut',
     });
@@ -87,14 +87,16 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     // Animate the CURRENT slide into view
     gsap.fromTo(currentSlide, 
         { 
-            xPercent: isNext ? 100 : -100, // Start from the right if next, left if prev
+            xPercent: isNext ? 100 : -100,
             rotationY: isNext ? -45 : 45,
-            filter: 'blur(10px)',
+            filter: 'blur(10px) brightness(0.7)',
+            scale: 0.9,
         },
         {
             xPercent: 0,
             rotationY: 0,
-            filter: 'blur(0px)',
+            filter: 'blur(0px) brightness(1)',
+            scale: 1,
             duration: 1.2,
             ease: 'expo.inOut',
         }
@@ -185,7 +187,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
         loop={slides.length > 1}
         allowTouchMove={slides.length > 1}
         className="w-full h-full"
-        effect="custom" // Disables Swiper's default visual transitions
+        effect="custom" 
       >
         {slides.map((slide, index) => {
           const firstEpisodeId = slide.episodes?.[0]?.id || '';
@@ -227,7 +229,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                       src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1`}
                       title={slide.title}
                       className="absolute w-full h-full object-cover"
-                      style={{ border: 0, transform: 'scale(1.5)', objectFit: 'cover' }} // Zoom in
+                      style={{ border: 0, transform: 'scale(1.5)', objectFit: 'cover' }} 
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
