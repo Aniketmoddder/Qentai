@@ -4,9 +4,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperInstance } from 'swiper';
-import { EffectFade, Navigation } from 'swiper/modules';
+import { Navigation } from 'swiper/modules';
 import 'swiper/css';
-import 'swiper/css/effect-fade';
 import 'swiper/css/navigation';
 
 import Image from 'next/image';
@@ -19,6 +18,7 @@ import { Skeleton } from '../ui/skeleton';
 import type { SpotlightSlide } from '@/types/spotlight';
 import type { Anime } from '@/types/anime';
 import { Loader2 } from 'lucide-react';
+import { gsap } from 'gsap';
 
 type EnrichedSpotlightSlide = Anime & SpotlightSlide;
 
@@ -49,30 +49,65 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
     if (slides.length > 0 && !isLoading) {
       const initialLoadTimeout = setTimeout(() => {
         setVideoVisibility(prev => ({ ...prev, 0: true }));
-      }, 6000); // 6-second poster display for first slide
+      }, 6000); 
       return () => clearTimeout(initialLoadTimeout);
     }
   }, [slides.length, isLoading]);
 
-  const handleSlideChange = useCallback((swiperInstance: SwiperInstance) => {
-    const newIndex = swiperInstance.realIndex;
+  const handleSlideChangeStart = useCallback((swiperInstance: SwiperInstance) => {
     const oldIndex = activeIndex;
-    
-    if (slideChangeTimeoutRef.current) clearTimeout(slideChangeTimeoutRef.current);
+    const newIndex = swiperInstance.realIndex;
 
     const oldVideo = videoRefs.current[oldIndex];
     if (oldVideo) {
       if ('pause' in oldVideo) (oldVideo as HTMLVideoElement).pause();
     }
     
-    setVideoVisibility(prev => ({ [newIndex]: false }));
+    // Animate slides with GSAP
+    const slidesElements = swiperInstance.slides;
+    const currentSlide = slidesElements[swiperInstance.activeIndex];
+    const prevSlide = slidesElements[swiperInstance.previousIndex];
+
+    gsap.to(prevSlide, {
+        xPercent: -100, // Move previous slide out to the left
+        rotationY: 45,
+        filter: 'blur(10px)',
+        duration: 1.2,
+        ease: 'expo.inOut',
+    });
+
+    gsap.fromTo(currentSlide, 
+        { 
+            xPercent: 100, // Start new slide from the right
+            rotationY: -45,
+            filter: 'blur(10px)',
+        },
+        {
+            xPercent: 0,
+            rotationY: 0,
+            filter: 'blur(0px)',
+            duration: 1.2,
+            ease: 'expo.inOut',
+        }
+    );
     
+    // Clear any existing timeout for video visibility
+    if (slideChangeTimeoutRef.current) clearTimeout(slideChangeTimeoutRef.current);
+
+    // Hide video for the new slide initially
+    setVideoVisibility(prev => ({ ...prev, [newIndex]: false }));
+  }, [activeIndex]);
+
+  const handleSlideChangeEnd = useCallback((swiperInstance: SwiperInstance) => {
+    const newIndex = swiperInstance.realIndex;
+
+    // Wait before showing the video on the new slide
     slideChangeTimeoutRef.current = setTimeout(() => {
       setVideoVisibility(prev => ({ ...prev, [newIndex]: true }));
-    }, 3500); // 3.5-second delay for subsequent slides
+    }, 3500); // 3.5-second poster display
 
     setActiveIndex(newIndex);
-  }, [activeIndex]);
+  }, []);
 
   useEffect(() => {
     const currentVideo = videoRefs.current[activeIndex];
@@ -131,18 +166,21 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
   };
 
   return (
-    <section className="relative h-[55vh] md:h-[70vh] w-full bg-[#0e0e0e] text-white overflow-hidden">
+    <section 
+        className="relative h-[55vh] md:h-[70vh] w-full bg-[#0e0e0e] text-white overflow-hidden" 
+        style={{ perspective: '1000px' }}
+    >
       <Swiper
-        modules={[Navigation, EffectFade]}
-        effect="fade"
-        fadeEffect={{ crossFade: true }}
+        modules={[Navigation]}
         onSwiper={setSwiper}
-        onSlideChangeTransitionEnd={handleSlideChange}
+        onSlideChangeTransitionStart={handleSlideChangeStart}
+        onSlideChangeTransitionEnd={handleSlideChangeEnd}
         spaceBetween={0}
         slidesPerView={1}
         loop={slides.length > 1}
         allowTouchMove={true}
         className="w-full h-full"
+        // effect="fade" is removed to allow GSAP to control the transition
       >
         {slides.map((slide, index) => {
           const firstEpisodeId = slide.episodes?.[0]?.id || '';
@@ -165,14 +203,14 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const youtubeId = isYouTube ? getYouTubeVideoId(videoUrl) : null;
 
           return (
-            <SwiperSlide key={slide.spotlightId} className="relative">
+            <SwiperSlide key={slide.spotlightId} className="relative !bg-transparent" style={{ willChange: 'transform' }}>
               <div className="absolute inset-0 w-full h-full overflow-hidden">
                 <Image
                   src={backgroundUrl}
                   alt={slide.title}
                   fill
                   className="w-full h-full object-cover transition-opacity duration-500"
-                  style={{ opacity: shouldShowVideo ? 0 : 1 }}
+                  style={{ opacity: shouldShowVideo ? 0 : 1, objectFit: 'cover' }}
                   data-ai-hint="anime background scene"
                   priority={index === 0}
                 />
@@ -183,8 +221,8 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                       ref={el => videoRefs.current[index] = el}
                       src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=1&playlist=${youtubeId}&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1`}
                       title={slide.title}
-                      className="absolute top-1/2 left-1/2 min-w-full min-h-full w-auto h-auto -translate-x-1/2 -translate-y-1/2 scale-[1.7]"
-                      style={{ border: 0 }}
+                      className="absolute w-full h-full object-cover"
+                      style={{ border: 0, transform: 'scale(1.5)' }} // Zoom in
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
@@ -196,7 +234,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                       loop
                       playsInline
                       autoPlay
-                      className="absolute top-1/2 left-1/2 w-full h-full -translate-x-1/2 -translate-y-1/2 object-cover"
+                      className="w-full h-full object-cover"
                     />
                   ) : null
                 )}
