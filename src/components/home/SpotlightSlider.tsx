@@ -34,6 +34,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
   const videoRefs = useRef<(HTMLVideoElement | HTMLIFrameElement | null)[]>([]);
   const slideChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAnimating = useRef(false);
 
   useEffect(() => {
     try {
@@ -52,59 +53,61 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
       return () => clearTimeout(initialLoadTimeout);
     }
   }, [slides.length, isLoading]);
-
-  const handleSlideChangeStart = useCallback((swiperInstance: SwiperInstance) => {
-    const oldIndex = activeIndex;
-    const newIndex = swiperInstance.realIndex;
-    const isNext = (newIndex > oldIndex && !(oldIndex === slides.length - 1 && newIndex === 0)) || (oldIndex === slides.length - 1 && newIndex === 0);
-
-    const oldVideo = videoRefs.current[oldIndex];
-    if (oldVideo) {
-      if ('pause' in oldVideo) (oldVideo as HTMLVideoElement).pause();
-    }
+  
+  const animateSlideChange = useCallback((swiperInstance: SwiperInstance) => {
+    if (isAnimating.current) return;
+    isAnimating.current = true;
     
-    // Animate slides with GSAP
     const slidesElements = swiperInstance.slides;
-    const currentSlide = slidesElements[swiperInstance.activeIndex];
-    const prevSlide = slidesElements[swiperInstance.previousIndex];
+    const currentSlideEl = slidesElements[swiperInstance.activeIndex];
+    const prevSlideEl = slidesElements[swiperInstance.previousIndex];
 
-    // ** FIX: Reset all slides to a default state before animating **
-    gsap.set(slidesElements, { xPercent: 0, rotationY: 0, filter: 'blur(0px) brightness(1)', scale: 1, zIndex: 1 });
-    gsap.set(currentSlide, { zIndex: 2 });
-    gsap.set(prevSlide, { zIndex: 1 });
+    const currentBg = currentSlideEl.querySelector('[data-spotlight="background"]');
+    const currentContent = currentSlideEl.querySelector('[data-spotlight="content"]');
+    const prevBg = prevSlideEl.querySelector('[data-spotlight="background"]');
+    const prevContent = prevSlideEl.querySelector('[data-spotlight="content"]');
+    
+    const isNext = (swiperInstance.realIndex > activeIndex && !(activeIndex === slides.length - 1 && swiperInstance.realIndex === 0)) || (activeIndex === slides.length - 1 && swiperInstance.realIndex === 0);
 
+    gsap.set([currentBg, currentContent, prevBg, prevContent], { clearProps: "all" });
 
-    // Animate the PREVIOUS slide out of view
-    gsap.to(prevSlide, {
-        xPercent: isNext ? -100 : 100,
-        rotationY: isNext ? 45 : -45,
-        filter: 'blur(10px) brightness(0.7)',
-        scale: 0.9,
-        duration: 1.2,
-        ease: 'expo.inOut',
+    const tl = gsap.timeline({
+        onComplete: () => {
+            isAnimating.current = false;
+        }
     });
 
-    // Animate the CURRENT slide into view
-    gsap.fromTo(currentSlide, 
-        { 
-            xPercent: isNext ? 100 : -100,
-            rotationY: isNext ? -45 : 45,
-            filter: 'blur(10px) brightness(0.7)',
-            scale: 0.9,
-        },
-        {
-            xPercent: 0,
-            rotationY: 0,
-            filter: 'blur(0px) brightness(1)',
-            scale: 1,
-            duration: 1.2,
-            ease: 'expo.inOut',
-        }
-    );
+    // Exit animation for previous slide
+    if (prevBg && prevContent) {
+        tl.to(prevContent, { xPercent: isNext ? -120 : 120, opacity: 0, duration: 0.8, ease: 'expo.inOut' }, 0);
+        tl.to(prevBg, { xPercent: isNext ? -100 : 100, scale: 1.1, opacity: 0.5, duration: 1, ease: 'expo.inOut' }, 0);
+    }
     
-    if (slideChangeTimeoutRef.current) clearTimeout(slideChangeTimeoutRef.current);
-    setVideoVisibility(prev => ({ ...prev, [newIndex]: false }));
+    // Enter animation for current slide
+    if (currentBg && currentContent) {
+        tl.fromTo(currentBg, 
+            { xPercent: isNext ? 100 : -100, scale: 1.1, opacity: 0.5 },
+            { xPercent: 0, scale: 1, opacity: 1, duration: 1, ease: 'expo.inOut' },
+            0.1 // Stagger start time
+        );
+        tl.fromTo(currentContent,
+            { xPercent: isNext ? 120 : -120, opacity: 0 },
+            { xPercent: 0, opacity: 1, duration: 0.8, ease: 'expo.inOut' },
+            0.2 // Stagger start time
+        );
+    }
   }, [activeIndex, slides.length]);
+
+
+  const handleSlideChangeStart = useCallback((swiperInstance: SwiperInstance) => {
+    const oldVideo = videoRefs.current[activeIndex];
+    if (oldVideo && 'pause' in oldVideo) (oldVideo as HTMLVideoElement).pause();
+    
+    animateSlideChange(swiperInstance);
+
+    if (slideChangeTimeoutRef.current) clearTimeout(slideChangeTimeoutRef.current);
+    setVideoVisibility(prev => ({ ...prev, [swiperInstance.realIndex]: false }));
+  }, [activeIndex, animateSlideChange]);
 
   const handleSlideChangeEnd = useCallback((swiperInstance: SwiperInstance) => {
     const newIndex = swiperInstance.realIndex;
@@ -174,11 +177,9 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
 
   return (
     <section 
-        className="relative h-[55vh] md:h-[70vh] w-full bg-[#0e0e0e] text-white overflow-hidden" 
-        style={{ perspective: '1000px' }}
+        className="relative h-[55vh] md:h-[70vh] w-full bg-[#0e0e0e] text-white overflow-hidden"
     >
       <Swiper
-        modules={[Navigation]}
         onSwiper={setSwiper}
         onSlideChangeTransitionStart={handleSlideChangeStart}
         onSlideChangeTransitionEnd={handleSlideChangeEnd}
@@ -187,7 +188,7 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
         loop={slides.length > 1}
         allowTouchMove={slides.length > 1}
         className="w-full h-full"
-        effect="custom" 
+        speed={0} // We let GSAP handle all animation duration
       >
         {slides.map((slide, index) => {
           const firstEpisodeId = slide.episodes?.[0]?.id || '';
@@ -210,8 +211,8 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
           const youtubeId = isYouTube ? getYouTubeVideoId(videoUrl) : null;
 
           return (
-            <SwiperSlide key={slide.spotlightId} className="relative !bg-transparent" style={{ willChange: 'transform' }}>
-              <div className="absolute inset-0 w-full h-full overflow-hidden">
+            <SwiperSlide key={slide.spotlightId} className="relative !bg-transparent overflow-hidden">
+              <div data-spotlight="background" className="absolute inset-0 w-full h-full">
                 <Image
                   src={backgroundUrl}
                   alt={slide.title}
@@ -246,38 +247,40 @@ const SpotlightSlider: React.FC<SpotlightSliderProps> = ({ slides, isLoading }) 
                     />
                   ) : null
                 )}
-
+                
                 <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e0e]/90 via-[#0e0e0e]/30 to-transparent"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-[#0e0e0e]/50 via-transparent to-transparent"></div>
               </div>
 
-              <Container className="relative z-10 h-full flex flex-col justify-end pb-12 md:pb-20">
-                <div className="max-w-xl space-y-3">
-                  <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-orbitron leading-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
-                    {slide.title}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-300 font-medium">
-                    <span className="flex items-center gap-1.5">{slide.year}</span>
-                    <span className="flex items-center gap-1.5">{Icon} {slide.type}</span>
-                    <span className="flex items-center gap-1.5">{slide.episodesCount || slide.episodes?.length || 'N/A'} Episodes</span>
+              <div data-spotlight="content" className="relative z-10 h-full">
+                <Container className="h-full flex flex-col justify-end pb-12 md:pb-20">
+                  <div className="max-w-xl space-y-3">
+                    <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold font-orbitron leading-tight" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.5)' }}>
+                      {slide.title}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-300 font-medium">
+                      <span className="flex items-center gap-1.5">{slide.year}</span>
+                      <span className="flex items-center gap-1.5">{Icon} {slide.type}</span>
+                      <span className="flex items-center gap-1.5">{slide.episodesCount || slide.episodes?.length || 'N/A'} Episodes</span>
+                    </div>
+                    <p className="text-sm md:text-base text-neutral-300 line-clamp-3 font-light leading-relaxed">
+                      {slide.synopsis}
+                    </p>
+                    <div className="flex items-center gap-3 pt-2">
+                      <Button asChild className="btn-spotlight-gradient rounded-full px-5 h-11 text-sm md:text-base">
+                        <Link href={watchNowUrl}>
+                          <Play className="mr-2 h-5 w-5 fill-current" /> Watch Now
+                        </Link>
+                      </Button>
+                      <Button asChild variant="outline" className="rounded-full px-5 h-11 text-sm md:text-base bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white">
+                        <Link href={moreInfoUrl}>
+                          <Info className="mr-2 h-5 w-5" /> More Info
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-sm md:text-base text-neutral-300 line-clamp-3 font-light leading-relaxed">
-                    {slide.synopsis}
-                  </p>
-                  <div className="flex items-center gap-3 pt-2">
-                    <Button asChild className="btn-spotlight-gradient rounded-full px-5 h-11 text-sm md:text-base">
-                      <Link href={watchNowUrl}>
-                        <Play className="mr-2 h-5 w-5 fill-current" /> Watch Now
-                      </Link>
-                    </Button>
-                    <Button asChild variant="outline" className="rounded-full px-5 h-11 text-sm md:text-base bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white">
-                      <Link href={moreInfoUrl}>
-                        <Info className="mr-2 h-5 w-5" /> More Info
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-              </Container>
+                </Container>
+              </div>
             </SwiperSlide>
           );
         })}
