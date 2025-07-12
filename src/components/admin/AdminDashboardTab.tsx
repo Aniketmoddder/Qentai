@@ -81,7 +81,7 @@ export default function AdminDashboardTab() {
       setError(null);
       try {
         const [animes, appUsers] = await Promise.all([
-          getAllAnimes({ count: -1, filters: {} }),
+          getAllAnimes({ count: -1, filters: { sortBy: 'popularity', sortOrder: 'desc' } }), // Explicitly sort by popularity
           getAllAppUsers(-1),
         ]);
 
@@ -100,9 +100,8 @@ export default function AdminDashboardTab() {
         const sortedUsers = [...appUsers].sort((a,b) => parseISO(b.createdAt as string).getTime() - parseISO(a.createdAt as string).getTime());
         setRecentUsers(sortedUsers.slice(0, 5));
 
-        // Process Top Content
-        const sortedContent = [...animes].sort((a,b) => (b.popularity || 0) - (a.popularity || 0));
-        setTopContent(sortedContent.slice(0, 5));
+        // Process Top Content (already sorted by popularity from the fetch)
+        setTopContent(animes.slice(0, 5));
 
         // Process User Acquisition Chart Data
         const userAcquisitionData: { [key: string]: number } = {};
@@ -363,11 +362,11 @@ export default function AdminDashboardTab() {
                         <div key={anime.id} className="flex items-center space-x-4 p-2 rounded-md hover:bg-muted/50">
                             <span className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 1}</span>
                             <Avatar className="h-12 w-12 rounded-md">
-                                <AvatarImage src={anime.coverImage} alt={anime.title} className="object-cover"/>
+                                <AvatarImage src={anime.coverImage || undefined} alt={anime.title} className="object-cover"/>
                                 <AvatarFallback>{anime.title.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-grow min-w-0">
-                                <Link href={`/anime/${anime.id}`} className="font-medium text-foreground truncate hover:underline">{anime.title}</Link>
+                                <Link href={`/anime/${anime.id}`} className="font-medium text-foreground truncate hover:underline block">{anime.title}</Link>
                                 <p className="text-xs text-muted-foreground">{anime.type} • {anime.year}</p>
                             </div>
                             <Badge variant="secondary" className="flex-shrink-0">
@@ -407,3 +406,5 @@ function DashboardStatCard({ icon: Icon, title, value, isTextValue }: DashboardS
     </Card>
   );
 }
+
+    
