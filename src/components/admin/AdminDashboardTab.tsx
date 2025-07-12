@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BarChart as BarChartIcon, Users, Film, Tv as TvIcon, Loader2, AlertCircle, Eye, BookmarkPlus, LibraryBig, UserCheck, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart as BarChartIcon, Users, Film, Tv as TvIcon, Loader2, AlertCircle, Eye, BookmarkPlus, LibraryBig, UserCheck, TrendingUp, PieChart as PieChartIcon, Tags } from 'lucide-react';
 import { getAllAnimes } from '@/services/animeService';
 import { getAllAppUsers } from '@/services/appUserService';
 import type { Anime } from '@/types/anime';
@@ -12,20 +12,20 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { useTheme } from '@/context/ThemeContext';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { format, parseISO } from 'date-fns';
+import { Badge } from '../ui/badge';
+import Link from 'next/link';
 
 interface Stats {
   totalAnime: number;
   totalUsers: number;
   movies: number;
   tvShows: number;
-  latestUser?: string;
-  mostStreamed?: string;
-  mostBookmarked?: string;
 }
 
 interface ChartData {
   userAcquisition: { name: string; users: number }[];
   contentTypes: { name: string; value: number }[];
+  genreDistribution: { name: string; count: number }[];
 }
 
 const getChartColors = (themeValue: string | undefined) => {
@@ -61,8 +61,10 @@ export default function AdminDashboardTab() {
   const [chartData, setChartData] = useState<ChartData>({
       userAcquisition: [],
       contentTypes: [],
+      genreDistribution: [],
   });
   const [recentUsers, setRecentUsers] = useState<AppUser[]>([]);
+  const [topContent, setTopContent] = useState<Anime[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
@@ -87,22 +89,20 @@ export default function AdminDashboardTab() {
         const moviesCount = animes.filter(anime => anime.type === 'Movie').length;
         const tvShowsCount = animes.filter(anime => anime.type === 'TV').length;
         
-        let latestUserDisplay = 'N/A';
-        if (appUsers.length > 0) {
-          appUsers.sort((a,b) => parseISO(b.createdAt as string).getTime() - parseISO(a.createdAt as string).getTime());
-          const latest = appUsers[0];
-          latestUserDisplay = latest.displayName || latest.email || 'Unknown';
-        }
         setStats({
           totalAnime: animes.length,
           totalUsers: appUsers.length,
           movies: moviesCount,
           tvShows: tvShowsCount,
-          latestUser: latestUserDisplay,
-          mostStreamed: animes[0]?.title || 'N/A', // Placeholder
-          mostBookmarked: animes[1]?.title || 'N/A', // Placeholder
         });
-        setRecentUsers(appUsers.slice(0, 5));
+
+        // Process Recent Users
+        const sortedUsers = [...appUsers].sort((a,b) => parseISO(b.createdAt as string).getTime() - parseISO(a.createdAt as string).getTime());
+        setRecentUsers(sortedUsers.slice(0, 5));
+
+        // Process Top Content
+        const sortedContent = [...animes].sort((a,b) => (b.popularity || 0) - (a.popularity || 0));
+        setTopContent(sortedContent.slice(0, 5));
 
         // Process User Acquisition Chart Data
         const userAcquisitionData: { [key: string]: number } = {};
@@ -129,12 +129,25 @@ export default function AdminDashboardTab() {
             acc[type] = (acc[type] || 0) + 1;
             return acc;
         }, {} as { [key: string]: number });
-
         const formattedContentTypes = Object.entries(contentTypesCount).map(([name, value]) => ({ name, value }));
         
+        // Process Genre Distribution
+        const genreCounts = animes.reduce((acc, anime) => {
+            (anime.genre || []).forEach(g => {
+                acc[g] = (acc[g] || 0) + 1;
+            });
+            return acc;
+        }, {} as Record<string, number>);
+
+        const genreDistributionData = Object.entries(genreCounts)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 15); // Top 15 genres
+
         setChartData({
             userAcquisition: formattedUserAcquisition,
-            contentTypes: formattedContentTypes
+            contentTypes: formattedContentTypes,
+            genreDistribution: genreDistributionData,
         });
 
       } catch (err) {
@@ -211,8 +224,8 @@ export default function AdminDashboardTab() {
         <DashboardStatCard icon={Film} title="Movies" value={stats.movies.toString()} />
       </div>
       
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2 bg-card shadow-lg border-border/30">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <Card className="xl:col-span-2 bg-card shadow-lg border-border/30">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-primary flex items-center">
               <TrendingUp className="mr-2 h-5 w-5"/> User Acquisition
@@ -262,8 +275,9 @@ export default function AdminDashboardTab() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid grid-cols-1 gap-6">
-         <Card className="bg-card shadow-lg border-border/30">
+
+       <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <Card className="bg-card shadow-lg border-border/30">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-primary flex items-center">
               <PieChartIcon className="mr-2 h-5 w-5"/> Content Type Distribution
@@ -306,8 +320,65 @@ export default function AdminDashboardTab() {
              </ResponsiveContainer>
           </CardContent>
         </Card>
+         <Card className="xl:col-span-2 bg-card shadow-lg border-border/30">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-primary flex items-center">
+              <Tags className="mr-2 h-5 w-5"/> Genre Preferences
+            </CardTitle>
+            <CardDescription className="text-xs">Distribution of top genres across all content.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart layout="vertical" data={chartData.genreDistribution} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border)/0.5)"/>
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis type="category" dataKey="name" width={80} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--accent)/0.1)' }}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--popover))',
+                    borderColor: 'hsl(var(--border))',
+                    borderRadius: 'var(--radius)',
+                  }}
+                  labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                />
+                <Bar dataKey="count" fill={chartColors[1]} radius={[0, 4, 4, 0]} barSize={12} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
 
+      <div className="grid grid-cols-1 gap-6">
+        <Card className="bg-card shadow-lg border-border/30">
+            <CardHeader>
+                <CardTitle className="text-lg font-semibold text-primary flex items-center">
+                    <TrendingUp className="mr-2 h-5 w-5"/> Most Popular Content
+                </CardTitle>
+                <CardDescription className="text-xs">Top 5 content by popularity score.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {topContent.map((anime, index) => (
+                        <div key={anime.id} className="flex items-center space-x-4 p-2 rounded-md hover:bg-muted/50">
+                            <span className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 1}</span>
+                            <Avatar className="h-12 w-12 rounded-md">
+                                <AvatarImage src={anime.coverImage} alt={anime.title} className="object-cover"/>
+                                <AvatarFallback>{anime.title.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-grow min-w-0">
+                                <Link href={`/anime/${anime.id}`} className="font-medium text-foreground truncate hover:underline">{anime.title}</Link>
+                                <p className="text-xs text-muted-foreground">{anime.type} • {anime.year}</p>
+                            </div>
+                            <Badge variant="secondary" className="flex-shrink-0">
+                                Pop: {anime.popularity?.toLocaleString() || 'N/A'}
+                            </Badge>
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
