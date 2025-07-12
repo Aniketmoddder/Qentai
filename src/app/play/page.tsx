@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import MoreLikeThisSection from "@/components/anime/MoreLikeThisSection";
 import type Plyr from "plyr";
-import "plyr-react/dist/plyr.css"; // Ensure CSS is imported for plyr-react
+import "plyr/dist/plyr.css"; // Ensure CSS is imported for plyr-react
 import Hls from 'hls.js';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
