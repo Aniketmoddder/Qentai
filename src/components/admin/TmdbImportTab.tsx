@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -66,6 +67,7 @@ export default function TmdbImportTab() {
         status: fetchedAnime.status || 'Unknown', 
         synopsis: fetchedAnime.synopsis || 'Synopsis not available.', 
         averageRating: fetchedAnime.averageRating, 
+        popularity: fetchedAnime.popularity,
         episodes: fetchedAnime.episodes || [], // Ensure episodes are included
         type: fetchedAnime.type || (mediaType === 'tv' ? 'TV' : 'Movie'),
         sourceAdmin: 'tmdb',
@@ -157,6 +159,7 @@ export default function TmdbImportTab() {
                 <p><span className="font-semibold text-muted-foreground">Type:</span> {fetchedAnime.type}</p>
                 <p><span className="font-semibold text-muted-foreground">Status:</span> <Badge variant={fetchedAnime.status === 'Completed' ? 'default' : 'secondary'}>{fetchedAnime.status}</Badge></p>
                 <p><span className="font-semibold text-muted-foreground">TMDB Rating:</span> {fetchedAnime.averageRating ? fetchedAnime.averageRating.toFixed(1) : 'N/A'}</p>
+                 <p><span className="font-semibold text-muted-foreground">TMDB Popularity:</span> {fetchedAnime.popularity ? fetchedAnime.popularity.toLocaleString() : 'N/A'}</p>
                 <div className="flex flex-wrap gap-1.5 items-center">
                   <span className="font-semibold text-muted-foreground">Genres:</span>
                   {fetchedAnime.genre?.map(g => <Badge key={g} variant="outline" className="text-xs">{g}</Badge>)}

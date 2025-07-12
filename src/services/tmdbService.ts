@@ -1,3 +1,4 @@
+
 'use server';
 import type { Anime, Episode, Season } from '@/types/anime';
 import type { TMDBMovie, TMDBTVShow, TMDBTVSeasonResponse, TMDBEpisode } from '@/types/tmdb';
@@ -66,6 +67,7 @@ export const fetchAnimeDetailsFromTMDB = async (tmdbId: string, type: 'movie' | 
       year: movieData.release_date ? parseInt(movieData.release_date.split('-')[0]) : 0,
       genre: movieData.genres.map(g => g.name),
       averageRating: movieData.vote_average ? parseFloat(movieData.vote_average.toFixed(1)) : undefined,
+      popularity: movieData.popularity || 0,
       status: getTMDBStatus(movieData.status, 'movie'),
       type: 'Movie',
       episodes: [{ 
@@ -121,6 +123,7 @@ export const fetchAnimeDetailsFromTMDB = async (tmdbId: string, type: 'movie' | 
       year: tvData.first_air_date ? parseInt(tvData.first_air_date.split('-')[0]) : 0,
       genre: tvData.genres.map(g => g.name),
       averageRating: tvData.vote_average ? parseFloat(tvData.vote_average.toFixed(1)) : undefined,
+      popularity: tvData.popularity || 0,
       status: getTMDBStatus(tvData.status, 'tv'),
       type: 'TV',
       episodes: animeEpisodes.length > 0 ? animeEpisodes.sort((a,b) => {

@@ -361,6 +361,7 @@ export async function addAnimeToFirestore(animeData: Omit<Anime, 'id' | 'created
     genre: Array.isArray(animeData.genre) ? animeData.genre : [],
     studios: Array.isArray(animeData.studios) ? animeData.studios : [],
     characters: Array.isArray(animeData.characters) ? animeData.characters : [],
+    tmdbId: animeData.tmdbId || null,
   };
 
   dataToSave.episodes = (animeData.episodes || []).map((ep, index) => {
@@ -799,3 +800,4 @@ export async function getSimilarAnimes({
     throw handleFirestoreError(error, `getSimilarAnimes (genres: ${currentAnimeGenres.join(', ')})`);
   }
 }
+
