@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Stats {
   totalAnime: number;
@@ -361,12 +362,17 @@ export default function AdminDashboardTab() {
                     {topContent.map((anime, index) => (
                         <div key={anime.id} className="flex items-center space-x-4 p-2 rounded-md hover:bg-muted/50">
                             <span className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 1}</span>
-                            <Avatar className="h-12 w-12 rounded-md">
-                                <AvatarImage src={anime.coverImage || undefined} alt={anime.title} className="object-cover"/>
-                                <AvatarFallback>{anime.title.charAt(0)}</AvatarFallback>
-                            </Avatar>
+                            <div className="relative h-16 w-12 flex-shrink-0 rounded-md overflow-hidden bg-muted">
+                                <Image 
+                                    src={anime.coverImage || `https://placehold.co/80x120.png`} 
+                                    alt={anime.title} 
+                                    fill
+                                    className="object-cover"
+                                    data-ai-hint="anime poster"
+                                />
+                            </div>
                             <div className="flex-grow min-w-0">
-                                <Link href={`/anime/${anime.id}`} className="font-medium text-foreground truncate hover:underline block">{anime.title}</Link>
+                                <Link href={`/anime/${anime.id}`} className="font-medium text-foreground truncate hover:underline block" title={anime.title}>{anime.title}</Link>
                                 <p className="text-xs text-muted-foreground">{anime.type} • {anime.year}</p>
                             </div>
                             <Badge variant="secondary" className="flex-shrink-0">
@@ -406,5 +412,3 @@ function DashboardStatCard({ icon: Icon, title, value, isTextValue }: DashboardS
     </Card>
   );
 }
-
-    
