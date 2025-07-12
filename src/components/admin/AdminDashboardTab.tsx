@@ -244,6 +244,7 @@ export default function AdminDashboardTab() {
                     backgroundColor: 'hsl(var(--popover))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)',
+                    color: 'hsl(var(--popover-foreground))'
                   }}
                   labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
                 />
@@ -293,6 +294,7 @@ export default function AdminDashboardTab() {
                             backgroundColor: 'hsl(var(--popover))',
                             borderColor: 'hsl(var(--border))',
                             borderRadius: 'var(--radius)',
+                            color: 'hsl(var(--popover-foreground))'
                         }}
                     />
                     <Legend
@@ -339,6 +341,7 @@ export default function AdminDashboardTab() {
                     backgroundColor: 'hsl(var(--popover))',
                     borderColor: 'hsl(var(--border))',
                     borderRadius: 'var(--radius)',
+                    color: 'hsl(var(--popover-foreground))'
                   }}
                   labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
                 />
@@ -360,24 +363,28 @@ export default function AdminDashboardTab() {
             <CardContent>
                 <div className="space-y-3">
                     {topContent.map((anime, index) => (
-                        <div key={anime.id} className="flex items-center space-x-4 p-2 rounded-md hover:bg-muted/50">
-                            <span className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 1}</span>
-                            <div className="relative h-16 w-12 flex-shrink-0 rounded-md overflow-hidden bg-muted">
-                                <Image 
-                                    src={anime.coverImage || `https://placehold.co/80x120.png`} 
-                                    alt={anime.title} 
-                                    fill
-                                    className="object-cover"
-                                    data-ai-hint="anime poster"
-                                />
+                        <div key={anime.id} className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 p-2 rounded-md hover:bg-muted/50">
+                            <div className="flex items-center w-full sm:w-auto">
+                                <span className="text-lg font-bold text-muted-foreground w-6 text-center">{index + 1}</span>
+                                <div className="relative h-24 w-16 sm:h-16 sm:w-12 flex-shrink-0 rounded-md overflow-hidden bg-muted ml-2">
+                                    <Image 
+                                        src={anime.coverImage || `https://placehold.co/80x120.png`} 
+                                        alt={anime.title} 
+                                        fill
+                                        className="object-cover"
+                                        data-ai-hint="anime poster"
+                                    />
+                                </div>
+                                <div className="flex-grow min-w-0 ml-3">
+                                    <Link href={`/anime/${anime.id}`} className="font-medium text-foreground truncate hover:underline block" title={anime.title}>{anime.title}</Link>
+                                    <p className="text-xs text-muted-foreground">{anime.type} • {anime.year}</p>
+                                </div>
                             </div>
-                            <div className="flex-grow min-w-0">
-                                <Link href={`/anime/${anime.id}`} className="font-medium text-foreground truncate hover:underline block" title={anime.title}>{anime.title}</Link>
-                                <p className="text-xs text-muted-foreground">{anime.type} • {anime.year}</p>
+                            <div className="w-full sm:w-auto flex justify-end">
+                                <Badge variant="secondary" className="flex-shrink-0">
+                                    Pop: {anime.popularity?.toLocaleString() || 'N/A'}
+                                </Badge>
                             </div>
-                            <Badge variant="secondary" className="flex-shrink-0">
-                                Pop: {anime.popularity?.toLocaleString() || 'N/A'}
-                            </Badge>
                         </div>
                     ))}
                 </div>
