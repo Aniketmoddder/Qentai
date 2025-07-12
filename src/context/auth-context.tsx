@@ -4,12 +4,10 @@ import type { ReactNode, Dispatch, SetStateAction } from 'react';
 import React, { createContext, useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { Loader2 } from 'lucide-react';
-import Container from '@/components/layout/container';
-import Logo from '@/components/common/logo';
 import { upsertAppUserInFirestore, getAppUserById } from '@/services/appUserService';
 import type { AppUser } from '@/types/appUser';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import Preloader from '@/components/layout/Preloader';
 
 export interface AuthContextType {
   user: FirebaseUser | null;
@@ -49,8 +47,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
-        // Don't set global `setLoading(true)` here for appUser fetch to avoid prolonged full-screen loader
-        // The `isInitializing` flag handles the initial full-screen loader.
         try {
           let userDoc = await getAppUserById(firebaseUser.uid);
 
@@ -100,30 +96,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         setAppUser(null);
       }
-      setIsInitializing(false); // Mark initial auth check as complete
+      // We control the end of initialization inside the Preloader component
     });
 
     return () => unsubscribe();
   }, []);
 
-  if (isInitializing) { // Show preloader only during the very first auth state check
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground">
-        <Container className="text-center">
-          <div className="mx-auto mb-6" style={{ width: '100px', height: '100px' }}>
-            <Logo iconSize={27} />
-          </div>
-          <Loader2 className="w-16 h-16 mx-auto animate-spin text-primary mb-6" />
-          <p className="text-xl font-semibold text-foreground/90 font-orbitron">Loading Qentai</p>
-          <p className="text-muted-foreground font-poppins">Please wait while we prepare your experience.</p>
-        </Container>
-      </div>
-    );
-  }
-
   return (
     <AuthContext.Provider value={{ user, appUser, loading, setLoading, refreshAppUser, isInitializing }}>
-      {children}
+      {isInitializing && <Preloader onFinished={() => setIsInitializing(false)} />}
+      {!isInitializing && children}
     </AuthContext.Provider>
   );
 };
