@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart as BarChartIcon, Users, Film, Tv as TvIcon, Loader2, AlertCircle, Eye, BookmarkPlus, LibraryBig, UserCheck, TrendingUp, PieChart as PieChartIcon } from 'lucide-react';
 import { getAllAnimes } from '@/services/animeService';
