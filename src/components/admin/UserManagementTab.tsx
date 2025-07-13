@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 
-const ADMIN_EMAIL = 'ninjax.desi@gmail.com';
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'ninjax.desi@gmail.com';
 
 
 export default function UserManagementTab() {
@@ -274,4 +274,3 @@ export default function UserManagementTab() {
     </Card>
   );
 }
-

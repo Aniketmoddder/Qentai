@@ -1,3 +1,4 @@
+
 'use server';
 
 import { db, auth as firebaseAuth } from '@/lib/firebase'; // Imported firebaseAuth to check provider

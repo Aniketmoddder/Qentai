@@ -21,7 +21,7 @@ export type AdminNavItem = {
   exactMatch?: boolean; 
 };
 
-const OWNER_EMAIL = process.env.NEXT_PUBLIC_OWNER_EMAIL || 'ninjax.desi@gmail.com';
+const ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'ninjax.desi@gmail.com';
 
 export const adminNavItems: AdminNavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: GaugeCircle, exactMatch: true, isAdminOrOwner: true },
@@ -48,7 +48,7 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
       } else if (appUser && !(appUser.role === 'owner' || appUser.role === 'admin')) {
         toast({ variant: 'destructive', title: 'Unauthorized', description: 'You do not have permission to access the admin panel.' });
         router.push('/');
-      } else if (appUser === null && user.email !== OWNER_EMAIL) {
+      } else if (appUser === null && user.email !== ADMIN_EMAIL) {
         toast({ variant: 'destructive', title: 'Access Error', description: 'Could not verify your admin permissions.' });
         router.push('/');
       }
@@ -63,7 +63,7 @@ export default function AdminPanelLayout({ children }: { children: React.ReactNo
     );
   }
   
-  if (!user || (appUser && !(appUser.role === 'owner' || appUser.role === 'admin')) || (appUser === null && user?.email !== OWNER_EMAIL) ) {
+  if (!user || (appUser && !(appUser.role === 'owner' || appUser.role === 'admin')) || (appUser === null && user?.email !== ADMIN_EMAIL) ) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-4">
         <AlertCircle className="mx-auto h-16 w-16 text-destructive mb-4" />
