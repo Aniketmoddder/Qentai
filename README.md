@@ -43,10 +43,10 @@ Follow these instructions to get a local copy up and running for development and
     ```
 
 3.  **Set up Environment Variables (Crucial Step):**
-    Your project's secret keys (like API keys) are managed through environment variables.
+    Your project's secret keys (like API keys) are managed through environment variables. See the `sample.env.txt` file for a full template of the required variables.
 
     #### For Local Development:
-    Create a file named `.env.local` in the root of your project. Copy the contents of the `.env` template file into it and fill in your keys. This file is **intentionally not committed to GitHub** for security reasons.
+    Create a file named `.env.local` in the root of your project. Copy the contents of `sample.env.txt` into it and fill in your keys. This file is **intentionally not committed to GitHub** for security reasons.
 
     ```env
     # .env.local - DO NOT COMMIT THIS FILE
