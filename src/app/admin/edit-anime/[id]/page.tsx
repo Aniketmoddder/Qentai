@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -40,7 +41,7 @@ const animeSchema = z.object({
 
 type AnimeFormData = z.infer<typeof animeSchema>;
 
-const ADMIN_EMAIL = 'ninjax.desi@gmail.com';
+const OWNER_EMAIL = 'ninjax.desi@gmail.com';
 const INITIAL_GENRES = ['Action', 'Adventure', 'Comedy', 'Drama', 'Fantasy', 'Sci-Fi', 'Slice of Life', 'Romance', 'Horror', 'Mystery', 'Thriller', 'Sports', 'Supernatural', 'Mecha', 'Historical', 'Music', 'School', 'Shounen', 'Shoujo', 'Seinen', 'Josei', 'Isekai', 'Psychological', 'Ecchi', 'Harem', 'Demons', 'Magic', 'Martial Arts', 'Military', 'Parody', 'Police', 'Samurai', 'Space', 'Super Power', 'Vampire', 'Game'];
 
 export default function EditAnimePage() {
@@ -85,7 +86,7 @@ export default function EditAnimePage() {
       if (!user) {
         router.push('/login?redirect=/admin');
         setIsAuthorized(false);
-      } else if (user.email !== ADMIN_EMAIL) {
+      } else if (user.email !== OWNER_EMAIL) {
         toast({ variant: 'destructive', title: 'Unauthorized', description: 'You do not have permission to access this page.' });
         router.push('/');
         setIsAuthorized(false);

@@ -801,3 +801,4 @@ export async function getSimilarAnimes({
   }
 }
 
+
