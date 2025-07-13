@@ -53,7 +53,14 @@ export default function TmdbImportTab() {
   };
 
   const handleAddAnimeToDB = async () => {
-    if (!fetchedAnime || !fetchedAnime.title) return;
+    if (!fetchedAnime || !fetchedAnime.title) {
+        toast({
+            variant: "destructive",
+            title: "Save Error",
+            description: "Cannot save content because the fetched title is empty. Please check the TMDB entry.",
+        });
+        return;
+    }
     setIsLoading(true);
     setError(null);
     try {
