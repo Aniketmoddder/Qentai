@@ -15,7 +15,7 @@ Qentai is a modern, feature-rich streaming platform template built with the late
 - **Dynamic Content**:
     - Featured content carousels and spotlight sliders on the homepage.
     - Advanced browsing and filtering by genre, type, and more.
-- **Ready for Deployment**: Optimized for deployment on Vercel or any Node.js supported hosting.
+- **Ready for Deployment**: Optimized for deployment on Vercel, cPanel, or any Node.js supported hosting.
 
 ## 🚀 Getting Started
 
@@ -42,10 +42,15 @@ Follow these instructions to get a local copy up and running for development and
     npm install
     ```
 
-3.  **Set up environment variables:**
-    Create a `.env.local` file in the root of your project and add the necessary Firebase and API keys. You can use the `.env` file as a template.
+3.  **Set up Environment Variables (Crucial Step):**
+    Your project's secret keys (like API keys) are managed through environment variables.
+
+    #### For Local Development:
+    Create a file named `.env.local` in the root of your project. Copy the contents of the `.env` template file into it and fill in your keys. This file is **intentionally not committed to GitHub** for security reasons.
 
     ```env
+    # .env.local - DO NOT COMMIT THIS FILE
+    
     # Firebase Configuration (replace with your project's credentials)
     NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
@@ -64,6 +69,14 @@ Follow these instructions to get a local copy up and running for development and
     # Admin Account Email (for owner role)
     NEXT_PUBLIC_ADMIN_EMAIL=your_admin_email@example.com
     ```
+    
+    #### For Production (Vercel, cPanel, etc.):
+    You **do not** upload the `.env.local` file. Instead, you must set these variables in your hosting provider's dashboard.
+    -   **Vercel**: Go to your Project Settings > Environment Variables.
+    -   **cPanel**: Look for "Setup Node.js App", and within your application's settings, there is usually a section to add environment variables.
+    -   **Other Hosts**: Refer to your hosting provider's documentation for "environment variables".
+
+    You will need to add each key-value pair from the list above into your hosting platform's interface.
 
 ### Running the Application
 
@@ -81,12 +94,7 @@ Follow these instructions to get a local copy up and running for development and
 
 ## 📦 Deployment
 
-This project is optimized for deployment on Vercel, the platform from the creators of Next.js.
-
--   **Automatic Deployment**: Simply connect your Git repository to Vercel, and it will automatically deploy your project.
--   **Environment Variables**: Make sure to add all the environment variables from your `.env.local` file to the Vercel project settings.
-
-For other Node.js hosting providers, you can use the following standard Next.js commands:
+This project is optimized for deployment on any Node.js supported hosting.
 
 1.  **Build the application:**
     ```bash
@@ -97,6 +105,8 @@ For other Node.js hosting providers, you can use the following standard Next.js 
     ```bash
     npm run start
     ```
+    
+    Ensure you have set all the required environment variables in your hosting provider's settings as mentioned above.
 
 ---
 Happy streaming!
