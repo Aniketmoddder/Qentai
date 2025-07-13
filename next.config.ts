@@ -1,5 +1,7 @@
 
-// next.config.ts
+// Use require for dotenv at the top
+require('dotenv').config();
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
