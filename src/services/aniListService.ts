@@ -1,3 +1,4 @@
+
 'use server';
 
 import type { AniListMediaData, AniListMedia } from '@/types/anilist';
@@ -127,6 +128,12 @@ export async function fetchAniListMediaDetails(
     });
 
     if (!response.ok) {
+      // Specifically handle 404 Not Found gracefully without a console error.
+      // This is expected if an AniList ID from our DB no longer exists on their platform.
+      if (response.status === 404) {
+        return null;
+      }
+      // For all other errors, log them as they might indicate a problem.
       const errorBody = await response.text();
       console.error(`AniList API Error for identifier ${JSON.stringify(identifier)}: ${response.status} ${response.statusText}`, errorBody);
       return null;
@@ -135,6 +142,10 @@ export async function fetchAniListMediaDetails(
     const result: AniListGraphQLResponse<AniListMediaData> = await response.json();
 
     if (result.errors) {
+      // Also handle 404s that might come through the GraphQL response body
+      if (result.errors.some(e => e.message?.includes('Not Found'))) {
+        return null;
+      }
       console.error(`AniList GraphQL Error for identifier ${JSON.stringify(identifier)}:`, result.errors);
       return null;
     }
